@@ -246,9 +246,14 @@ export const getNowPlayingMovies = async (req, res) => {
         });
 
         if (response.data && response.data.results) {
+          // Normalize all movies to have _id
+          const normalizedMovies = response.data.results.slice(0, 10).map((movie) => ({
+            ...movie,
+            _id: String(movie.id),  // Add _id from TMDB id
+          }));
           return res.status(200).json({
             success: true,
-            data: response.data.results.slice(0, 10),
+            data: normalizedMovies,
           });
         }
       } catch (err) {
@@ -300,9 +305,14 @@ export const getTrendingMovies = async (req, res) => {
         });
 
         if (response.data && response.data.results) {
+          // Normalize all movies to have _id
+          const normalizedMovies = response.data.results.slice(0, 10).map((movie) => ({
+            ...movie,
+            _id: String(movie.id),  // Add _id from TMDB id
+          }));
           return res.status(200).json({
             success: true,
-            data: response.data.results.slice(0, 10),
+            data: normalizedMovies,
           });
         }
       } catch (err) {
@@ -356,9 +366,14 @@ export const getUpcomingMovies = async (req, res) => {
         });
 
         if (response.data && response.data.results) {
+          // Normalize all movies to have _id
+          const normalizedMovies = response.data.results.slice(0, 10).map((movie) => ({
+            ...movie,
+            _id: String(movie.id),  // Add _id from TMDB id
+          }));
           return res.status(200).json({
             success: true,
-            data: response.data.results.slice(0, 10),
+            data: normalizedMovies,
           });
         }
       } catch (err) {
@@ -412,9 +427,14 @@ export const getPopularMovies = async (req, res) => {
         });
 
         if (response.data && response.data.results) {
+          // Normalize all movies to have _id
+          const normalizedMovies = response.data.results.slice(0, 10).map((movie) => ({
+            ...movie,
+            _id: String(movie.id),  // Add _id from TMDB id
+          }));
           return res.status(200).json({
             success: true,
-            data: response.data.results.slice(0, 10),
+            data: normalizedMovies,
           });
         }
       } catch (err) {
@@ -488,7 +508,11 @@ export const getLatestMovies = async (req, res) => {
     const sortedMovies = uniqueMovies
       .filter((m) => m.release_date && m.poster_path)
       .sort((a, b) => new Date(b.release_date) - new Date(a.release_date))
-      .slice(0, 20);
+      .slice(0, 20)
+      .map((movie) => ({
+        ...movie,
+        _id: String(movie.id),  // Add _id from TMDB id
+      }));
 
     if (sortedMovies.length === 0) {
       return res.status(200).json({
