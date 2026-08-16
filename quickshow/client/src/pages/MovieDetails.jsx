@@ -17,13 +17,27 @@ export default function MovieDetails() {
   const [selectedDate, setSelectedDate] = useState('');
   const [showsForDate, setShowsForDate] = useState([]);
   const [trailerOpen, setTrailerOpen] = useState(false);
+  const [error, setError] = useState(null);
   const { posterUrl, backdropUrl, isLoading, onPosterError, onBackdropError } = useMovieImageWithFallback(movie);
 
   useEffect(() => {
+    if (!id) {
+      setError('Invalid movie ID');
+      return;
+    }
+
     const loadMovie = async () => {
-      const movieData = await fetchMovieById(id);
-      if (movieData) {
-        setMovie(movieData);
+      try {
+        const movieData = await fetchMovieById(id);
+        if (movieData) {
+          setMovie(movieData);
+          setError(null);
+        } else {
+          setError('Movie not found');
+        }
+      } catch (err) {
+        console.error('Error loading movie:', err);
+        setError('Failed to load movie details');
       }
     };
     loadMovie();
@@ -83,6 +97,24 @@ export default function MovieDetails() {
   const getPosterUrl = () => {
     return posterUrl;
   };
+
+  if (error) {
+    return (
+      <div className="min-h-screen pt-20 pb-16 bg-white flex items-center justify-center">
+        <div className="text-center max-w-md px-4">
+          <Ticket size={64} className="mx-auto text-slate-400 mb-4" />
+          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">{error}</h2>
+          <p className="text-slate-600 mb-6">The movie you're looking for is not available.</p>
+          <button
+            onClick={() => navigate('/movies')}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold transition-all"
+          >
+            Back to Movies
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading || !movie) {
     return <Loading />;

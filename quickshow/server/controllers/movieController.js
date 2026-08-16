@@ -53,18 +53,87 @@ export const getMovieById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const movie = await Movie.findById(id);
+    // Try MongoDB first (for database movies)
+    try {
+      const movie = await Movie.findById(id);
+      if (movie) {
+        return res.status(200).json({
+          success: true,
+          data: movie,
+        });
+      }
+    } catch (dbErr) {
+      // If it's not a valid MongoDB ID, try TMDB
+    }
 
-    if (!movie) {
+    // If not found in database, try TMDB by ID
+    const TMDB_API_KEY = getTMDBKey();
+    if (!TMDB_API_KEY) {
       return res.status(404).json({
         success: false,
         message: 'Movie not found',
       });
     }
 
-    return res.status(200).json({
-      success: true,
-      data: movie,
+    try {
+      const tmdbResponse = await axios.get(`${TMDB_BASE_URL}/movie/${id}`, {
+        params: { api_key: TMDB_API_KEY },
+        timeout: 5000,
+      });
+
+      if (tmdbResponse.data) {
+        // Fetch additional details
+        const creditsResponse = await axios.get(
+          `${TMDB_BASE_URL}/movie/${id}/credits`,
+          {
+            params: { api_key: TMDB_API_KEY },
+            timeout: 5000,
+          }
+        );
+
+        const videosResponse = await axios.get(
+          `${TMDB_BASE_URL}/movie/${id}/videos`,
+          {
+            params: { api_key: TMDB_API_KEY },
+            timeout: 5000,
+          }
+        );
+
+        const trailer = videosResponse.data.results?.find(
+          (video) => video.type === 'Trailer'
+        );
+
+        const cast = creditsResponse.data.cast
+          ?.slice(0, 10)
+          .map((actor) => actor.name) || [];
+
+        const movieData = {
+          id: tmdbResponse.data.id,
+          _id: `tmdb_${tmdbResponse.data.id}`, // Create pseudo ID for frontend consistency
+          title: tmdbResponse.data.title,
+          overview: tmdbResponse.data.overview,
+          poster_path: tmdbResponse.data.poster_path,
+          backdrop_path: tmdbResponse.data.backdrop_path,
+          release_date: tmdbResponse.data.release_date,
+          genres: tmdbResponse.data.genres?.map((g) => g.name) || [],
+          cast,
+          vote_average: tmdbResponse.data.vote_average,
+          language: tmdbResponse.data.original_language,
+          trailer: trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : null,
+        };
+
+        return res.status(200).json({
+          success: true,
+          data: movieData,
+        });
+      }
+    } catch (tmdbErr) {
+      console.error('Error fetching from TMDB:', tmdbErr.message);
+    }
+
+    return res.status(404).json({
+      success: false,
+      message: 'Movie not found',
     });
   } catch (error) {
     console.error('Error fetching movie:', error);
