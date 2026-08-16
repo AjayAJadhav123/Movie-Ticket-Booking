@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import MovieCard from '../components/MovieCard';
@@ -7,41 +7,93 @@ import Loading from '../components/Loading';
 import { Search, Filter } from 'lucide-react';
 
 export default function AllMovies() {
-  const { latestMovies, fetchLatestMovies, movies, fetchMovies, loading } = useApp();
+  const { latestMovies, fetchLatestMovies, loading } = useApp();
+  const { apiClient } = useApp();
   const [searchParams, setSearchParams] = useSearchParams();
   const [trailerMovie, setTrailerMovie] = useState(null);
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedGenre, setSelectedGenre] = useState('');
   const [filteredMovies, setFilteredMovies] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
+  const debounceTimer = useRef(null);
 
+  // Fetch initial movies
   useEffect(() => {
-    // Fetch latest movies as primary source
     fetchLatestMovies();
-    // Also fetch all movies for search functionality
-    fetchMovies({ page: 1 });
   }, []);
 
+  // Handle search with debounce
   useEffect(() => {
-    // If searching, use all movies database for better search results
-    // Otherwise use latest TMDB movies
-    const sourceMovies = searchQuery ? movies : latestMovies;
-    let filtered = sourceMovies;
-
-    if (searchQuery) {
-      filtered = filtered.filter((m) =>
-        m.title.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+    // Clear previous timer
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
     }
 
-    if (selectedGenre) {
-      filtered = filtered.filter((m) =>
-        m.genres?.includes(selectedGenre)
-      );
+    // If no search query, show latest movies
+    if (!searchQuery.trim()) {
+      setFilteredMovies(latestMovies);
+      setSearchError(null);
+      return;
     }
 
-    setFilteredMovies(filtered);
-  }, [latestMovies, movies, searchQuery, selectedGenre]);
+    // Set loading state
+    setSearchLoading(true);
+    setSearchError(null);
+
+    // Debounce search API call (300ms)
+    debounceTimer.current = setTimeout(async () => {
+      try {
+        const response = await apiClient.get('/api/movie/search', {
+          params: { query: searchQuery.trim() },
+        });
+
+        if (response.data.success) {
+          let results = response.data.data || [];
+
+          // Apply genre filter if selected
+          if (selectedGenre) {
+            results = results.filter((m) =>
+              m.genres?.some((g) => g.toLowerCase().includes(selectedGenre.toLowerCase())) ||
+              m.genres?.includes(selectedGenre)
+            );
+          }
+
+          setFilteredMovies(results);
+          setSearchError(null);
+        } else {
+          setSearchError(response.data.message || 'Error searching movies');
+          setFilteredMovies([]);
+        }
+      } catch (error) {
+        console.error('Search error:', error);
+        setSearchError('Unable to search movies. Please try again.');
+        setFilteredMovies([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, [searchQuery, selectedGenre, apiClient]);
+
+  const handleSearchChange = (value) => {
+    setSearchQuery(value);
+    setSearchParams({ search: value });
+  };
+
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setSelectedGenre('');
+    setSearchParams({});
+    setFilteredMovies(latestMovies);
+    setSearchError(null);
+  };
 
   const genres = [
     'Action',
@@ -55,7 +107,7 @@ export default function AllMovies() {
     'Fantasy',
   ];
 
-  if (loading && movies.length === 0) {
+  if (loading && latestMovies.length === 0 && !searchQuery) {
     return <Loading />;
   }
 
@@ -76,13 +128,20 @@ export default function AllMovies() {
               type="text"
               placeholder="Search movies by title..."
               value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setSearchParams({ search: e.target.value });
-              }}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full pl-12 pr-4 py-3 md:py-4 bg-slate-50 text-slate-900 placeholder-slate-500 rounded-lg border border-slate-300 focus:border-indigo-500 focus:outline-none focus:bg-white transition text-sm md:text-base"
             />
+            {searchLoading && (
+              <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                <div className="animate-spin h-5 w-5 text-indigo-600">
+                  <div className="h-5 w-5 border-2 border-indigo-600 border-t-transparent rounded-full"></div>
+                </div>
+              </div>
+            )}
           </div>
+          {searchError && (
+            <p className="text-red-600 text-sm mt-2">{searchError}</p>
+          )}
         </div>
 
         {/* Filters */}
@@ -129,19 +188,25 @@ export default function AllMovies() {
         </div>
 
         {/* Results */}
-        {filteredMovies.length === 0 ? (
+        {searchLoading ? (
+          <div className="text-center py-16 md:py-24">
+            <div className="inline-flex items-center gap-2">
+              <div className="animate-spin h-5 w-5 text-indigo-600">
+                <div className="h-5 w-5 border-2 border-indigo-600 border-t-transparent rounded-full"></div>
+              </div>
+              <p className="text-slate-600">Searching movies...</p>
+            </div>
+          </div>
+        ) : filteredMovies.length === 0 ? (
           <div className="text-center py-16 md:py-24">
             <p className="text-slate-600 text-base md:text-lg mb-4">
-              {movies.length === 0
-                ? 'No movies available at the moment'
-                : 'No movies match your search criteria'}
+              {searchQuery
+                ? 'No movies found. Try searching with a different movie title.'
+                : 'No movies available at the moment'}
             </p>
-            {searchQuery && (
+            {(searchQuery || selectedGenre) && (
               <button
-                onClick={() => {
-                  setSearchQuery('');
-                  setSelectedGenre('');
-                }}
+                onClick={handleClearFilters}
                 className="text-indigo-600 hover:text-indigo-700 transition font-semibold"
               >
                 Clear filters

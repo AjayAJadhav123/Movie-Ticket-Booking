@@ -562,6 +562,84 @@ export const deleteMovie = async (req, res) => {
   }
 };
 
+export const searchMovies = async (req, res) => {
+  try {
+    const { query } = req.query;
+
+    if (!query || query.trim().length < 1) {
+      return res.status(400).json({
+        success: false,
+        message: 'Search query is required',
+      });
+    }
+
+    const searchTerm = query.trim();
+    const TMDB_API_KEY = getTMDBKey();
+
+    // Search in database first
+    let dbResults = [];
+    try {
+      dbResults = await Movie.find({
+        title: { $regex: searchTerm, $options: 'i' },
+      }).limit(10);
+    } catch (dbErr) {
+      console.error('Database search error:', dbErr.message);
+    }
+
+    // Search TMDB
+    let tmdbResults = [];
+    if (TMDB_API_KEY) {
+      try {
+        const response = await axios.get(`${TMDB_BASE_URL}/search/movie`, {
+          params: {
+            api_key: TMDB_API_KEY,
+            query: searchTerm,
+            page: 1,
+          },
+          timeout: 5000,
+        });
+
+        if (response.data && response.data.results) {
+          tmdbResults = response.data.results
+            .filter((movie) => movie.poster_path && movie.release_date)
+            .slice(0, 10)
+            .map((movie) => ({
+              id: movie.id,
+              _id: String(movie.id),
+              title: movie.title,
+              overview: movie.overview,
+              poster_path: movie.poster_path,
+              backdrop_path: movie.backdrop_path,
+              release_date: movie.release_date,
+              vote_average: movie.vote_average,
+              genres: movie.genres || [],
+              language: movie.original_language,
+            }));
+        }
+      } catch (tmdbError) {
+        console.error('TMDB search error:', tmdbError.message);
+      }
+    }
+
+    // Combine results (database first, then TMDB, avoiding duplicates by TMDB ID)
+    const tmdbIds = new Set(tmdbResults.map(m => m.id));
+    const dbFiltered = dbResults.filter(m => !tmdbIds.has(m.tmdbId));
+    
+    const combinedResults = [...dbFiltered, ...tmdbResults];
+
+    return res.status(200).json({
+      success: true,
+      data: combinedResults,
+    });
+  } catch (error) {
+    console.error('Error searching movies:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error searching movies',
+    });
+  }
+};
+
 export const searchTMDBMovies = async (req, res) => {
   try {
     const { query } = req.query;

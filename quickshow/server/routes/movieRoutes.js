@@ -9,6 +9,7 @@ import {
   getUpcomingMovies,
   getPopularMovies,
   deleteMovie,
+  searchMovies,
   searchTMDBMovies,
 } from '../controllers/movieController.js';
 import { requireAdminMiddleware } from '../middleware/auth.js';
@@ -26,6 +27,8 @@ router.get('/trending', getTrendingMovies);
 router.get('/upcoming', getUpcomingMovies);
 
 router.get('/popular', getPopularMovies);
+
+router.get('/search', searchMovies);
 
 router.get('/search-tmdb', searchTMDBMovies);
 
