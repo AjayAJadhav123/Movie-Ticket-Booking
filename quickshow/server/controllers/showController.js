@@ -1,5 +1,109 @@
 import Show from '../models/Show.js';
 import Movie from '../models/Movie.js';
+import axios from 'axios';
+
+const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+const getTMDBKey = () => process.env.TMDB_API_KEY;
+
+// Helper function to ensure a movie exists in database
+// If given a TMDB ID (numeric), fetch from TMDB and create/update in DB
+// If given a MongoDB ObjectId, return it
+const ensureMovieInDatabase = async (movieIdInput) => {
+  // Check if it's a MongoDB ObjectId (24 hex characters or valid ObjectId)
+  if (/^[0-9a-fA-F]{24}$/.test(String(movieIdInput))) {
+    // It's already a MongoDB ObjectId
+    const movie = await Movie.findById(movieIdInput);
+    if (movie) return movie._id;
+    return null;
+  }
+
+  // It might be a TMDB ID (numeric or string number)
+  const tmdbId = parseInt(movieIdInput);
+  if (!isNaN(tmdbId)) {
+    // Check if movie already exists by TMDB ID
+    let movie = await Movie.findOne({ tmdbId });
+    
+    if (!movie) {
+      // Fetch from TMDB and create in database
+      try {
+        const TMDB_API_KEY = getTMDBKey();
+        if (!TMDB_API_KEY) {
+          console.error('TMDB_API_KEY not configured');
+          return null;
+        }
+
+        const tmdbResponse = await axios.get(`${TMDB_BASE_URL}/movie/${tmdbId}`, {
+          params: { api_key: TMDB_API_KEY },
+          timeout: 5000,
+        });
+
+        const tmdbData = tmdbResponse.data;
+
+        // Fetch credits for cast
+        let cast = [];
+        try {
+          const creditsResponse = await axios.get(
+            `${TMDB_BASE_URL}/movie/${tmdbId}/credits`,
+            {
+              params: { api_key: TMDB_API_KEY },
+              timeout: 5000,
+            }
+          );
+          cast = creditsResponse.data.cast
+            ?.slice(0, 10)
+            .map((actor) => actor.name) || [];
+        } catch (err) {
+          console.warn('Failed to fetch cast from TMDB:', err.message);
+        }
+
+        // Fetch trailer
+        let trailer = null;
+        try {
+          const videosResponse = await axios.get(
+            `${TMDB_BASE_URL}/movie/${tmdbId}/videos`,
+            {
+              params: { api_key: TMDB_API_KEY },
+              timeout: 5000,
+            }
+          );
+          const tmdbTrailer = videosResponse.data.results?.find(
+            (video) => video.type === 'Trailer'
+          );
+          if (tmdbTrailer) {
+            trailer = `https://www.youtube.com/watch?v=${tmdbTrailer.key}`;
+          }
+        } catch (err) {
+          console.warn('Failed to fetch trailer from TMDB:', err.message);
+        }
+
+        // Create movie in database
+        movie = new Movie({
+          title: tmdbData.title,
+          overview: tmdbData.overview,
+          poster_path: tmdbData.poster_path,
+          backdrop_path: tmdbData.backdrop_path,
+          release_date: tmdbData.release_date,
+          genres: tmdbData.genres?.map((g) => g.name) || [],
+          cast,
+          tmdbId: tmdbData.id,
+          language: tmdbData.original_language,
+          rating: tmdbData.vote_average,
+          trailer,
+        });
+
+        await movie.save();
+        console.log(`Movie synced from TMDB: ${tmdbId} → MongoDB _id: ${movie._id}`);
+      } catch (error) {
+        console.error(`Error syncing movie ${tmdbId} from TMDB:`, error.message);
+        return null;
+      }
+    }
+
+    return movie._id;
+  }
+
+  return null;
+};
 
 export const getShowList = async (req, res) => {
   try {
@@ -184,7 +288,17 @@ export const getAvailableDates = async (req, res) => {
       });
     }
 
-    const shows = await Show.find({ movieId }).select('date').distinct('date');
+    // Ensure the movie exists in database (sync from TMDB if needed)
+    const dbMovieId = await ensureMovieInDatabase(movieId);
+    
+    if (!dbMovieId) {
+      return res.status(404).json({
+        success: false,
+        message: 'Movie not found',
+      });
+    }
+
+    const shows = await Show.find({ movieId: dbMovieId }).select('date').distinct('date');
 
     const dates = shows.sort((a, b) => a - b);
 
@@ -212,12 +326,22 @@ export const getShowsByMovieAndDate = async (req, res) => {
       });
     }
 
+    // Ensure the movie exists in database (sync from TMDB if needed)
+    const dbMovieId = await ensureMovieInDatabase(movieId);
+    
+    if (!dbMovieId) {
+      return res.status(404).json({
+        success: false,
+        message: 'Movie not found',
+      });
+    }
+
     const startDate = new Date(date);
     const endDate = new Date(date);
     endDate.setDate(endDate.getDate() + 1);
 
     const shows = await Show.find({
-      movieId,
+      movieId: dbMovieId,
       date: { $gte: startDate, $lt: endDate },
     }).sort({ time: 1 });
 
