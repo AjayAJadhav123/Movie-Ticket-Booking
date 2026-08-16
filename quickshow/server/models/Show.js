@@ -17,6 +17,14 @@ const showSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    theatre: {
+      type: String,
+      default: 'Theatre TBD',
+    },
+    screen: {
+      type: String,
+      default: 'Screen TBD',
+    },
     price: {
       type: Number,
       required: true,

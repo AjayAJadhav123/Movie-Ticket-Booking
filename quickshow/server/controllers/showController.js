@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Show from '../models/Show.js';
 import Movie from '../models/Movie.js';
 import axios from 'axios';
@@ -193,25 +194,69 @@ export const getShowById = async (req, res) => {
 
 export const createShow = async (req, res) => {
   try {
-    const { movieId, date, time, price, totalSeats } = req.body;
+    const { movieId, tmdbId, date, time, theatre, screen, price, totalSeats } = req.body;
 
-    if (!movieId || !date || !time || !price) {
+    if (!date || !time || !price) {
       return res.status(400).json({
         success: false,
-        message: 'All fields are required',
+        message: 'Date, time, and price are required',
       });
     }
 
-    const movie = await Movie.findById(movieId);
-    if (!movie) {
-      return res.status(404).json({
+    if (!theatre || !screen) {
+      return res.status(400).json({
         success: false,
-        message: 'Movie not found',
+        message: 'Theatre and screen are required',
       });
     }
 
+    let dbMovieId;
+
+    if (movieId) {
+      // Validate MongoDB ObjectId
+      if (!mongoose.Types.ObjectId.isValid(movieId)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid movie ID format',
+        });
+      }
+      const movie = await Movie.findById(movieId);
+      if (!movie) {
+        return res.status(404).json({
+          success: false,
+          message: 'Movie not found',
+        });
+      }
+      dbMovieId = movieId;
+    } else if (tmdbId) {
+      // Handle TMDB ID - sync movie and get MongoDB ID
+      const tmdbIdNum = parseInt(tmdbId);
+      if (isNaN(tmdbIdNum)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid TMDB ID',
+        });
+      }
+
+      // Ensure movie exists in database
+      const dbMovieId_result = await ensureMovieInDatabase(tmdbIdNum);
+      if (!dbMovieId_result) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to sync movie from TMDB',
+        });
+      }
+      dbMovieId = dbMovieId_result;
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Either movieId or tmdbId is required',
+      });
+    }
+
+    // Check for duplicate show
     const existingShow = await Show.findOne({
-      movieId,
+      movieId: dbMovieId,
       date: new Date(date),
       time,
     });
@@ -224,9 +269,11 @@ export const createShow = async (req, res) => {
     }
 
     const newShow = new Show({
-      movieId,
+      movieId: dbMovieId,
       date: new Date(date),
       time,
+      theatre: theatre || 'Theatre TBD',
+      screen: screen || 'Screen TBD',
       price,
       totalSeats: totalSeats || 100,
     });

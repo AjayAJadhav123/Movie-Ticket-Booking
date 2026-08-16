@@ -561,3 +561,72 @@ export const deleteMovie = async (req, res) => {
     });
   }
 };
+
+export const searchTMDBMovies = async (req, res) => {
+  try {
+    const { query } = req.query;
+
+    if (!query || query.trim().length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: 'Search query must be at least 2 characters',
+      });
+    }
+
+    const TMDB_API_KEY = getTMDBKey();
+    if (!TMDB_API_KEY) {
+      return res.status(503).json({
+        success: false,
+        message: 'TMDB API key not configured',
+      });
+    }
+
+    try {
+      const response = await axios.get(`${TMDB_BASE_URL}/search/movie`, {
+        params: {
+          api_key: TMDB_API_KEY,
+          query: query.trim(),
+          page: 1,
+        },
+        timeout: 5000,
+      });
+
+      if (response.data && response.data.results) {
+        const results = response.data.results
+          .filter((movie) => movie.poster_path && movie.release_date)
+          .slice(0, 10)
+          .map((movie) => ({
+            id: movie.id,
+            title: movie.title,
+            overview: movie.overview,
+            poster_path: movie.poster_path,
+            backdrop_path: movie.backdrop_path,
+            release_date: movie.release_date,
+            vote_average: movie.vote_average,
+          }));
+
+        return res.status(200).json({
+          success: true,
+          data: results,
+        });
+      }
+    } catch (tmdbError) {
+      console.error('TMDB search error:', tmdbError.message);
+      return res.status(503).json({
+        success: false,
+        message: 'TMDB service temporarily unavailable',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: [],
+    });
+  } catch (error) {
+    console.error('Error searching TMDB movies:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error searching movies',
+    });
+  }
+};
