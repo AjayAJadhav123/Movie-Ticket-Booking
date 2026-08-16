@@ -271,11 +271,11 @@ export default function BookingTicket() {
                 <div className="bg-white rounded-lg p-3 md:p-4 border border-gray-200">
                   <div className="flex justify-between mb-2 text-sm md:text-base">
                     <span className="text-gray-700">Tickets ({booking.seats.length})</span>
-                    <span className="font-semibold">${(booking.amount / 100).toFixed(2)}</span>
+                    <span className="font-semibold">₹{booking.amount.toFixed(2)}</span>
                   </div>
                   <div className="border-t border-gray-200 pt-2 mt-2 flex justify-between font-bold md:text-lg text-base">
                     <span>Total</span>
-                    <span className="text-indigo-600">${(booking.amount / 100).toFixed(2)}</span>
+                    <span className="text-indigo-600">₹{booking.amount.toFixed(2)}</span>
                   </div>
                 </div>
               </div>

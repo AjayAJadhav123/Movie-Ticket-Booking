@@ -116,7 +116,7 @@ export default function ViewBookings() {
                       </span>
                     )}
                   </div>
-                  <p className="font-bold text-indigo-600 text-sm md:text-base">${(booking.amount / 100).toFixed(2)}</p>
+                  <p className="font-bold text-indigo-600 text-sm md:text-base">₹{booking.amount.toFixed(2)}</p>
                 </div>
 
                 <div className="md:col-span-2 lg:col-span-1 flex items-end">

@@ -16,6 +16,7 @@
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "inngest": "^3.8.0",
+    "jwt-decode": "^4.0.0",
     "mongoose": "^8.0.0",
     "nodemailer": "^6.9.7",
     "stripe": "^14.0.0",

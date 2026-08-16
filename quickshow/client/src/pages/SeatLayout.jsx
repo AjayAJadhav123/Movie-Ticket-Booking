@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '@clerk/clerk-react';
 import { useApp } from '../context/AppContext';
 import { loadStripe } from '@stripe/stripe-js';
 import SeatGrid from '../components/SeatGrid';
@@ -11,6 +12,7 @@ import { ArrowLeft } from 'lucide-react';
 export default function SeatLayout() {
   const { showId } = useParams();
   const navigate = useNavigate();
+  const { isLoaded: clerkLoaded, isSignedIn } = useAuth();
   const { selectedSeats, setSelectedSeats, createStripeSession } = useApp();
   const [show, setShow] = useState(null);
   const [movie, setMovie] = useState(null);
@@ -66,6 +68,23 @@ export default function SeatLayout() {
   };
 
   const handleBooking = async () => {
+    // Check Clerk authentication status
+    console.log("Payment attempt - Clerk status:", {
+      clerkLoaded,
+      isSignedIn,
+      selectedSeats: selectedSeats.length
+    });
+
+    if (!clerkLoaded) {
+      toast.error('Clerk is still loading. Please wait.');
+      return;
+    }
+
+    if (!isSignedIn) {
+      toast.error('You must be signed in to book tickets');
+      return;
+    }
+
     if (selectedSeats.length === 0) {
       toast.error('Please select at least one seat');
       return;
@@ -82,6 +101,13 @@ export default function SeatLayout() {
 
       if (sessionData?.sessionId) {
         try {
+          // Use the direct URL if available (modern approach)
+          if (sessionData.url) {
+            window.location.href = sessionData.url;
+            return;
+          }
+          
+          // Fallback to redirectToCheckout (deprecated but may still work)
           const stripe = await loadStripe(stripePublicKey);
           if (!stripe) {
             toast.error('Stripe failed to load');
@@ -164,7 +190,7 @@ export default function SeatLayout() {
               <strong>Time:</strong> {show.time}
             </p>
             <p>
-              <strong>Price per seat:</strong> ${show.price}
+              <strong>Price per seat:</strong> ₹{show.price}
             </p>
           </div>
           <SeatGrid show={show} onSeatsChange={setSelectedSeats} />
@@ -214,16 +240,16 @@ export default function SeatLayout() {
             <div className="space-y-2 md:space-y-3 mb-4 md:mb-6">
               <div className="flex justify-between text-sm md:text-base">
                 <span className="text-gray-600">Subtotal ({selectedSeats.length} seats)</span>
-                <span className="font-semibold">${totalPrice.toFixed(2)}</span>
+                <span className="font-semibold">₹{totalPrice.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm md:text-base">
                 <span className="text-gray-600">Taxes & Fees</span>
-                <span className="font-semibold">${(totalPrice * 0.1).toFixed(2)}</span>
+                <span className="font-semibold">₹{(totalPrice * 0.1).toFixed(2)}</span>
               </div>
               <div className="border-t pt-2 md:pt-3 flex justify-between md:text-lg">
                 <span className="font-bold text-sm md:text-base">Total</span>
                 <span className="text-indigo-600 font-bold text-sm md:text-base">
-                  ${(totalPrice * 1.1).toFixed(2)}
+                  ₹{(totalPrice * 1.1).toFixed(2)}
                 </span>
               </div>
             </div>

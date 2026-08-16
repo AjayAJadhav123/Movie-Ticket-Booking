@@ -90,7 +90,7 @@ export const handleClerkWebhook = async (req, res) => {
 
 export const getUser = async (req, res) => {
   try {
-    const userId = req.auth?.userId;
+    const userId = req.userId;
 
     if (!userId) {
       return res.status(401).json({
@@ -123,7 +123,7 @@ export const getUser = async (req, res) => {
 
 export const addFavorite = async (req, res) => {
   try {
-    const userId = req.auth?.userId;
+    const userId = req.userId;
     const { movieId } = req.body;
 
     if (!userId) {
@@ -169,7 +169,7 @@ export const addFavorite = async (req, res) => {
 
 export const removeFavorite = async (req, res) => {
   try {
-    const userId = req.auth?.userId;
+    const userId = req.userId;
     const { movieId } = req.body;
 
     if (!userId) {
@@ -213,7 +213,7 @@ export const removeFavorite = async (req, res) => {
 
 export const getFavorites = async (req, res) => {
   try {
-    const userId = req.auth?.userId;
+    const userId = req.userId;
 
     if (!userId) {
       return res.status(401).json({

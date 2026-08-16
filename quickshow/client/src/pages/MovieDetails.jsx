@@ -291,7 +291,7 @@ export default function MovieDetails() {
 
                         <div className="mb-4 pb-4 border-b border-gray-700">
                           <p className="text-gray-400 text-xs md:text-sm uppercase tracking-wider font-semibold">Price per Seat</p>
-                          <p className="text-2xl md:text-3xl font-bold text-indigo-400 mt-1">${show.price.toFixed(2)}</p>
+                          <p className="text-2xl md:text-3xl font-bold text-indigo-400 mt-1">₹{show.price.toFixed(2)}</p>
                         </div>
 
                         <div className="mb-6">

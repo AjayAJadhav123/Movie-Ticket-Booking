@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '@clerk/clerk-react';
 
@@ -6,7 +6,7 @@ const AppContext = createContext();
 
 // Wrapper component to use useAuth hook
 function AppProviderInner({ children }) {
-  const { getToken } = useAuth();
+  const { getToken, isLoaded, isSignedIn } = useAuth();
   const [movies, setMovies] = useState([]);
   const [shows, setShows] = useState([]);
   const [selectedShow, setSelectedShow] = useState(null);
@@ -18,27 +18,54 @@ function AppProviderInner({ children }) {
 
   const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
-  const apiClient = axios.create({
-    baseURL: API_BASE,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
+  // Create axios client once (stable reference)
+  const apiClientRef = useRef(null);
 
-  apiClient.interceptors.request.use(
-    async (config) => {
-      try {
-        const token = await getToken();
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
+  if (!apiClientRef.current) {
+    apiClientRef.current = axios.create({
+      baseURL: API_BASE,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  }
+
+  const apiClient = apiClientRef.current;
+
+  // Store getToken in a ref so we can access it in interceptor without re-creating
+  const getTokenRef = useRef(getToken);
+  useEffect(() => {
+    getTokenRef.current = getToken;
+  }, [getToken]);
+
+  // Setup interceptor ONCE when Clerk is loaded
+  useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+
+    // Setup fresh interceptor
+    const requestInterceptorId = apiClient.interceptors.request.use(
+      async (config) => {
+        try {
+          // Get token from ref (always current)
+          const token = await getTokenRef.current();
+          if (token) {
+            config.headers = config.headers || {};
+            config.headers.Authorization = `Bearer ${token}`;
+          }
+        } catch (error) {
+          console.error('Error getting Clerk token:', error.message);
         }
-      } catch (error) {
-        console.error('Error getting Clerk token:', error);
-      }
-      return config;
-    },
-    (error) => Promise.reject(error)
-  );
+        return config;
+      },
+      (error) => Promise.reject(error)
+    );
+
+    return () => {
+      apiClient.interceptors.request.eject(requestInterceptorId);
+    };
+  }, [isLoaded, apiClient]);
 
   const fetchMovies = useCallback(async (filters = {}) => {
     try {
@@ -165,28 +192,42 @@ function AppProviderInner({ children }) {
   const createStripeSession = useCallback(async (showId, seats) => {
     try {
       setLoading(true);
-      const response = await apiClient.post('/api/booking/create-stripe-session', {
-        showId,
-        seats,
-      });
+      
+      // Get fresh token from ref (which is always up-to-date)
+      const token = await getTokenRef.current();
+      if (!token) {
+        throw new Error('Failed to get authentication token');
+      }
+
+      // Make the request with explicit Authorization header
+      const response = await axios.post(
+        `${API_BASE}/api/booking/create-stripe-session`,
+        { showId, seats },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+      
       if (response.data.success) {
         setError(null);
         return response.data.data;
       } else {
-        // Handle error response from backend
         const errorMsg = response.data.message || 'Failed to create payment session';
         setError(errorMsg);
         return { message: errorMsg };
       }
     } catch (err) {
-      console.error('Error creating Stripe session:', err);
+      console.error('Error creating Stripe session:', err.response?.data?.message || err.message);
       const errorMsg = err.response?.data?.message || 'Error creating payment session';
       setError(errorMsg);
       return { message: errorMsg };
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [API_BASE]);
 
   const value = {
     movies,

@@ -1,21 +1,71 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useUser } from '@clerk/clerk-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Loading from '../components/Loading';
-import { Calendar, Clock, Ticket, FileCheck, Eye } from 'lucide-react';
+import { Calendar, Clock, Ticket, FileCheck, Eye, AlertCircle } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 export default function MyBookings() {
   const { isSignedIn } = useUser();
   const navigate = useNavigate();
-  const { bookings, fetchUserBookings, loading } = useApp();
+  const [searchParams] = useSearchParams();
+  const { bookings, fetchUserBookings, loading, apiClient } = useApp();
   const [displayBookings, setDisplayBookings] = useState([]);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
 
   useEffect(() => {
     if (isSignedIn) {
       fetchUserBookings();
+      
+      // Check if returning from payment
+      const sessionId = searchParams.get('session_id');
+      if (sessionId) {
+        verifyPaymentFromSession(sessionId);
+      }
     }
-  }, [isSignedIn]);
+  }, [isSignedIn, searchParams]);
+
+  const verifyPaymentFromSession = async (sessionId) => {
+    try {
+      setVerifyingPayment(true);
+      
+      // Find the booking that corresponds to this session
+      // We'll do this by checking all pending bookings
+      const pendingBookings = bookings.filter(b => b.status === 'pending');
+      
+      for (const booking of pendingBookings) {
+        if (booking.stripeSessionId === sessionId) {
+          // Verify this payment
+          const response = await apiClient.get('/api/booking/verify-payment-session', {
+            params: {
+              sessionId: sessionId,
+              bookingId: booking._id
+            }
+          });
+          
+          if (response.data.success) {
+            if (response.data.data.status === 'paid') {
+              toast.success('✅ Payment confirmed! Your booking is confirmed.');
+              // Refresh bookings to show updated status
+              setTimeout(() => fetchUserBookings(), 500);
+            } else if (response.data.data.status === 'unpaid') {
+              toast.info('Payment is still processing. Please check back in a moment.');
+              // Auto-refresh after 3 seconds
+              setTimeout(() => fetchUserBookings(), 3000);
+            }
+          }
+          break;
+        }
+      }
+    } catch (error) {
+      console.error('Error verifying payment:', error);
+      // Don't show error - payment might still go through via webhook
+      toast.info('Verifying your payment...');
+    } finally {
+      setVerifyingPayment(false);
+    }
+  };
 
   useEffect(() => {
     setDisplayBookings(bookings);
@@ -29,7 +79,7 @@ export default function MyBookings() {
     );
   }
 
-  if (loading) {
+  if (loading || verifyingPayment) {
     return <Loading />;
   }
 
@@ -63,6 +113,15 @@ export default function MyBookings() {
               key={booking._id}
               className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
             >
+              {booking.status === 'pending' && (
+                <div className="bg-yellow-50 border-b border-yellow-200 p-3 flex items-start gap-3">
+                  <AlertCircle size={18} className="text-yellow-700 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-yellow-800">
+                    <p className="font-semibold">Payment Pending</p>
+                    <p>Your payment is being processed. Please wait or check back shortly.</p>
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 p-4 md:p-6">
                 {/* Movie Info */}
                 <div className="md:col-span-2 lg:col-span-2">
@@ -94,7 +153,7 @@ export default function MyBookings() {
                   </div>
                   <p className="text-gray-600 mb-1 md:mb-2 font-semibold text-sm md:text-base">Amount</p>
                   <p className="text-xl md:text-2xl font-bold text-indigo-600">
-                    ${(booking.amount / 100).toFixed(2)}
+                    ₹{booking.amount.toFixed(2)}
                   </p>
                 </div>
 

@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   createStripeSession,
+  verifyPaymentSession,
   handleStripeWebhook,
   getUserBookings,
   getBookingById,
@@ -20,14 +21,16 @@ router.post(
   createStripeSession
 );
 
+router.get('/verify-payment-session', requireAuthMiddleware, verifyPaymentSession);
+
 router.post('/stripe-webhook', handleStripeWebhook);
 
 router.get('/user-bookings', requireAuthMiddleware, getUserBookings);
 
 router.get('/:bookingId', requireAuthMiddleware, getBookingById);
 
-router.get('/admin-bookings', requireAdminMiddleware, getAdminBookings);
+router.get('/admin-bookings', requireAuthMiddleware, requireAdminMiddleware, getAdminBookings);
 
-router.get('/admin-stats', requireAdminMiddleware, getAdminStats);
+router.get('/admin-stats', requireAuthMiddleware, requireAdminMiddleware, getAdminStats);
 
 export default router;

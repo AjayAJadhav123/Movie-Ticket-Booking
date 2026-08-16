@@ -87,7 +87,7 @@ export default function ListShows() {
                       {show.time}
                     </div>
                   </td>
-                  <td className="px-3 md:px-6 py-3 md:py-4 font-semibold whitespace-nowrap">${show.price}</td>
+                  <td className="px-3 md:px-6 py-3 md:py-4 font-semibold whitespace-nowrap">₹{show.price}</td>
                   <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap">
                     <span className="bg-green-100 text-green-800 px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-semibold inline-block">
                       {show.totalSeats - (show.occupiedSeats?.length || 0)}

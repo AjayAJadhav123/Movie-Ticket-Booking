@@ -5,22 +5,20 @@ import Movie from '../models/Movie.js';
 import User from '../models/User.js';
 import { inngest } from '../config/inngest.js';
 
-const stripe = process.env.STRIPE_SECRET_KEY 
-  ? new Stripe(process.env.STRIPE_SECRET_KEY)
-  : null;
-
 export const createStripeSession = async (req, res) => {
   try {
-    // Check if Stripe is configured
-    if (!stripe || !process.env.STRIPE_SECRET_KEY) {
+    // Initialize Stripe inside the function to ensure env vars are loaded
+    if (!process.env.STRIPE_SECRET_KEY) {
       return res.status(503).json({
         success: false,
-        message: 'Stripe is not configured. Add STRIPE_SECRET_KEY to server/.env.',
+        message: 'Stripe is not configured',
       });
     }
 
-    const userId = req.auth?.userId;
-    const { showId, seats, seatType } = req.body;
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    
+    const userId = req.userId;
+    const { showId, seats } = req.body;
 
     if (!userId) {
       return res.status(401).json({
@@ -57,17 +55,25 @@ export const createStripeSession = async (req, res) => {
       }
     }
 
-    const user = await User.findOne({ clerkId: userId });
-
+    // Get user, create if doesn't exist
+    let user = await User.findOne({ clerkId: userId });
+    
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found',
+      // Create a basic user entry from Clerk userId
+      user = new User({
+        clerkId: userId,
+        name: 'User',
+        email: `user+${userId}@example.com`,
       });
+      await user.save();
     }
 
     const pricePerSeat = show.price;
-    const totalAmount = pricePerSeat * seats.length;
+    const subtotalAmount = pricePerSeat * seats.length;
+    const taxAmount = Math.round(subtotalAmount * 0.1 * 100) / 100; // 10% tax
+    const totalAmount = subtotalAmount + taxAmount;
+    
+    console.log(`💰 Booking Calculation: ${seats.length} seats × ₹${pricePerSeat} = ₹${subtotalAmount} + ₹${taxAmount} tax = ₹${totalAmount} total`);
 
     const booking = new Booking({
       userId,
@@ -96,19 +102,30 @@ export const createStripeSession = async (req, res) => {
     );
 
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
+      payment_method_types: ['card', 'upi'],
       mode: 'payment',
       line_items: [
         {
           price_data: {
-            currency: 'usd',
+            currency: 'inr',
             product_data: {
               name: `${show.movieId?.title || 'Movie'} - Seats: ${seats.join(', ')}`,
               description: `Show: ${show.time} on ${show.date.toDateString()}`,
             },
-            unit_amount: pricePerSeat * 100,
+            unit_amount: Math.round(pricePerSeat * 100),
           },
           quantity: seats.length,
+        },
+        {
+          price_data: {
+            currency: 'inr',
+            product_data: {
+              name: 'Taxes & Fees (10%)',
+              description: 'Service tax and booking fees',
+            },
+            unit_amount: Math.round(taxAmount * 100),
+          },
+          quantity: 1,
         },
       ],
       customer_email: user.email,
@@ -131,12 +148,13 @@ export const createStripeSession = async (req, res) => {
       success: true,
       data: {
         sessionId: session.id,
+        url: session.url,
         bookingId: booking._id,
         clientSecret: session.client_secret,
       },
     });
   } catch (error) {
-    console.error('Error creating Stripe session:', error);
+    console.error('Error creating Stripe session:', error.message);
     return res.status(500).json({
       success: false,
       message: 'Error creating payment session',
@@ -144,13 +162,119 @@ export const createStripeSession = async (req, res) => {
   }
 };
 
+// New endpoint to verify payment status from Stripe directly
+export const verifyPaymentSession = async (req, res) => {
+  try {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return res.status(503).json({
+        success: false,
+        message: 'Stripe is not configured',
+      });
+    }
+
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    const { sessionId, bookingId } = req.query;
+
+    if (!sessionId || !bookingId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Session ID and booking ID are required',
+      });
+    }
+
+    // Get booking to verify ownership
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found',
+      });
+    }
+
+    // Verify this session belongs to this booking
+    if (booking.stripeSessionId !== sessionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Session ID does not match booking',
+      });
+    }
+
+    // Get session from Stripe
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    // Session status reference:
+    // - 'open': Checkout session still in progress
+    // - 'complete': Checkout completed (payment may be processing)
+    // - 'expired': Session expired without completion
+
+    if (session.status === 'complete' && session.payment_status === 'paid') {
+      // Payment is confirmed
+      if (booking.status !== 'confirmed') {
+        // This handles case where webhook might have failed/delayed
+        booking.status = 'confirmed';
+        booking.paymentId = session.payment_intent;
+        await booking.save();
+
+        const seats = JSON.parse(session.metadata.seats);
+        const show = await Show.findById(session.metadata.showId);
+
+        if (show) {
+          show.occupiedSeats = Array.from(
+            new Set([...show.occupiedSeats, ...seats])
+          );
+          show.lockedSeats = show.lockedSeats.filter(
+            (locked) => !seats.includes(locked.seatNumber)
+          );
+          await show.save();
+        }
+
+        console.log(`✅ Session Verified & Booking Confirmed: ${booking._id}`);
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          status: 'paid',
+          bookingStatus: booking.status,
+          amount: booking.amount,
+        },
+      });
+    } else if (session.payment_status === 'unpaid') {
+      return res.status(200).json({
+        success: true,
+        data: {
+          status: 'unpaid',
+          bookingStatus: booking.status,
+          message: 'Payment is still processing',
+        },
+      });
+    } else {
+      return res.status(200).json({
+        success: true,
+        data: {
+          status: session.payment_status,
+          bookingStatus: booking.status,
+        },
+      });
+    }
+  } catch (error) {
+    console.error('Error verifying payment session:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Error verifying payment session',
+    });
+  }
+};
+
 export const handleStripeWebhook = async (req, res) => {
-  if (!stripe || !process.env.STRIPE_SECRET_KEY) {
+  if (!process.env.STRIPE_SECRET_KEY) {
     return res.status(503).json({
       success: false,
       message: 'Stripe is not configured',
     });
   }
+
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
   const sig = req.headers['stripe-signature'];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -201,6 +325,8 @@ export const handleStripeWebhook = async (req, res) => {
       booking.status = 'confirmed';
       booking.paymentId = session.payment_intent;
       await booking.save();
+
+      console.log(`✅ Payment Confirmed: Booking ${booking._id} - Amount: ₹${booking.amount} INR - Status: ${booking.status}`);
 
       const seats = JSON.parse(session.metadata.seats);
       const show = await Show.findById(session.metadata.showId);
@@ -263,7 +389,7 @@ export const handleStripeWebhook = async (req, res) => {
 
 export const getUserBookings = async (req, res) => {
   try {
-    const userId = req.auth?.userId;
+    const userId = req.userId;
 
     if (!userId) {
       return res.status(401).json({
@@ -294,7 +420,7 @@ export const getUserBookings = async (req, res) => {
 
 export const getBookingById = async (req, res) => {
   try {
-    const userId = req.auth?.userId;
+    const userId = req.userId;
     const { bookingId } = req.params;
 
     if (!userId) {

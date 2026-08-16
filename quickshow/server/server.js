@@ -45,11 +45,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.use(clerkMiddleware({
-  onError: (err) => {
-    console.warn('Clerk middleware warning:', err.message);
-  },
-}));
+app.use(clerkMiddleware());
 
 app.use('/api/user', userRoutes);
 app.use('/api/movie', movieRoutes);
@@ -58,6 +54,19 @@ app.use('/api/booking', bookingRoutes);
 
 // Inngest handler - using correct v3 syntax
 app.use('/api/inngest', serve({ client: inngest }));
+
+// 404 handler for debugging API routes
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    console.log(`404: ${req.method} ${req.path}`);
+  }
+  res.status(404).json({
+    success: false,
+    message: 'Route not found',
+    path: req.path,
+    method: req.method,
+  });
+});
 
 app.use((err, req, res, next) => {
   console.error('Error:', err);
