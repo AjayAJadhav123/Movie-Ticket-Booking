@@ -18,6 +18,7 @@ export default function SeatLayout() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const { apiClient } = useApp();
+  const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
 
   useEffect(() => {
     fetchShow();
@@ -70,20 +71,30 @@ export default function SeatLayout() {
       return;
     }
 
+    if (!stripePublicKey) {
+      toast.error('Stripe is not configured. Payment is currently unavailable.');
+      return;
+    }
+
     try {
       setIsBooking(true);
       const sessionData = await createStripeSession(showId, selectedSeats);
 
       if (sessionData?.sessionId) {
-        const stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
-        if (!stripe) {
-          toast.error('Stripe failed to load');
-          return;
-        }
+        try {
+          const stripe = await loadStripe(stripePublicKey);
+          if (!stripe) {
+            toast.error('Stripe failed to load');
+            return;
+          }
 
-        await stripe.redirectToCheckout({
-          sessionId: sessionData.sessionId,
-        });
+          await stripe.redirectToCheckout({
+            sessionId: sessionData.sessionId,
+          });
+        } catch (stripeError) {
+          console.error('Stripe initialization error:', stripeError);
+          toast.error('Payment system error. Please try again.');
+        }
       } else {
         // Check if it's a Stripe configuration error
         const errorMsg = sessionData?.message || 'Failed to create payment session';
