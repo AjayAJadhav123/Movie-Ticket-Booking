@@ -253,7 +253,18 @@ export default function BookingTicket() {
               {/* Booking Details */}
               <div className="col-span-1 md:col-span-2">
                 <div className="space-y-4 md:space-y-6">
-                  {/* Date and Time */}
+                  {/* Date, Time, Theatre, Screen */}
+                  <div className="grid grid-cols-2 gap-4 md:gap-6">
+                    <div>
+                      <p className="text-slate-600 font-semibold mb-1 text-sm md:text-base">THEATRE</p>
+                      <p className="text-lg md:text-2xl font-bold text-slate-900">{booking.showId?.theatre || 'Theatre TBD'}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-600 font-semibold mb-1 text-sm md:text-base">SCREEN</p>
+                      <p className="text-lg md:text-2xl font-bold text-slate-900">{booking.showId?.screen || 'Screen TBD'}</p>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4 md:gap-6">
                     <div>
                       <p className="text-slate-600 font-semibold mb-1 text-sm md:text-base">SHOW DATE</p>

@@ -223,6 +223,12 @@ export default function SeatLayout() {
               </h1>
               <div className="mb-4 text-slate-600 text-sm md:text-base space-y-2">
                 <p>
+                  <span className="text-slate-700 font-semibold">Theatre:</span> {show.theatre || 'Theatre TBD'}
+                </p>
+                <p>
+                  <span className="text-slate-700 font-semibold">Screen:</span> {show.screen || 'Screen TBD'}
+                </p>
+                <p>
                   <span className="text-slate-700 font-semibold">Date:</span> {new Date(show.date).toLocaleDateString()}
                 </p>
                 <p>
@@ -244,6 +250,16 @@ export default function SeatLayout() {
                   <div>
                     <p className="text-slate-600 mb-1 md:mb-2 text-sm md:text-base">Movie</p>
                     <p className="font-semibold text-slate-900 text-sm md:text-base">{movie?.title}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-slate-600 mb-1 md:mb-2 text-sm md:text-base">Theatre</p>
+                    <p className="font-semibold text-slate-900 text-sm md:text-base">{show.theatre || 'Theatre TBD'}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-slate-600 mb-1 md:mb-2 text-sm md:text-base">Screen</p>
+                    <p className="font-semibold text-slate-900 text-sm md:text-base">{show.screen || 'Screen TBD'}</p>
                   </div>
 
                   <div>

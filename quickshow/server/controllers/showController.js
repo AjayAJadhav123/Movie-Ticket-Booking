@@ -173,6 +173,8 @@ export const getShowById = async (req, res) => {
       posterPath: movie?.poster_path || null,
       date: show.date,
       time: show.time,
+      theatre: show.theatre || 'Theatre TBD',
+      screen: show.screen || 'Screen TBD',
       price: show.price,
       totalSeats: show.totalSeats,
       occupiedSeats: show.occupiedSeats,

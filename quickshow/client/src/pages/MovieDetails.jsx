@@ -302,6 +302,13 @@ export default function MovieDetails() {
                         key={show._id}
                         className="card card-hover p-5 md:p-6 transform transition-all hover:-translate-y-1"
                       >
+                        {/* Theatre and Screen */}
+                        <div className="mb-3 pb-3 border-b border-slate-200">
+                          <p className="text-slate-600 text-xs uppercase tracking-wider font-semibold mb-1">Location</p>
+                          <p className="text-sm md:text-base font-semibold text-slate-900">{show.theatre || 'Theatre TBD'}</p>
+                          <p className="text-xs md:text-sm text-slate-600">{show.screen || 'Screen TBD'}</p>
+                        </div>
+
                         <div className="mb-4">
                           <p className="text-slate-600 text-xs uppercase tracking-wider font-semibold">Show Time</p>
                           <p className="text-2xl md:text-3xl font-bold text-slate-900 mt-2">{show.time}</p>
