@@ -143,7 +143,7 @@ export default function AdminMovies() {
         <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold">Manage Movies</h1>
         <button
           onClick={() => setShowTMDBModal(true)}
-          className="flex items-center gap-2 px-3 md:px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold text-sm md:text-base w-full sm:w-auto justify-center sm:justify-start"
+          className="flex items-center gap-2 px-3 md:px-4 py-2 bg-indigo-600 text-slate-900 rounded-lg hover:bg-indigo-700 transition-colors font-semibold text-sm md:text-base w-full sm:w-auto justify-center sm:justify-start"
         >
           <Plus size={18} />
           Import from TMDB
@@ -151,11 +151,11 @@ export default function AdminMovies() {
       </div>
 
       {/* Search and Filter */}
-      <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
+      <div className="bg-slate-50 rounded-lg shadow-lg p-4 md:p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-3 text-gray-400" size={18} />
+            <Search className="absolute left-3 top-3 text-slate-400" size={18} />
             <input
               type="text"
               placeholder="Search movies..."
@@ -193,7 +193,7 @@ export default function AdminMovies() {
                 setSelectedGenre('');
                 setPage(1);
               }}
-              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors text-sm md:text-base"
+              className="px-4 py-2 bg-gray-200 text-slate-800 rounded-lg hover:bg-gray-300 transition-colors text-sm md:text-base"
             >
               Clear Filters
             </button>
@@ -205,37 +205,37 @@ export default function AdminMovies() {
       {loading ? (
         <Loading />
       ) : movies.length === 0 ? (
-        <div className="text-center py-8 md:py-12 bg-white rounded-lg">
-          <AlertCircle size={40} className="mx-auto text-gray-400 mb-3 md:mb-4" />
-          <p className="text-gray-500 text-base md:text-lg">No movies found.</p>
-          <p className="text-gray-400 text-sm md:text-base">
+        <div className="text-center py-8 md:py-12 bg-slate-50 rounded-lg">
+          <AlertCircle size={40} className="mx-auto text-slate-400 mb-3 md:mb-4" />
+          <p className="text-slate-500 text-base md:text-lg">No movies found.</p>
+          <p className="text-slate-400 text-sm md:text-base">
             {searchTerm || selectedGenre
               ? 'Try different search or filter criteria.'
               : 'Import movies from TMDB to get started.'}
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div className="bg-slate-50 rounded-lg shadow-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-max md:min-w-0">
-              <thead className="bg-gray-100 border-b border-gray-200">
+              <thead className="bg-slate-100 border-b border-gray-200">
                 <tr>
-                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold text-gray-700">
+                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold text-slate-700">
                     Poster
                   </th>
-                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold text-gray-700">
+                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold text-slate-700">
                     Title
                   </th>
-                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold text-gray-700 hidden sm:table-cell">
+                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold text-slate-700 hidden sm:table-cell">
                     Release
                   </th>
-                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold text-gray-700 hidden lg:table-cell">
+                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold text-slate-700 hidden lg:table-cell">
                     Rating
                   </th>
-                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold text-gray-700 hidden md:table-cell">
+                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold text-slate-700 hidden md:table-cell">
                     Genres
                   </th>
-                  <th className="px-3 md:px-6 py-3 md:py-4 text-center text-xs md:text-sm font-semibold text-gray-700">
+                  <th className="px-3 md:px-6 py-3 md:py-4 text-center text-xs md:text-sm font-semibold text-slate-700">
                     Action
                   </th>
                 </tr>
@@ -251,24 +251,24 @@ export default function AdminMovies() {
                           className="h-12 md:h-16 object-cover rounded"
                         />
                       ) : (
-                        <div className="h-12 md:h-16 w-8 md:w-12 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">
+                        <div className="h-12 md:h-16 w-8 md:w-12 bg-gray-200 rounded flex items-center justify-center text-xs text-slate-500">
                           No Image
                         </div>
                       )}
                     </td>
                     <td className="px-3 md:px-6 py-3 md:py-4">
                       <div>
-                        <p className="font-semibold text-gray-800 truncate">{movie.title}</p>
-                        <p className="text-xs text-gray-500">ID: {movie.tmdbId}</p>
+                        <p className="font-semibold text-slate-800 truncate">{movie.title}</p>
+                        <p className="text-xs text-slate-500">ID: {movie.tmdbId}</p>
                       </div>
                     </td>
-                    <td className="px-3 md:px-6 py-3 md:py-4 text-gray-600 hidden sm:table-cell whitespace-nowrap">
+                    <td className="px-3 md:px-6 py-3 md:py-4 text-slate-600 hidden sm:table-cell whitespace-nowrap">
                       {movie.release_date
                         ? new Date(movie.release_date).toLocaleDateString()
                         : 'N/A'}
                     </td>
                     <td className="px-3 md:px-6 py-3 md:py-4 hidden lg:table-cell whitespace-nowrap">
-                      <span className="text-sm font-semibold text-gray-800">
+                      <span className="text-sm font-semibold text-slate-800">
                         ★ {movie.rating?.toFixed(1)}
                       </span>
                     </td>
@@ -284,10 +284,10 @@ export default function AdminMovies() {
                             </span>
                           ))
                         ) : (
-                          <span className="text-xs text-gray-500">No genres</span>
+                          <span className="text-xs text-slate-500">No genres</span>
                         )}
                         {movie.genres && movie.genres.length > 2 && (
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-slate-500">
                             +{movie.genres.length - 2}
                           </span>
                         )}
@@ -315,21 +315,21 @@ export default function AdminMovies() {
           {/* Pagination */}
           {pagination.pages > 1 && (
             <div className="flex flex-col sm:flex-row justify-between items-center gap-3 md:gap-4 px-4 md:px-6 py-3 md:py-4 bg-gray-50 border-t border-gray-200">
-              <div className="text-xs md:text-sm text-gray-600">
+              <div className="text-xs md:text-sm text-slate-600">
                 Page {pagination.page} of {pagination.pages} ({pagination.total} total)
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setPage(Math.max(1, page - 1))}
                   disabled={page === 1}
-                  className="px-3 md:px-4 py-2 bg-gray-200 text-gray-800 rounded text-xs md:text-sm disabled:opacity-50 font-semibold"
+                  className="px-3 md:px-4 py-2 bg-gray-200 text-slate-800 rounded text-xs md:text-sm disabled:opacity-50 font-semibold"
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => setPage(Math.min(pagination.pages, page + 1))}
                   disabled={page === pagination.pages}
-                  className="px-3 md:px-4 py-2 bg-gray-200 text-gray-800 rounded text-xs md:text-sm disabled:opacity-50 font-semibold"
+                  className="px-3 md:px-4 py-2 bg-gray-200 text-slate-800 rounded text-xs md:text-sm disabled:opacity-50 font-semibold"
                 >
                   Next
                 </button>
@@ -342,8 +342,8 @@ export default function AdminMovies() {
       {/* TMDB Import Modal */}
       {showTMDBModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md md:max-w-2xl max-h-[90vh] overflow-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-3 md:p-6 flex justify-between items-center">
+          <div className="bg-slate-50 rounded-lg shadow-xl w-full max-w-md md:max-w-2xl max-h-[90vh] overflow-auto">
+            <div className="sticky top-0 bg-slate-50 border-b border-gray-200 p-3 md:p-6 flex justify-between items-center">
               <h2 className="text-lg md:text-2xl font-bold">Import from TMDB</h2>
               <button
                 onClick={() => {
@@ -352,7 +352,7 @@ export default function AdminMovies() {
                   setTmdbResults([]);
                   setTmdbApiKeyMissing(false);
                 }}
-                className="text-gray-400 hover:text-gray-600 text-2xl"
+                className="text-slate-400 hover:text-slate-600 text-2xl"
               >
                 ×
               </button>
@@ -384,7 +384,7 @@ export default function AdminMovies() {
                 <button
                   onClick={searchTMDB}
                   disabled={tmdbLoading || tmdbApiKeyMissing}
-                  className="px-3 md:px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-2 text-sm md:text-base font-semibold"
+                  className="px-3 md:px-6 py-2 bg-indigo-600 text-slate-900 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-2 text-sm md:text-base font-semibold"
                 >
                   {tmdbLoading ? <Loader size={16} className="animate-spin" /> : <Search size={16} />}
                   Search
@@ -392,7 +392,7 @@ export default function AdminMovies() {
               </div>
 
               {tmdbResults.length === 0 && tmdbSearchTerm && !tmdbLoading && (
-                <p className="text-gray-500 text-center py-8 text-sm md:text-base">No results found</p>
+                <p className="text-slate-500 text-center py-8 text-sm md:text-base">No results found</p>
               )}
 
               <div className="space-y-2 md:space-y-3">
@@ -411,14 +411,14 @@ export default function AdminMovies() {
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm md:text-base truncate">{movie.title}</p>
-                      <p className="text-xs md:text-sm text-gray-600">{movie.release_date}</p>
-                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                      <p className="text-xs md:text-sm text-slate-600">{movie.release_date}</p>
+                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">
                         {movie.overview}
                       </p>
                     </div>
                     <button
                       onClick={() => importMovie(movie)}
-                      className="px-3 md:px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 whitespace-nowrap h-fit text-xs md:text-sm font-semibold flex-shrink-0"
+                      className="px-3 md:px-4 py-2 bg-green-600 text-slate-900 rounded hover:bg-green-700 whitespace-nowrap h-fit text-xs md:text-sm font-semibold flex-shrink-0"
                     >
                       Import
                     </button>
@@ -432,3 +432,4 @@ export default function AdminMovies() {
     </div>
   );
 }
+

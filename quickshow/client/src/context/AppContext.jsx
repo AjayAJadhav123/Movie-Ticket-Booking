@@ -8,6 +8,11 @@ const AppContext = createContext();
 function AppProviderInner({ children }) {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const [movies, setMovies] = useState([]);
+  const [latestMovies, setLatestMovies] = useState([]);
+  const [trendingMovies, setTrendingMovies] = useState([]);
+  const [nowPlayingMovies, setNowPlayingMovies] = useState([]);
+  const [upcomingMovies, setUpcomingMovies] = useState([]);
+  const [popularMovies, setPopularMovies] = useState([]);
   const [shows, setShows] = useState([]);
   const [selectedShow, setSelectedShow] = useState(null);
   const [selectedSeats, setSelectedSeats] = useState([]);
@@ -80,6 +85,66 @@ function AppProviderInner({ children }) {
       setError(err.response?.data?.message || 'Error fetching movies');
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  const fetchLatestMovies = useCallback(async () => {
+    try {
+      const response = await apiClient.get('/api/movie/latest');
+      if (response.data.success) {
+        setLatestMovies(response.data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching latest movies:', err);
+      setLatestMovies([]);
+    }
+  }, []);
+
+  const fetchTrendingMovies = useCallback(async () => {
+    try {
+      const response = await apiClient.get('/api/movie/trending');
+      if (response.data.success) {
+        setTrendingMovies(response.data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching trending movies:', err);
+      setTrendingMovies([]);
+    }
+  }, []);
+
+  const fetchNowPlayingMovies = useCallback(async () => {
+    try {
+      const response = await apiClient.get('/api/movie/now-playing');
+      if (response.data.success) {
+        setNowPlayingMovies(response.data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching now playing movies:', err);
+      setNowPlayingMovies([]);
+    }
+  }, []);
+
+  const fetchUpcomingMovies = useCallback(async () => {
+    try {
+      const response = await apiClient.get('/api/movie/upcoming');
+      if (response.data.success) {
+        setUpcomingMovies(response.data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching upcoming movies:', err);
+      setUpcomingMovies([]);
+    }
+  }, []);
+
+  const fetchPopularMovies = useCallback(async () => {
+    try {
+      const response = await apiClient.get('/api/movie/popular');
+      if (response.data.success) {
+        setPopularMovies(response.data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching popular movies:', err);
+      setPopularMovies([]);
     }
   }, []);
 
@@ -233,6 +298,16 @@ function AppProviderInner({ children }) {
     movies,
     fetchMovies,
     fetchMovieById,
+    latestMovies,
+    fetchLatestMovies,
+    trendingMovies,
+    fetchTrendingMovies,
+    nowPlayingMovies,
+    fetchNowPlayingMovies,
+    upcomingMovies,
+    fetchUpcomingMovies,
+    popularMovies,
+    fetchPopularMovies,
     shows,
     fetchShows,
     fetchShowById,

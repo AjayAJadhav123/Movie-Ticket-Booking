@@ -17,7 +17,7 @@ export default function TrailerModal({ movie, isOpen, onClose }) {
       <div className="relative w-full max-w-2xl">
         <button
           onClick={onClose}
-          className="absolute -top-10 right-0 text-white hover:text-gray-300 transition"
+          className="absolute -top-10 right-0 text-slate-900 hover:text-slate-700 transition"
         >
           <X size={32} />
         </button>
@@ -34,18 +34,19 @@ export default function TrailerModal({ movie, isOpen, onClose }) {
                 allowFullScreen
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gray-900">
-                <p className="text-white">Trailer not available</p>
+              <div className="w-full h-full flex items-center justify-center bg-white">
+                <p className="text-slate-900">Trailer not available</p>
               </div>
             )}
           </div>
 
-          <div className="p-4 bg-gray-900">
-            <h3 className="text-white font-bold text-lg">{movie?.title}</h3>
-            <p className="text-gray-400 text-sm mt-1">{movie?.overview}</p>
+          <div className="p-4 bg-white">
+            <h3 className="text-slate-900 font-bold text-lg">{movie?.title}</h3>
+            <p className="text-slate-600 text-sm mt-1">{movie?.overview}</p>
           </div>
         </div>
       </div>
     </div>
   );
 }
+

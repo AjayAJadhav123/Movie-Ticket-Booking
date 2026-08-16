@@ -76,9 +76,9 @@ export default function AddShow() {
     <div className="container mx-auto px-4 py-6 md:py-8 lg:py-12 max-w-2xl">
       <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 md:mb-8">Add New Show</h1>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-lg p-4 md:p-8">
+      <form onSubmit={handleSubmit} className="bg-slate-50 rounded-lg shadow-lg p-4 md:p-8">
         <div className="mb-4 md:mb-6">
-          <label className="block text-gray-700 font-semibold mb-2 text-sm md:text-base">Movie</label>
+          <label className="block text-slate-700 font-semibold mb-2 text-sm md:text-base">Movie</label>
           <select
             name="movieId"
             value={formData.movieId}
@@ -95,7 +95,7 @@ export default function AddShow() {
         </div>
 
         <div className="mb-4 md:mb-6">
-          <label className="block text-gray-700 font-semibold mb-2 text-sm md:text-base">Date</label>
+          <label className="block text-slate-700 font-semibold mb-2 text-sm md:text-base">Date</label>
           <input
             type="date"
             name="date"
@@ -106,7 +106,7 @@ export default function AddShow() {
         </div>
 
         <div className="mb-4 md:mb-6">
-          <label className="block text-gray-700 font-semibold mb-2 text-sm md:text-base">Time</label>
+          <label className="block text-slate-700 font-semibold mb-2 text-sm md:text-base">Time</label>
           <input
             type="time"
             name="time"
@@ -117,7 +117,7 @@ export default function AddShow() {
         </div>
 
         <div className="mb-4 md:mb-6">
-          <label className="block text-gray-700 font-semibold mb-2 text-sm md:text-base">Price per Seat ($)</label>
+          <label className="block text-slate-700 font-semibold mb-2 text-sm md:text-base">Price per Seat ($)</label>
           <input
             type="number"
             name="price"
@@ -130,7 +130,7 @@ export default function AddShow() {
         </div>
 
         <div className="mb-4 md:mb-6">
-          <label className="block text-gray-700 font-semibold mb-2 text-sm md:text-base">Total Seats</label>
+          <label className="block text-slate-700 font-semibold mb-2 text-sm md:text-base">Total Seats</label>
           <input
             type="number"
             name="totalSeats"
@@ -152,3 +152,4 @@ export default function AddShow() {
     </div>
   );
 }
+

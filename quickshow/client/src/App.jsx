@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ClerkProvider, SignIn, SignUp, RedirectToSignIn, useUser } from '@clerk/clerk-react';
+import { ClerkProvider, RedirectToSignIn, useUser } from '@clerk/clerk-react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -14,6 +14,8 @@ import SeatLayout from './pages/SeatLayout';
 import MyBookings from './pages/MyBookings';
 import BookingTicket from './pages/BookingTicket';
 import Favorites from './pages/Favorites';
+import SignInPage from './pages/SignInPage';
+import SignUpPage from './pages/SignUpPage';
 
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AddShow from './pages/admin/AddShow';
@@ -117,12 +119,18 @@ export default function App() {
   }
 
   return (
-    <ClerkProvider publishableKey={clerkPubKey}>
+    <ClerkProvider 
+      publishableKey={clerkPubKey}
+      signInUrl="/sign-in"
+      signUpUrl="/sign-up"
+      afterSignInUrl="/"
+      afterSignUpUrl="/"
+    >
       <BrowserRouter>
         <AppProvider>
-          <div className="flex flex-col min-h-screen">
+          <div className="flex flex-col min-h-screen bg-white">
             <Navbar />
-            <main className="flex-grow bg-gray-50">
+            <main className="flex-grow bg-white">
               <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<Home />} />
@@ -130,8 +138,8 @@ export default function App() {
                 <Route path="/movie/:id" element={<MovieDetails />} />
 
                 {/* Auth Routes */}
-                <Route path="/sign-in/*" element={<SignIn routing="path" path="/sign-in" />} />
-                <Route path="/sign-up/*" element={<SignUp routing="path" path="/sign-up" />} />
+                <Route path="/sign-in/*" element={<SignInPage />} />
+                <Route path="/sign-up/*" element={<SignUpPage />} />
 
                 {/* Protected Routes */}
                 <Route
@@ -226,6 +234,7 @@ export default function App() {
             pauseOnFocusLoss
             draggable
             pauseOnHover
+            theme="dark"
           />
         </AppProvider>
       </BrowserRouter>

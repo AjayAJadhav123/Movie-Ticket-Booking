@@ -1,0 +1,38 @@
+<svg viewBox="0 0 180 48" xmlns="http://www.w3.org/2000/svg" width="180" height="48">
+  <defs>
+    <linearGradient id="iconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366F1;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#A855F7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#D946EF;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#D946EF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E11D48;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Film reel circle background -->
+  <circle cx="16" cy="24" r="15" fill="none" stroke="url(#iconGradient)" stroke-width="2" opacity="0.3"/>
+  
+  <!-- Play button triangle inside circle -->
+  <g>
+    <!-- Circle with gradient -->
+    <circle cx="16" cy="24" r="12" fill="url(#iconGradient)" opacity="0.95"/>
+    
+    <!-- Play triangle -->
+    <polygon points="12,19 12,29 23,24" fill="white" opacity="0.95"/>
+    
+    <!-- Film strip edge accent -->
+    <rect x="6" y="18" width="2" height="3" fill="url(#accentGradient)" opacity="0.8"/>
+    <rect x="6" y="24" width="2" height="3" fill="url(#accentGradient)" opacity="0.8"/>
+    <rect x="6" y="30" width="2" height="3" fill="url(#accentGradient)" opacity="0.8"/>
+  </g>
+
+  <!-- QuickShow text -->
+  <text x="35" y="32" font-family="Arial, sans-serif" font-size="24" font-weight="700" letter-spacing="-0.5">
+    <tspan fill="#111827">Quick</tspan><tspan fill="url(#iconGradient)">Show</tspan>
+  </text>
+
+  <!-- Subtle accent dot -->
+  <circle cx="175" cy="14" r="1.5" fill="url(#accentGradient)"/>
+</svg>

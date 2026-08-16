@@ -63,10 +63,10 @@ export default function SeatGrid({ show, onSeatsChange }) {
   };
 
   return (
-    <div className="bg-white rounded-lg p-4 md:p-6 w-full overflow-x-auto">
+    <div className="card p-4 md:p-6 w-full overflow-x-auto">
       <div className="mb-6 md:mb-8">
-        <h3 className="text-center text-gray-600 mb-3 md:mb-4 font-semibold text-sm md:text-base">SCREEN</h3>
-        <div className="h-1 bg-gradient-to-r from-gray-300 via-gray-400 to-gray-300 rounded"></div>
+        <h3 className="text-center text-slate-600 mb-3 md:mb-4 font-semibold text-sm md:text-base uppercase tracking-wide">Screen</h3>
+        <div className="h-1 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 rounded"></div>
       </div>
 
       <div className="flex justify-center mb-6 md:mb-8 w-full">
@@ -74,7 +74,7 @@ export default function SeatGrid({ show, onSeatsChange }) {
           {Array.from({ length: Math.ceil(allSeats.length / seatsPerRow) }).map(
             (_, rowIndex) => (
               <div key={rowIndex} className="flex justify-center gap-1 md:gap-2 mb-2 md:mb-3">
-                <span className="text-xs text-gray-500 w-5 md:w-4 font-bold text-right mr-1 md:mr-2 flex items-center">
+                <span className="text-xs text-slate-500 w-5 md:w-4 font-bold text-right mr-1 md:mr-2 flex items-center">
                   {String.fromCharCode(65 + rowIndex)}
                 </span>
                 {allSeats
@@ -90,9 +90,9 @@ export default function SeatGrid({ show, onSeatsChange }) {
                           rounded-t-lg font-xs transition-all min-h-9 min-w-9 md:w-10 md:h-10 w-9 h-9
                           ${
                             status === 'occupied'
-                              ? 'bg-gray-300 cursor-not-allowed'
+                              ? 'bg-slate-400 cursor-not-allowed text-slate-600'
                               : status === 'selected'
-                              ? 'bg-pink-600 text-white cursor-pointer hover:bg-pink-700'
+                              ? 'bg-indigo-600 text-white cursor-pointer hover:bg-indigo-700'
                               : 'bg-green-500 hover:bg-green-600 text-white cursor-pointer'
                           }
                         `}
@@ -104,7 +104,7 @@ export default function SeatGrid({ show, onSeatsChange }) {
                       </button>
                     );
                   })}
-                <span className="text-xs text-gray-500 w-5 md:w-4 font-bold ml-1 md:ml-2 flex items-center">
+                <span className="text-xs text-slate-500 w-5 md:w-4 font-bold ml-1 md:ml-2 flex items-center">
                   {String.fromCharCode(65 + rowIndex)}
                 </span>
               </div>
@@ -116,36 +116,36 @@ export default function SeatGrid({ show, onSeatsChange }) {
       <div className="flex justify-center gap-3 md:gap-6 text-xs md:text-sm flex-wrap px-2">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-green-500 rounded-t flex-shrink-0"></div>
-          <span>Available</span>
+          <span className="text-slate-700">Available</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-pink-600 rounded-t flex-shrink-0"></div>
-          <span>Selected</span>
+          <div className="w-4 h-4 bg-indigo-600 rounded-t flex-shrink-0"></div>
+          <span className="text-slate-700">Selected</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-gray-300 rounded-t flex-shrink-0"></div>
-          <span>Occupied</span>
+          <div className="w-4 h-4 bg-slate-400 rounded-t flex-shrink-0"></div>
+          <span className="text-slate-700">Occupied</span>
         </div>
       </div>
 
       {selectedSeats.length > 0 && (
-        <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t">
-          <p className="font-semibold mb-2 text-sm md:text-base">Selected Seats:</p>
+        <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-slate-200">
+          <p className="font-semibold mb-2 text-sm md:text-base text-slate-900">Selected Seats:</p>
           <div className="flex gap-2 flex-wrap">
             {selectedSeats.map((seat) => (
               <span
                 key={seat}
-                className="bg-pink-100 text-pink-800 px-2 md:px-3 py-1 rounded font-semibold text-xs md:text-sm"
+                className="bg-indigo-100 text-indigo-600 px-2 md:px-3 py-1 rounded font-semibold text-xs md:text-sm border border-indigo-300"
               >
                 {seat}
               </span>
             ))}
           </div>
-          <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t">
+          <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-slate-200">
             <div className="flex justify-between items-center">
-              <span className="font-semibold text-sm md:text-base">Total Price:</span>
+              <span className="font-semibold text-sm md:text-base text-slate-700">Total Price:</span>
               <span className="text-xl md:text-2xl font-bold text-indigo-600">
-                ${(show?.price * selectedSeats.length).toFixed(2)}
+                ₹{(show?.price * selectedSeats.length).toFixed(2)}
               </span>
             </div>
           </div>
@@ -154,3 +154,4 @@ export default function SeatGrid({ show, onSeatsChange }) {
     </div>
   );
 }
+

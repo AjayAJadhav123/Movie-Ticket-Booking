@@ -53,20 +53,20 @@ export default function ListShows() {
       {loading ? (
         <div className="text-center py-8 md:py-12">Loading...</div>
       ) : shows.length === 0 ? (
-        <div className="text-center py-8 md:py-12 bg-white rounded-lg">
-          <p className="text-gray-500 text-base md:text-lg">No shows found.</p>
+        <div className="text-center py-8 md:py-12 bg-slate-50 rounded-lg">
+          <p className="text-slate-500 text-base md:text-lg">No shows found.</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full bg-white rounded-lg shadow-lg overflow-hidden min-w-max md:min-w-0">
-            <thead className="bg-gray-100">
+          <table className="w-full bg-slate-50 rounded-lg shadow-lg overflow-hidden min-w-max md:min-w-0">
+            <thead className="bg-slate-100">
               <tr>
-                <th className="px-3 md:px-6 py-3 md:py-4 text-left font-semibold text-gray-700 text-xs md:text-sm lg:text-base">Movie</th>
-                <th className="px-3 md:px-6 py-3 md:py-4 text-left font-semibold text-gray-700 text-xs md:text-sm lg:text-base">Date</th>
-                <th className="px-3 md:px-6 py-3 md:py-4 text-left font-semibold text-gray-700 text-xs md:text-sm lg:text-base">Time</th>
-                <th className="px-3 md:px-6 py-3 md:py-4 text-left font-semibold text-gray-700 text-xs md:text-sm lg:text-base">Price</th>
-                <th className="px-3 md:px-6 py-3 md:py-4 text-left font-semibold text-gray-700 text-xs md:text-sm lg:text-base">Available</th>
-                <th className="px-3 md:px-6 py-3 md:py-4 text-center font-semibold text-gray-700 text-xs md:text-sm lg:text-base">Actions</th>
+                <th className="px-3 md:px-6 py-3 md:py-4 text-left font-semibold text-slate-700 text-xs md:text-sm lg:text-base">Movie</th>
+                <th className="px-3 md:px-6 py-3 md:py-4 text-left font-semibold text-slate-700 text-xs md:text-sm lg:text-base">Date</th>
+                <th className="px-3 md:px-6 py-3 md:py-4 text-left font-semibold text-slate-700 text-xs md:text-sm lg:text-base">Time</th>
+                <th className="px-3 md:px-6 py-3 md:py-4 text-left font-semibold text-slate-700 text-xs md:text-sm lg:text-base">Price</th>
+                <th className="px-3 md:px-6 py-3 md:py-4 text-left font-semibold text-slate-700 text-xs md:text-sm lg:text-base">Available</th>
+                <th className="px-3 md:px-6 py-3 md:py-4 text-center font-semibold text-slate-700 text-xs md:text-sm lg:text-base">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -111,3 +111,4 @@ export default function ListShows() {
     </div>
   );
 }
+
