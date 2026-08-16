@@ -13,8 +13,8 @@ export default function Home() {
   const navigate = useNavigate();
   const { isSignedIn } = useAuth();
   const { 
-    movies, 
-    fetchMovies, 
+    latestMovies,
+    fetchLatestMovies,
     bookings, 
     fetchUserBookings, 
     loading,
@@ -32,7 +32,7 @@ export default function Home() {
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
 
   useEffect(() => {
-    fetchMovies({ page: 1 });
+    fetchLatestMovies();
     fetchTrendingMovies();
     fetchNowPlayingMovies();
     fetchUpcomingMovies();
@@ -43,15 +43,15 @@ export default function Home() {
   }, [isSignedIn]);
 
   useEffect(() => {
-    // Use trending movies for hero if available, otherwise use default movies
-    const heroMovies = trendingMovies.length > 0 ? trendingMovies : movies;
+    // Use trending movies for hero if available, otherwise use latest movies
+    const heroMovies = trendingMovies.length > 0 ? trendingMovies : latestMovies;
     if (heroMovies && heroMovies.length > 0) {
       setFeaturedMovie(heroMovies[currentHeroIndex % heroMovies.length]);
     }
-  }, [trendingMovies, movies, currentHeroIndex]);
+  }, [trendingMovies, latestMovies, currentHeroIndex]);
 
   const handleHeroNavigation = (direction) => {
-    const heroMovies = trendingMovies.length > 0 ? trendingMovies : movies;
+    const heroMovies = trendingMovies.length > 0 ? trendingMovies : latestMovies;
     if (heroMovies.length === 0) return;
     setCurrentHeroIndex((prev) => 
       direction === 'next' 
@@ -62,12 +62,12 @@ export default function Home() {
 
   const recentBookings = bookings.slice(0, 3);
 
-  if (loading && movies.length === 0 && trendingMovies.length === 0) {
+  if (loading && latestMovies.length === 0 && trendingMovies.length === 0) {
     return <Loading />;
   }
 
   // Get hero image with fallback
-  const heroMovies = trendingMovies.length > 0 ? trendingMovies : movies;
+  const heroMovies = trendingMovies.length > 0 ? trendingMovies : latestMovies;
   let featuredImageUrl = getPlaceholderImage('backdrop');
   if (featuredMovie?.backdrop_path) {
     featuredImageUrl = `https://image.tmdb.org/t/p/w1280${featuredMovie.backdrop_path}`;
