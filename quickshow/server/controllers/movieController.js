@@ -165,7 +165,6 @@ export const getNowPlayingMovies = async (req, res) => {
 
     let retries = 0;
     const maxRetries = 2;
-    let lastError = null;
 
     while (retries < maxRetries) {
       try {
@@ -184,16 +183,13 @@ export const getNowPlayingMovies = async (req, res) => {
           });
         }
       } catch (err) {
-        lastError = err;
         retries++;
         if (retries < maxRetries) {
-          // Wait before retrying
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       }
     }
 
-    // All retries failed - return fallback response
     console.warn('TMDB now_playing endpoint unavailable after retries');
     return res.status(200).json({
       success: true,
@@ -202,6 +198,243 @@ export const getNowPlayingMovies = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching now playing movies from TMDB:', error.message);
+    return res.status(200).json({
+      success: true,
+      data: [],
+      message: 'TMDB service temporarily unavailable',
+    });
+  }
+};
+
+export const getTrendingMovies = async (req, res) => {
+  try {
+    const TMDB_API_KEY = getTMDBKey();
+    
+    if (!TMDB_API_KEY) {
+      return res.status(503).json({
+        success: false,
+        message: 'TMDB API key not configured',
+      });
+    }
+
+    let retries = 0;
+    const maxRetries = 2;
+    let lastError = null;
+
+    while (retries < maxRetries) {
+      try {
+        const response = await axios.get(`${TMDB_BASE_URL}/trending/movie/day`, {
+          params: {
+            api_key: TMDB_API_KEY,
+          },
+          timeout: 5000,
+        });
+
+        if (response.data && response.data.results) {
+          return res.status(200).json({
+            success: true,
+            data: response.data.results.slice(0, 10),
+          });
+        }
+      } catch (err) {
+        lastError = err;
+        retries++;
+        if (retries < maxRetries) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      }
+    }
+
+    console.warn('TMDB trending endpoint unavailable after retries');
+    return res.status(200).json({
+      success: true,
+      data: [],
+      message: 'Currently no data available from TMDB. Please try again later.',
+    });
+  } catch (error) {
+    console.error('Error fetching trending movies from TMDB:', error.message);
+    return res.status(200).json({
+      success: true,
+      data: [],
+      message: 'TMDB service temporarily unavailable',
+    });
+  }
+};
+
+export const getUpcomingMovies = async (req, res) => {
+  try {
+    const TMDB_API_KEY = getTMDBKey();
+    
+    if (!TMDB_API_KEY) {
+      return res.status(503).json({
+        success: false,
+        message: 'TMDB API key not configured',
+      });
+    }
+
+    let retries = 0;
+    const maxRetries = 2;
+    let lastError = null;
+
+    while (retries < maxRetries) {
+      try {
+        const response = await axios.get(`${TMDB_BASE_URL}/movie/upcoming`, {
+          params: {
+            api_key: TMDB_API_KEY,
+            page: 1,
+          },
+          timeout: 5000,
+        });
+
+        if (response.data && response.data.results) {
+          return res.status(200).json({
+            success: true,
+            data: response.data.results.slice(0, 10),
+          });
+        }
+      } catch (err) {
+        lastError = err;
+        retries++;
+        if (retries < maxRetries) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      }
+    }
+
+    console.warn('TMDB upcoming endpoint unavailable after retries');
+    return res.status(200).json({
+      success: true,
+      data: [],
+      message: 'Currently no data available from TMDB. Please try again later.',
+    });
+  } catch (error) {
+    console.error('Error fetching upcoming movies from TMDB:', error.message);
+    return res.status(200).json({
+      success: true,
+      data: [],
+      message: 'TMDB service temporarily unavailable',
+    });
+  }
+};
+
+export const getPopularMovies = async (req, res) => {
+  try {
+    const TMDB_API_KEY = getTMDBKey();
+    
+    if (!TMDB_API_KEY) {
+      return res.status(503).json({
+        success: false,
+        message: 'TMDB API key not configured',
+      });
+    }
+
+    let retries = 0;
+    const maxRetries = 2;
+    let lastError = null;
+
+    while (retries < maxRetries) {
+      try {
+        const response = await axios.get(`${TMDB_BASE_URL}/movie/popular`, {
+          params: {
+            api_key: TMDB_API_KEY,
+            page: 1,
+          },
+          timeout: 5000,
+        });
+
+        if (response.data && response.data.results) {
+          return res.status(200).json({
+            success: true,
+            data: response.data.results.slice(0, 10),
+          });
+        }
+      } catch (err) {
+        lastError = err;
+        retries++;
+        if (retries < maxRetries) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      }
+    }
+
+    console.warn('TMDB popular endpoint unavailable after retries');
+    return res.status(200).json({
+      success: true,
+      data: [],
+      message: 'Currently no data available from TMDB. Please try again later.',
+    });
+  } catch (error) {
+    console.error('Error fetching popular movies from TMDB:', error.message);
+    return res.status(200).json({
+      success: true,
+      data: [],
+      message: 'TMDB service temporarily unavailable',
+    });
+  }
+};
+
+export const getLatestMovies = async (req, res) => {
+  try {
+    const TMDB_API_KEY = getTMDBKey();
+    
+    if (!TMDB_API_KEY) {
+      return res.status(503).json({
+        success: false,
+        message: 'TMDB API key not configured',
+      });
+    }
+
+    // Fetch multiple pages to get more recent movies
+    let allMovies = [];
+    let retries = 0;
+    const maxRetries = 2;
+
+    for (let page = 1; page <= 3; page++) {
+      try {
+        const response = await axios.get(`${TMDB_BASE_URL}/movie/now_playing`, {
+          params: {
+            api_key: TMDB_API_KEY,
+            region: 'IN',
+            page: page,
+          },
+          timeout: 5000,
+        });
+
+        if (response.data && response.data.results) {
+          allMovies = allMovies.concat(response.data.results);
+        }
+      } catch (err) {
+        retries++;
+        if (retries >= maxRetries) break;
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+    }
+
+    // Remove duplicates by id
+    const uniqueMovies = Array.from(
+      new Map(allMovies.map((m) => [m.id, m])).values()
+    );
+
+    // Sort by release_date descending (newest first)
+    const sortedMovies = uniqueMovies
+      .filter((m) => m.release_date && m.poster_path)
+      .sort((a, b) => new Date(b.release_date) - new Date(a.release_date))
+      .slice(0, 20);
+
+    if (sortedMovies.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        message: 'No latest movies available',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: sortedMovies,
+    });
+  } catch (error) {
+    console.error('Error fetching latest movies:', error.message);
     return res.status(200).json({
       success: true,
       data: [],

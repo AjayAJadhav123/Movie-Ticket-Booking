@@ -3,6 +3,9 @@ import {
   createStripeSession,
   verifyPaymentSession,
   handleStripeWebhook,
+  createCashfreeOrder,
+  verifyCashfreePayment,
+  handleCashfreeWebhook,
   getUserBookings,
   getBookingById,
   getAdminBookings,
@@ -15,6 +18,7 @@ import {
 
 const router = express.Router();
 
+// Stripe endpoints
 router.post(
   '/create-stripe-session',
   requireAuthMiddleware,
@@ -25,6 +29,22 @@ router.get('/verify-payment-session', requireAuthMiddleware, verifyPaymentSessio
 
 router.post('/stripe-webhook', handleStripeWebhook);
 
+// Cashfree endpoints - Dynamic UPI QR (replaces Razorpay)
+router.post(
+  '/create-cashfree-order',
+  requireAuthMiddleware,
+  createCashfreeOrder
+);
+
+router.post(
+  '/verify-cashfree-payment',
+  requireAuthMiddleware,
+  verifyCashfreePayment
+);
+
+router.post('/cashfree-webhook', handleCashfreeWebhook);
+
+// Booking management
 router.get('/user-bookings', requireAuthMiddleware, getUserBookings);
 
 router.get('/:bookingId', requireAuthMiddleware, getBookingById);

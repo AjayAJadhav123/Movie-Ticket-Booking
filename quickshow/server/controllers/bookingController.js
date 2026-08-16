@@ -1,9 +1,26 @@
 import Stripe from 'stripe';
+import { Cashfree } from 'cashfree-pg';
+import crypto from 'crypto';
 import Booking from '../models/Booking.js';
 import Show from '../models/Show.js';
 import Movie from '../models/Movie.js';
 import User from '../models/User.js';
 import { inngest } from '../config/inngest.js';
+
+// Initialize Cashfree SDK (Version >=5)
+let cashfree = null;
+const initCashfree = () => {
+  if (!cashfree) {
+    const clientId = process.env.CASHFREE_APP_ID;
+    const clientSecret = process.env.CASHFREE_SECRET_KEY;
+    const environment = process.env.CASHFREE_ENV === 'PRODUCTION' ? Cashfree.PRODUCTION : Cashfree.SANDBOX;
+    
+    if (clientId && clientSecret) {
+      cashfree = new Cashfree(environment, clientId, clientSecret);
+    }
+  }
+  return cashfree;
+};
 
 export const createStripeSession = async (req, res) => {
   try {
@@ -540,3 +557,357 @@ export const getAdminStats = async (req, res) => {
     });
   }
 };
+
+// CASHFREE - Dynamic UPI QR Code Payment Flow (Replaces Razorpay)
+// Note: Razorpay functions removed - using Cashfree for UPI payments
+
+// CASHFREE - Dynamic UPI QR Code Payment Flow
+export const createCashfreeOrder = async (req, res) => {
+  try {
+    if (!process.env.CASHFREE_APP_ID || !process.env.CASHFREE_SECRET_KEY) {
+      console.error('Cashfree config missing:', {
+        appId: !!process.env.CASHFREE_APP_ID,
+        secretKey: !!process.env.CASHFREE_SECRET_KEY,
+      });
+      return res.status(503).json({
+        success: false,
+        message: 'Cashfree is not configured',
+      });
+    }
+
+    const userId = req.userId;
+    const { showId, seats } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Unauthorized',
+      });
+    }
+
+    if (!showId || !seats || !Array.isArray(seats) || seats.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Show ID and seats are required',
+      });
+    }
+
+    const show = await Show.findById(showId).populate('movieId');
+
+    if (!show) {
+      return res.status(404).json({
+        success: false,
+        message: 'Show not found',
+      });
+    }
+
+    const occupiedSeatSet = new Set(show.occupiedSeats);
+    const selectedSeatSet = new Set(seats);
+
+    for (const seat of selectedSeatSet) {
+      if (occupiedSeatSet.has(seat)) {
+        return res.status(409).json({
+          success: false,
+          message: 'One or more selected seats are already occupied',
+        });
+      }
+    }
+
+    // Get user, create if doesn't exist
+    let user = await User.findOne({ clerkId: userId });
+    
+    if (!user) {
+      user = new User({
+        clerkId: userId,
+        name: 'User',
+        email: `user+${userId}@example.com`,
+      });
+      await user.save();
+    }
+
+    const pricePerSeat = show.price;
+    const subtotalAmount = pricePerSeat * seats.length;
+    const taxAmount = Math.round(subtotalAmount * 0.1 * 100) / 100;
+    const totalAmount = subtotalAmount + taxAmount;
+    
+    console.log(`💰 Cashfree Booking: ${seats.length} seats × ₹${pricePerSeat} = ₹${subtotalAmount} + ₹${taxAmount} tax = ₹${totalAmount} INR`);
+
+    const booking = new Booking({
+      userId,
+      showId,
+      seats,
+      amount: totalAmount,
+      status: 'pending',
+      paymentMethod: 'cashfree',
+      movieTitle: show.movieId?.title || 'Unknown Movie',
+      showDate: show.date,
+      showTime: show.time,
+    });
+
+    await booking.save();
+
+    const lockedSeatsEntry = seats.map((seat) => ({
+      seatNumber: seat,
+      userId,
+      bookedAt: new Date(),
+    }));
+
+    await Show.updateOne(
+      { _id: showId },
+      {
+        $push: { lockedSeats: { $each: lockedSeatsEntry } },
+      }
+    );
+
+    // Initialize Cashfree
+    try {
+      const cfInstance = initCashfree();
+      
+      if (!cfInstance) {
+        return res.status(503).json({
+          success: false,
+          message: 'Cashfree SDK not initialized. Check your credentials.',
+        });
+      }
+
+      const orderId = `order_${booking._id.toString()}_${Date.now()}`;
+
+      const request = {
+        order_id: orderId,
+        order_amount: totalAmount,
+        order_currency: 'INR',
+        customer_details: {
+          customer_id: userId,
+          customer_email: user.email,
+          customer_phone: '9000000000',
+          customer_name: user.name || 'Customer',
+        },
+        order_meta: {
+          return_url: `${process.env.FRONTEND_URL}/my-bookings?order_id=${orderId}`,
+          notify_url: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/booking/cashfree-webhook`,
+        },
+        order_note: `QuickShow - ${show.movieId?.title} - Seats: ${seats.join(',')}`,
+      };
+
+      const response = await Cashfree.PGCreateOrder(request);
+
+      console.log('✅ Cashfree order created:', orderId, 'Response:', response);
+
+      const paymentSessionId = response?.data?.payment_session_id || response?.payment_session_id;
+
+      await Booking.updateOne(
+        { _id: booking._id },
+        { cashfreeOrderId: orderId }
+      );
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          orderId: orderId,
+          bookingId: booking._id.toString(),
+          amount: totalAmount,
+          currency: 'INR',
+          paymentSessionId: paymentSessionId,
+        },
+      });
+    } catch (cashfreeError) {
+      console.error('Cashfree SDK error:', {
+        name: cashfreeError?.name,
+        message: cashfreeError?.message,
+        code: cashfreeError?.code,
+        full: cashfreeError,
+      });
+      throw cashfreeError;
+    }
+  } catch (error) {
+    console.error('Error creating Cashfree order:', {
+      message: error?.message || 'Unknown error',
+      code: error?.code,
+      name: error?.name,
+    });
+    return res.status(500).json({
+      success: false,
+      message: 'Error creating payment order',
+    });
+  }
+};
+
+// Verify Cashfree payment
+export const verifyCashfreePayment = async (req, res) => {
+  try {
+    if (!process.env.CASHFREE_SECRET_KEY) {
+      return res.status(503).json({
+        success: false,
+        message: 'Cashfree is not configured',
+      });
+    }
+
+    const userId = req.userId;
+    const { orderId, paymentId, bookingId } = req.body;
+
+    if (!orderId || !paymentId || !bookingId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required payment verification fields',
+      });
+    }
+
+    // Get booking
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found',
+      });
+    }
+
+    // Verify booking belongs to user
+    if (booking.userId !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized booking access',
+      });
+    }
+
+    // Initialize Cashfree
+    const cfInstance = initCashfree();
+    
+    if (!cfInstance) {
+      return res.status(503).json({
+        success: false,
+        message: 'Cashfree SDK not initialized',
+      });
+    }
+
+    // Get payment from Cashfree
+    const paymentResponse = await Cashfree.PGFetchPayment(orderId, paymentId);
+
+    if (paymentResponse.data?.payment_status === 'SUCCESS') {
+      if (booking.status !== 'confirmed') {
+        booking.status = 'confirmed';
+        booking.paymentId = paymentId;
+        booking.cashfreeOrderId = orderId;
+        await booking.save();
+
+        // Mark seats as occupied
+        const seats = booking.seats;
+        const show = await Show.findById(booking.showId);
+
+        if (show) {
+          show.occupiedSeats = Array.from(
+            new Set([...show.occupiedSeats, ...seats])
+          );
+          show.lockedSeats = show.lockedSeats.filter(
+            (locked) => !seats.includes(locked.seatNumber)
+          );
+          await show.save();
+        }
+
+        // Send event
+        await inngest.send({
+          name: 'booking/created',
+          data: {
+            bookingId: booking._id.toString(),
+            userId: booking.userId,
+            movieTitle: booking.movieTitle,
+            showDate: booking.showDate,
+            showTime: booking.showTime,
+            seats: seats,
+            amount: booking.amount,
+          },
+        });
+
+        console.log(`✅ Cashfree Payment Verified & Booking Confirmed: ${booking._id}`);
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          status: 'confirmed',
+          bookingId: booking._id,
+          amount: booking.amount,
+          message: 'Payment verified and booking confirmed',
+        },
+      });
+    } else {
+      return res.status(200).json({
+        success: true,
+        data: {
+          status: paymentResponse.data?.payment_status || 'FAILED',
+          message: 'Payment not successful',
+        },
+      });
+    }
+  } catch (error) {
+    console.error('Error verifying Cashfree payment:', error?.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Error verifying payment',
+    });
+  }
+};
+
+// Cashfree webhook
+export const handleCashfreeWebhook = async (req, res) => {
+  try {
+    const event = req.body;
+
+    if (event.type === 'PAYMENT_SUCCESS' || event.type === 'PAYMENT_FAILED') {
+      const orderId = event.data?.order?.order_id;
+      const paymentStatus = event.data?.payment?.payment_status;
+
+      const booking = await Booking.findOne({ cashfreeOrderId: orderId });
+
+      if (!booking) {
+        console.warn(`Booking not found for order: ${orderId}`);
+        return res.status(200).json({ success: true });
+      }
+
+      if (paymentStatus === 'SUCCESS' && booking.status === 'pending') {
+        booking.status = 'confirmed';
+        booking.paymentId = event.data?.payment?.cf_payment_id;
+        await booking.save();
+
+        const seats = booking.seats;
+        const show = await Show.findById(booking.showId);
+
+        if (show) {
+          show.occupiedSeats = Array.from(
+            new Set([...show.occupiedSeats, ...seats])
+          );
+          show.lockedSeats = show.lockedSeats.filter(
+            (locked) => !seats.includes(locked.seatNumber)
+          );
+          await show.save();
+        }
+
+        console.log(`✅ Webhook: Payment Confirmed - Booking ${booking._id}`);
+      } else if (paymentStatus === 'FAILED' && booking.status === 'pending') {
+        booking.status = 'failed';
+        await booking.save();
+
+        const seats = booking.seats;
+        const show = await Show.findById(booking.showId);
+
+        if (show) {
+          show.lockedSeats = show.lockedSeats.filter(
+            (locked) => !seats.includes(locked.seatNumber)
+          );
+          await show.save();
+        }
+
+        console.log(`❌ Webhook: Payment Failed - Booking ${booking._id}`);
+      }
+    }
+
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Error handling Cashfree webhook:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Error processing webhook',
+    });
+  }
+};
+
+// End of Cashfree exports
