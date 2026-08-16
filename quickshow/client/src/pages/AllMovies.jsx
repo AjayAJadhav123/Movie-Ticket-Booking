@@ -154,13 +154,17 @@ export default function AllMovies() {
               Showing <span className="text-slate-900 font-semibold">{filteredMovies.length}</span> {filteredMovies.length === 1 ? 'movie' : 'movies'}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredMovies.map((movie) => (
-                <MovieCard
-                  key={movie._id}
-                  movie={movie}
-                  onTrailerClick={() => setTrailerMovie(movie)}
-                />
-              ))}
+              {filteredMovies.map((movie) => {
+                const movieId = movie._id || movie.id;
+                if (!movieId) return null;
+                return (
+                  <MovieCard
+                    key={movieId}
+                    movie={movie}
+                    onTrailerClick={() => setTrailerMovie(movie)}
+                  />
+                );
+              })}
             </div>
           </div>
         )}

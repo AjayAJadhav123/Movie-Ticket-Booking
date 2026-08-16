@@ -9,8 +9,12 @@ import { useMovieImage } from '../hooks/useMovieImage';
 export default function MovieCard({ movie, onTrailerClick }) {
   const { isSignedIn } = useUser();
   const { favorites, addFavorite, removeFavorite } = useApp();
+  
+  // Ensure we have a valid movie ID for navigation
+  const movieId = movie._id || movie.id || `movie_${Date.now()}`;
+  
   const [isFavorited, setIsFavorited] = useState(
-    favorites.some((fav) => fav._id === movie._id)
+    favorites.some((fav) => fav._id === movieId)
   );
   
   // Use the image hook for robust image handling
@@ -25,7 +29,7 @@ export default function MovieCard({ movie, onTrailerClick }) {
     }
 
     if (isFavorited) {
-      const success = await removeFavorite(movie._id);
+      const success = await removeFavorite(movieId);
       if (success) {
         setIsFavorited(false);
         toast.success('Removed from favorites');
@@ -33,7 +37,7 @@ export default function MovieCard({ movie, onTrailerClick }) {
         toast.error('Failed to remove favorite');
       }
     } else {
-      const success = await addFavorite(movie._id);
+      const success = await addFavorite(movieId);
       if (success) {
         setIsFavorited(true);
         toast.success('Added to favorites');
@@ -43,8 +47,13 @@ export default function MovieCard({ movie, onTrailerClick }) {
     }
   };
 
+  // Prevent rendering if movieId is invalid
+  if (!movieId || movieId.includes('undefined')) {
+    return null;
+  }
+
   return (
-    <Link to={`/movie/${movie._id}`} className="group h-full">
+    <Link to={`/movie/${movieId}`} className="group h-full">
       <div className="card card-hover h-full flex flex-col overflow-hidden">
         {/* Image Container */}
         <div className="relative h-72 md:h-80 overflow-hidden bg-slate-100">
