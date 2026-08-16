@@ -1,6 +1,8 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import { clerkMiddleware } from '@clerk/express';
 import connectDB from './config/db.js';
 import { initializeEmailService } from './services/emailService.js';
@@ -11,8 +13,6 @@ import bookingRoutes from './routes/bookingRoutes.js';
 import { serve } from 'inngest/express';
 import { inngest } from './config/inngest.js';
 import './inngest/functions.js';
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -77,6 +77,9 @@ app.listen(PORT, () => {
   }
   if (!process.env.STRIPE_WEBHOOK_SECRET) {
     console.warn('⚠️  STRIPE_WEBHOOK_SECRET not configured. Webhook processing will fail.');
+  }
+  if (!process.env.TMDB_API_KEY) {
+    console.warn('⚠️  TMDB_API_KEY not configured. Movie data from TMDB will not be available.');
   }
 });
 

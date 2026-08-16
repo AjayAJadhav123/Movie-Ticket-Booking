@@ -2,7 +2,9 @@ import axios from 'axios';
 import Movie from '../models/Movie.js';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
-const TMDB_API_KEY = process.env.TMDB_API_KEY;
+
+// Function to get TMDB API key at runtime
+const getTMDBKey = () => process.env.TMDB_API_KEY;
 
 export const getMovieList = async (req, res) => {
   try {
@@ -76,6 +78,7 @@ export const getMovieById = async (req, res) => {
 export const addMovieFromTMDB = async (req, res) => {
   try {
     const { tmdbId } = req.body;
+    const TMDB_API_KEY = getTMDBKey();
 
     if (!tmdbId) {
       return res.status(400).json({
@@ -151,29 +154,58 @@ export const addMovieFromTMDB = async (req, res) => {
 
 export const getNowPlayingMovies = async (req, res) => {
   try {
+    const TMDB_API_KEY = getTMDBKey();
+    
     if (!TMDB_API_KEY) {
-      return res.status(500).json({
+      return res.status(503).json({
         success: false,
         message: 'TMDB API key not configured',
       });
     }
 
-    const response = await axios.get(`${TMDB_BASE_URL}/movie/now_playing`, {
-      params: {
-        api_key: TMDB_API_KEY,
-        page: 1,
-      },
-    });
+    let retries = 0;
+    const maxRetries = 2;
+    let lastError = null;
 
+    while (retries < maxRetries) {
+      try {
+        const response = await axios.get(`${TMDB_BASE_URL}/movie/now_playing`, {
+          params: {
+            api_key: TMDB_API_KEY,
+            page: 1,
+          },
+          timeout: 5000,
+        });
+
+        if (response.data && response.data.results) {
+          return res.status(200).json({
+            success: true,
+            data: response.data.results.slice(0, 10),
+          });
+        }
+      } catch (err) {
+        lastError = err;
+        retries++;
+        if (retries < maxRetries) {
+          // Wait before retrying
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      }
+    }
+
+    // All retries failed - return fallback response
+    console.warn('TMDB now_playing endpoint unavailable after retries');
     return res.status(200).json({
       success: true,
-      data: response.data.results.slice(0, 10),
+      data: [],
+      message: 'Currently no data available from TMDB. Please try again later.',
     });
   } catch (error) {
-    console.error('Error fetching now playing movies from TMDB:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Error fetching now playing movies',
+    console.error('Error fetching now playing movies from TMDB:', error.message);
+    return res.status(200).json({
+      success: true,
+      data: [],
+      message: 'TMDB service temporarily unavailable',
     });
   }
 };

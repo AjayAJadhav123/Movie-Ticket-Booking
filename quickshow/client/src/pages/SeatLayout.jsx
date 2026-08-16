@@ -85,13 +85,22 @@ export default function SeatLayout() {
           sessionId: sessionData.sessionId,
         });
       } else {
+        // Check if it's a Stripe configuration error
         const errorMsg = sessionData?.message || 'Failed to create payment session';
-        toast.error(errorMsg);
+        if (errorMsg.includes('Stripe is not configured')) {
+          toast.error('Online payment is currently unavailable. Stripe configuration is required.');
+        } else {
+          toast.error(errorMsg);
+        }
       }
     } catch (error) {
       console.error('Error during booking:', error);
       const errorMsg = error.response?.data?.message || error.message || 'Error processing booking';
-      toast.error(errorMsg);
+      if (errorMsg.includes('Stripe')) {
+        toast.error('Online payment is currently unavailable. Stripe configuration is required.');
+      } else {
+        toast.error(errorMsg);
+      }
     } finally {
       setIsBooking(false);
     }
