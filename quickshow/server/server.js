@@ -4,6 +4,8 @@ dotenv.config();
 import express from 'express';
 import cors from 'cors';
 import { clerkMiddleware } from '@clerk/express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import connectDB from './config/db.js';
 import { initializeEmailService } from './services/emailService.js';
 import userRoutes from './routes/userRoutes.js';
@@ -15,6 +17,31 @@ import { inngest } from './config/inngest.js';
 import './inngest/functions.js';
 
 const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: function (origin, callback) {
+      const allowedOrigins = [
+        process.env.FRONTEND_URL || 'http://localhost:5173',
+        'http://localhost:3000',
+        'http://localhost:5173',
+      ];
+      
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, true); // Allow all origins in production for now
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST'],
+  },
+  transports: ['websocket', 'polling'],
+});
+
+// Make io accessible to routes
+app.locals.io = io;
+
 const PORT = process.env.PORT || 5000;
 
 connectDB();
@@ -90,7 +117,31 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+  console.log('🔌 Socket connected:', socket.id);
+
+  // User joins a specific show room
+  socket.on('join:show', (showId) => {
+    const room = `show:${showId}`;
+    socket.join(room);
+    console.log(`📍 Socket ${socket.id} joined room: ${room}`);
+  });
+
+  // User leaves a show room
+  socket.on('leave:show', (showId) => {
+    const room = `show:${showId}`;
+    socket.leave(room);
+    console.log(`📍 Socket ${socket.id} left room: ${room}`);
+  });
+
+  // Handle disconnect
+  socket.on('disconnect', () => {
+    console.log('❌ Socket disconnected:', socket.id);
+  });
+});
+
+httpServer.listen(PORT, () => {
   console.log(`✅ QuickShow server running on port ${PORT}`);
   console.log(`🚀 Environment: ${process.env.NODE_ENV || 'development'}`);
 

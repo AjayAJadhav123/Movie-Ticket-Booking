@@ -13,6 +13,8 @@ function AppProviderInner({ children }) {
   const [nowPlayingMovies, setNowPlayingMovies] = useState([]);
   const [upcomingMovies, setUpcomingMovies] = useState([]);
   const [popularMovies, setPopularMovies] = useState([]);
+  const [recommendedMovies, setRecommendedMovies] = useState([]);
+  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
   const [shows, setShows] = useState([]);
   const [selectedShow, setSelectedShow] = useState(null);
   const [selectedSeats, setSelectedSeats] = useState([]);
@@ -145,6 +147,21 @@ function AppProviderInner({ children }) {
     } catch (err) {
       console.error('Error fetching popular movies:', err);
       setPopularMovies([]);
+    }
+  }, []);
+
+  const fetchRecommendations = useCallback(async () => {
+    try {
+      setRecommendationsLoading(true);
+      const response = await apiClient.get('/api/movie/recommendations');
+      if (response.data.success) {
+        setRecommendedMovies(response.data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching recommendations:', err);
+      setRecommendedMovies([]);
+    } finally {
+      setRecommendationsLoading(false);
     }
   }, []);
 
@@ -308,6 +325,9 @@ function AppProviderInner({ children }) {
     fetchUpcomingMovies,
     popularMovies,
     fetchPopularMovies,
+    recommendedMovies,
+    fetchRecommendations,
+    recommendationsLoading,
     shows,
     fetchShows,
     fetchShowById,

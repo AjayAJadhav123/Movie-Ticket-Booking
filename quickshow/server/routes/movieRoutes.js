@@ -11,8 +11,9 @@ import {
   deleteMovie,
   searchMovies,
   searchTMDBMovies,
+  getRecommendations,
 } from '../controllers/movieController.js';
-import { requireAdminMiddleware } from '../middleware/auth.js';
+import { requireAdminMiddleware, requireAuthMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -31,6 +32,8 @@ router.get('/popular', getPopularMovies);
 router.get('/search', searchMovies);
 
 router.get('/search-tmdb', searchTMDBMovies);
+
+router.get('/recommendations', requireAuthMiddleware, getRecommendations);
 
 router.get('/:id', getMovieById);
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
 
-export default function SeatGrid({ show, onSeatsChange }) {
+export default function SeatGrid({ show, onSeatsChange, socketLockedSeats = new Set(), socketOccupiedSeats = new Set() }) {
   const { selectedSeats, setSelectedSeats } = useApp();
 
   const generateSeats = (total = 100) => {
@@ -14,6 +14,14 @@ export default function SeatGrid({ show, onSeatsChange }) {
 
   const allSeats = generateSeats(show?.totalSeats || 100);
   const occupiedSeats = show?.occupiedSeats || [];
+  const allLockedSeats = new Set([
+    ...(show?.lockedSeats?.map(l => l.seatNumber) || []),
+    ...Array.from(socketLockedSeats),
+  ]);
+  const allOccupiedSeats = new Set([
+    ...occupiedSeats,
+    ...Array.from(socketOccupiedSeats),
+  ]);
   
   // Responsive seats per row: 6 on mobile, 8 on tablet, 10 on desktop
   const getSeatsPerRow = () => {
@@ -36,7 +44,8 @@ export default function SeatGrid({ show, onSeatsChange }) {
   }, []);
 
   const toggleSeat = (seatNumber) => {
-    if (occupiedSeats.includes(seatNumber)) return;
+    // Prevent selecting occupied or locked seats
+    if (allOccupiedSeats.has(seatNumber) || allLockedSeats.has(seatNumber)) return;
 
     const newSelectedSeats = selectedSeats.includes(seatNumber)
       ? selectedSeats.filter((s) => s !== seatNumber)
@@ -49,7 +58,8 @@ export default function SeatGrid({ show, onSeatsChange }) {
   };
 
   const getSeatStatus = (seatNumber) => {
-    if (occupiedSeats.includes(seatNumber)) return 'occupied';
+    if (allOccupiedSeats.has(seatNumber)) return 'occupied';
+    if (allLockedSeats.has(seatNumber)) return 'locked';
     if (selectedSeats.includes(seatNumber)) return 'selected';
     return 'available';
   };
@@ -85,18 +95,20 @@ export default function SeatGrid({ show, onSeatsChange }) {
                       <button
                         key={seatNumber}
                         onClick={() => toggleSeat(seatNumber)}
-                        disabled={status === 'occupied'}
+                        disabled={status === 'occupied' || status === 'locked'}
                         className={`
                           rounded-t-lg font-xs transition-all min-h-9 min-w-9 md:w-10 md:h-10 w-9 h-9
                           ${
                             status === 'occupied'
                               ? 'bg-slate-400 cursor-not-allowed text-slate-600'
+                              : status === 'locked'
+                              ? 'bg-yellow-400 cursor-not-allowed text-slate-700 animate-pulse'
                               : status === 'selected'
                               ? 'bg-indigo-600 text-white cursor-pointer hover:bg-indigo-700'
                               : 'bg-green-500 hover:bg-green-600 text-white cursor-pointer'
                           }
                         `}
-                        title={`Seat ${String.fromCharCode(65 + rowIndex)}${seatNumber % seatsPerRow || seatsPerRow}`}
+                        title={`Seat ${String.fromCharCode(65 + rowIndex)}${seatNumber % seatsPerRow || seatsPerRow}${status === 'locked' ? ' (Temporarily Locked)' : ''}`}
                       >
                         <span className="text-xs leading-none">
                           {seatNumber % seatsPerRow || seatsPerRow}
@@ -121,6 +133,10 @@ export default function SeatGrid({ show, onSeatsChange }) {
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-indigo-600 rounded-t flex-shrink-0"></div>
           <span className="text-slate-700">Selected</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 bg-yellow-400 rounded-t flex-shrink-0 animate-pulse"></div>
+          <span className="text-slate-700">Temporarily Locked</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-slate-400 rounded-t flex-shrink-0"></div>

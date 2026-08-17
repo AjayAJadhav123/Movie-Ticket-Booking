@@ -659,6 +659,16 @@ export const createCashfreeOrder = async (req, res) => {
       }
     );
 
+    // Emit Socket.IO event to notify other users that seats are locked
+    const io = req.app.locals.io;
+    if (io) {
+      io.to(`show:${showId}`).emit('seats:locked', {
+        seats,
+        userId,
+        timestamp: new Date(),
+      });
+    }
+
     // Initialize Cashfree
     try {
       const cfInstance = initCashfree();
@@ -879,6 +889,16 @@ export const handleCashfreeWebhook = async (req, res) => {
             (locked) => !seats.includes(locked.seatNumber)
           );
           await show.save();
+
+          // Emit Socket.IO event to notify other users that seats are now occupied
+          const io = req.app.locals.io;
+          if (io) {
+            io.to(`show:${show._id.toString()}`).emit('seats:occupied', {
+              seats,
+              userId: booking.userId,
+              timestamp: new Date(),
+            });
+          }
         }
 
         console.log(`✅ Webhook: Payment Confirmed - Booking ${booking._id}`);
@@ -894,6 +914,16 @@ export const handleCashfreeWebhook = async (req, res) => {
             (locked) => !seats.includes(locked.seatNumber)
           );
           await show.save();
+
+          // Emit Socket.IO event to notify other users that locked seats are now released
+          const io = req.app.locals.io;
+          if (io) {
+            io.to(`show:${show._id.toString()}`).emit('seats:released', {
+              seats,
+              userId: booking.userId,
+              timestamp: new Date(),
+            });
+          }
         }
 
         console.log(`❌ Webhook: Payment Failed - Booking ${booking._id}`);

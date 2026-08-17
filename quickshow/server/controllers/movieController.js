@@ -708,3 +708,96 @@ export const searchTMDBMovies = async (req, res) => {
     });
   }
 };
+
+export const getRecommendations = async (req, res) => {
+  try {
+    const { userId } = req.query;
+
+    if (!userId || !userId.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'userId is required',
+      });
+    }
+
+    const AI_SERVICE_URL = process.env.AI_SERVICE_URL;
+    if (!AI_SERVICE_URL) {
+      console.warn('AI_SERVICE_URL not configured, returning popular movies as fallback');
+      return getPopularMoviesAsRecommendations(req, res);
+    }
+
+    try {
+      // Call AI service with timeout
+      const response = await axios.get(
+        `${AI_SERVICE_URL}/api/recommendations/${userId}`,
+        {
+          timeout: 10000, // 10 second timeout
+          params: {
+            limit: 10,
+            exclude_watched: true,
+          },
+        }
+      );
+
+      if (response.data && response.data.success && response.data.data) {
+        // Convert AI service response to include full movie data from database
+        const recommendations = await Promise.all(
+          response.data.data.map(async (rec) => {
+            try {
+              const movie = await Movie.findById(rec.movie_id);
+              if (movie) {
+                return {
+                  ...movie.toObject(),
+                  recommendation_score: rec.score,
+                };
+              }
+              return null;
+            } catch (err) {
+              return null;
+            }
+          })
+        );
+
+        const validRecommendations = recommendations.filter((r) => r !== null);
+
+        return res.status(200).json({
+          success: true,
+          data: validRecommendations,
+          source: 'ai_personalized',
+        });
+      }
+    } catch (aiError) {
+      console.error('AI service error:', aiError.message);
+      // Fallback to popular movies
+      return getPopularMoviesAsRecommendations(req, res);
+    }
+  } catch (error) {
+    console.error('Error fetching recommendations:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching recommendations',
+    });
+  }
+};
+
+// Helper function to return popular movies as fallback
+const getPopularMoviesAsRecommendations = async (req, res) => {
+  try {
+    const movies = await Movie.find()
+      .sort({ rating: -1 })
+      .limit(10);
+
+    return res.status(200).json({
+      success: true,
+      data: movies,
+      source: 'popular_fallback',
+      message: 'AI service unavailable, showing popular movies instead',
+    });
+  } catch (error) {
+    console.error('Error fetching fallback recommendations:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching recommendations',
+    });
+  }
+};

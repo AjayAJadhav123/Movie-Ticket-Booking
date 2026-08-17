@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
 import { useApp } from '../context/AppContext';
 import MovieCard from '../components/MovieCard';
+import RecommendedMovies from '../components/RecommendedMovies';
 import TrailerModal from '../components/TrailerModal';
 import Loading from '../components/Loading';
 import { Play, ChevronLeft, ChevronRight, Ticket, Calendar, Clock } from 'lucide-react';
@@ -186,6 +187,9 @@ export default function Home() {
 
 
       <div className="container mx-auto">
+        {/* RECOMMENDED FOR YOU SECTION - only show if authenticated */}
+        {isSignedIn && <RecommendedMovies />}
+
         {/* TRENDING MOVIES SECTION */}
         {trendingMovies.length > 0 && (
           <section className="mb-16 md:mb-24">

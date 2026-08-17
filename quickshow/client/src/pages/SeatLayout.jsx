@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
 import { useApp } from '../context/AppContext';
+import { useSocketIO } from '../hooks/useSocketIO';
 import SeatGrid from '../components/SeatGrid';
 import Loading from '../components/Loading';
 import Spinner from '../components/Spinner';
