@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import { Play, Calendar, Clock, Ticket, Star, Globe, Users } from 'lucide-react';
 import Loading from '../components/Loading';
 import TrailerModal from '../components/TrailerModal';
+import RecommendedMoviesCarousel from '../components/RecommendedMoviesCarousel';
 import { toast } from 'react-toastify';
 import { useMovieImageWithFallback } from '../hooks/useMovieImage';
 import { getPlaceholderImage } from '../utils/imageUtils';
@@ -348,6 +349,11 @@ export default function MovieDetails() {
         isOpen={trailerOpen}
         onClose={() => setTrailerOpen(false)}
       />
+
+      {/* Recommended Movies Section */}
+      <div className="container mx-auto px-4 mt-16">
+        <RecommendedMoviesCarousel movieId={movie._id} movieTitle={movie.title} />
+      </div>
     </div>
   );
 }
