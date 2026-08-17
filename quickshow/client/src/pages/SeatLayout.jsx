@@ -33,6 +33,9 @@ export default function SeatLayout() {
   const [error, setError] = useState(null);
   const { apiClient } = useApp();
 
+  // Socket.IO connection for real-time seat availability
+  const { isConnected, lockedSeats, occupiedSeats } = useSocketIO(showId);
+
   useEffect(() => {
     fetchShow();
   }, [showId]);
@@ -219,9 +222,18 @@ export default function SeatLayout() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
             {/* Seat Grid */}
             <div className="lg:col-span-2">
-              <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6 text-slate-900">
-                {movie?.title} - Select Seats
-              </h1>
+              <div className="flex items-center justify-between mb-6">
+                <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
+                  {movie?.title} - Select Seats
+                </h1>
+                {/* Socket.IO Connection Status */}
+                <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-slate-100">
+                  <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                  <span className="text-xs md:text-sm font-medium text-slate-700">
+                    {isConnected ? 'Live' : 'Connecting...'}
+                  </span>
+                </div>
+              </div>
               <div className="mb-4 text-slate-600 text-sm md:text-base space-y-2">
                 <p>
                   <span className="text-slate-700 font-semibold">Theatre:</span> {show.theatre || 'Theatre TBD'}
@@ -239,7 +251,7 @@ export default function SeatLayout() {
                   <span className="text-slate-700 font-semibold">Price per seat:</span> ₹{show.price}
                 </p>
               </div>
-              <SeatGrid show={show} onSeatsChange={setSelectedSeats} />
+              <SeatGrid show={show} onSeatsChange={setSelectedSeats} socketLockedSeats={lockedSeats} socketOccupiedSeats={occupiedSeats} />
             </div>
 
             {/* Booking Summary */}
