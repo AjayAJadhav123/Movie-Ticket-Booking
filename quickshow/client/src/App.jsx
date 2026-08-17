@@ -1,10 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ClerkProvider, RedirectToSignIn, useUser } from '@clerk/clerk-react';
 import { ToastContainer } from 'react-toastify';
+import { useState } from 'react';
 import 'react-toastify/dist/ReactToastify.css';
 
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import AIButton from './components/AIButton';
+import AIChat from './components/AIChat';
 import { AppProvider } from './context/AppContext';
 
 import Home from './pages/Home';
@@ -128,116 +131,133 @@ export default function App() {
     >
       <BrowserRouter>
         <AppProvider>
-          <div className="flex flex-col min-h-screen bg-white">
-            <Navbar />
-            <main className="flex-grow bg-white">
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/" element={<Home />} />
-                <Route path="/movies" element={<AllMovies />} />
-                <Route path="/movie/:id" element={<MovieDetails />} />
-
-                {/* Auth Routes */}
-                <Route path="/sign-in/*" element={<SignInPage />} />
-                <Route path="/sign-up/*" element={<SignUpPage />} />
-
-                {/* Protected Routes */}
-                <Route
-                  path="/seat-layout/:showId"
-                  element={
-                    <ProtectedRoute>
-                      <SeatLayout />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/my-bookings"
-                  element={
-                    <ProtectedRoute>
-                      <MyBookings />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/booking/:bookingId"
-                  element={
-                    <ProtectedRoute>
-                      <BookingTicket />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/favorites"
-                  element={
-                    <ProtectedRoute>
-                      <Favorites />
-                    </ProtectedRoute>
-                  }
-                />
-
-                {/* Admin Routes */}
-                <Route
-                  path="/admin/dashboard"
-                  element={
-                    <ProtectedAdminRoute>
-                      <AdminDashboard />
-                    </ProtectedAdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/movies"
-                  element={
-                    <ProtectedAdminRoute>
-                      <AdminMovies />
-                    </ProtectedAdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/add-shows"
-                  element={
-                    <ProtectedAdminRoute>
-                      <AddShow />
-                    </ProtectedAdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/list-shows"
-                  element={
-                    <ProtectedAdminRoute>
-                      <ListShows />
-                    </ProtectedAdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/bookings"
-                  element={
-                    <ProtectedAdminRoute>
-                      <ViewBookings />
-                    </ProtectedAdminRoute>
-                  }
-                />
-
-                {/* 404 */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </main>
-            <Footer />
-          </div>
-
-          <ToastContainer
-            position="bottom-right"
-            autoClose={3000}
-            hideProgressBar={false}
-            newestOnTop={false}
-            closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-            theme="dark"
-          />
+          <AIContent />
         </AppProvider>
       </BrowserRouter>
     </ClerkProvider>
+  );
+}
+
+function AIContent() {
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const { isSignedIn } = useUser();
+
+  return (
+    <div className="flex flex-col min-h-screen bg-white">
+      <Navbar />
+      <main className="flex-grow bg-white">
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<Home />} />
+          <Route path="/movies" element={<AllMovies />} />
+          <Route path="/movie/:id" element={<MovieDetails />} />
+
+          {/* Auth Routes */}
+          <Route path="/sign-in/*" element={<SignInPage />} />
+          <Route path="/sign-up/*" element={<SignUpPage />} />
+
+          {/* Protected Routes */}
+          <Route
+            path="/seat-layout/:showId"
+            element={
+              <ProtectedRoute>
+                <SeatLayout />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-bookings"
+            element={
+              <ProtectedRoute>
+                <MyBookings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/booking/:bookingId"
+            element={
+              <ProtectedRoute>
+                <BookingTicket />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/favorites"
+            element={
+              <ProtectedRoute>
+                <Favorites />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Admin Routes */}
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedAdminRoute>
+                <AdminDashboard />
+              </ProtectedAdminRoute>
+            }
+          />
+          <Route
+            path="/admin/movies"
+            element={
+              <ProtectedAdminRoute>
+                <AdminMovies />
+              </ProtectedAdminRoute>
+            }
+          />
+          <Route
+            path="/admin/add-shows"
+            element={
+              <ProtectedAdminRoute>
+                <AddShow />
+              </ProtectedAdminRoute>
+            }
+          />
+          <Route
+            path="/admin/list-shows"
+            element={
+              <ProtectedAdminRoute>
+                <ListShows />
+              </ProtectedAdminRoute>
+            }
+          />
+          <Route
+            path="/admin/bookings"
+            element={
+              <ProtectedAdminRoute>
+                <ViewBookings />
+              </ProtectedAdminRoute>
+            }
+          />
+
+          {/* 404 */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
+      <Footer />
+
+      {/* AI Chat - Only show if signed in */}
+      {isSignedIn && (
+        <>
+          <AIButton isOpen={isChatOpen} onClick={() => setIsChatOpen(!isChatOpen)} />
+          <AIChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+        </>
+      )}
+
+      <ToastContainer
+        position="bottom-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="dark"
+      />
+    </div>
   );
 }
