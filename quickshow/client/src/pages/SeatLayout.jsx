@@ -4,6 +4,7 @@ import { useAuth } from '@clerk/clerk-react';
 import { useApp } from '../context/AppContext';
 import { useSocketIO } from '../hooks/useSocketIO';
 import SeatGrid from '../components/SeatGrid';
+import DynamicPricingDisplay from '../components/DynamicPricingDisplay';
 import Loading from '../components/Loading';
 import Spinner from '../components/Spinner';
 import { toast } from 'react-toastify';
@@ -31,6 +32,7 @@ export default function SeatLayout() {
   const [isBooking, setIsBooking] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [dynamicPrice, setDynamicPrice] = useState(null);
   const { apiClient } = useApp();
 
   // Socket.IO connection for real-time seat availability
@@ -205,7 +207,7 @@ export default function SeatLayout() {
     );
   }
 
-  const totalPrice = show?.price * selectedSeats.length;
+  const totalPrice = dynamicPrice ? (dynamicPrice * selectedSeats.length) : (show?.price * selectedSeats.length);
 
   return (
     <>
@@ -258,6 +260,11 @@ export default function SeatLayout() {
             <div className="lg:col-span-1">
               <div className="card p-4 md:p-6 lg:sticky lg:top-24">
                 <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6 text-slate-900">Booking Summary</h2>
+
+                {/* Dynamic Pricing Display */}
+                <div className="mb-4 md:mb-6">
+                  <DynamicPricingDisplay showId={showId} />
+                </div>
 
                 <div className="space-y-3 md:space-y-4 mb-4 md:mb-6 pb-4 md:pb-6 border-b border-slate-200">
                   <div>

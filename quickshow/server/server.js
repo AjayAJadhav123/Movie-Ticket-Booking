@@ -14,6 +14,7 @@ import showRoutes from './routes/showRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 import recommendationRoutes from './routes/recommendationRoutes.js';
+import pricingRoutes from './routes/pricingRoutes.js';
 import { serve } from 'inngest/express';
 import { inngest } from './config/inngest.js';
 import './inngest/functions.js';
@@ -96,6 +97,7 @@ app.use('/api/show', showRoutes);
 app.use('/api/booking', bookingRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/recommendations', recommendationRoutes);
+app.use('/api/pricing', pricingRoutes);
 
 // Inngest handler - using correct v3 syntax
 app.use('/api/inngest', serve({ client: inngest }));

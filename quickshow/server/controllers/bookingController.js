@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 import { Cashfree } from 'cashfree-pg';
-import crypto from 'crypto';
+import { validateBookingPrice } from '../services/pricingService.js';
 import Booking from '../models/Booking.js';
 import Show from '../models/Show.js';
 import Movie from '../models/Movie.js';
@@ -632,11 +632,34 @@ export const createCashfreeOrder = async (req, res) => {
     
     console.log(`💰 Cashfree Booking: ${seats.length} seats × ₹${pricePerSeat} = ₹${subtotalAmount} + ₹${taxAmount} tax = ₹${totalAmount} INR`);
 
+    // Calculate dynamic price with validation
+    const pricingResult = await validateBookingPrice(showId, seats.length);
+    let finalPricePerSeat = pricePerSeat; // Fallback
+    let finalTotalAmount = totalAmount; // Fallback
+    let demandInfo = null;
+
+    if (pricingResult.success) {
+      const pricing = pricingResult.data;
+      finalPricePerSeat = pricing.dynamicPrice;
+      finalTotalAmount = pricing.total;
+      demandInfo = {
+        basePrice: pricing.basePrice,
+        dynamicPrice: pricing.dynamicPrice,
+        demandScore: pricing.demandScore,
+      };
+
+      console.log(
+        `💲 Dynamic Pricing Applied: ${seats.length} seats × ₹${finalPricePerSeat} = ₹${pricing.subtotal} + ₹${pricing.tax} tax = ₹${finalTotalAmount} INR (Demand Score: ${pricing.demandScore})`
+      );
+    } else {
+      console.warn('Dynamic pricing unavailable, using base price:', pricingResult.error);
+    }
+
     const booking = new Booking({
       userId,
       showId,
       seats,
-      amount: totalAmount,
+      amount: finalTotalAmount,
       status: 'pending',
       paymentMethod: 'cashfree',
       movieTitle: show.movieId?.title || 'Unknown Movie',
@@ -684,7 +707,7 @@ export const createCashfreeOrder = async (req, res) => {
 
       const request = {
         order_id: orderId,
-        order_amount: totalAmount,
+        order_amount: finalTotalAmount,
         order_currency: 'INR',
         customer_details: {
           customer_id: userId,
@@ -715,9 +738,10 @@ export const createCashfreeOrder = async (req, res) => {
         data: {
           orderId: orderId,
           bookingId: booking._id.toString(),
-          amount: totalAmount,
+          amount: finalTotalAmount,
           currency: 'INR',
           paymentSessionId: paymentSessionId,
+          demandInfo,
         },
       });
     } catch (cashfreeError) {
