@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { BarChart3, Users, DollarSign, Ticket } from 'lucide-react';
+import { BarChart3, Users, DollarSign, Ticket, TrendingUp } from 'lucide-react';
 import Loading from '../../components/Loading';
 
 export default function AdminDashboard() {
@@ -87,6 +87,13 @@ export default function AdminDashboard() {
           <div className="card p-4 md:p-6">
             <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-slate-900">Quick Actions</h2>
             <div className="space-y-2 md:space-y-3">
+              <a
+                href="/admin/analytics"
+                className="block w-full btn-primary text-center text-sm md:text-base py-2 md:py-3 flex items-center justify-center gap-2"
+              >
+                <TrendingUp size={18} />
+                View Analytics
+              </a>
               <a
                 href="/admin/movies"
                 className="block w-full btn-primary text-center text-sm md:text-base py-2 md:py-3"

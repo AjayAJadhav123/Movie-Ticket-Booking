@@ -25,6 +25,7 @@ import AddShow from './pages/admin/AddShow';
 import ListShows from './pages/admin/ListShows';
 import AdminMovies from './pages/admin/AdminMovies';
 import ViewBookings from './pages/admin/ViewBookings';
+import AdminAnalytics from './pages/admin/AdminAnalytics';
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
@@ -196,6 +197,14 @@ function AIContent() {
             element={
               <ProtectedAdminRoute>
                 <AdminDashboard />
+              </ProtectedAdminRoute>
+            }
+          />
+          <Route
+            path="/admin/analytics"
+            element={
+              <ProtectedAdminRoute>
+                <AdminAnalytics />
               </ProtectedAdminRoute>
             }
           />
