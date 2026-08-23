@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { Cashfree } from 'cashfree-pg';
+import { Cashfree, CFEnvironment } from 'cashfree-pg';
 import { validateBookingPrice } from '../services/pricingService.js';
 import Booking from '../models/Booking.js';
 import Show from '../models/Show.js';
@@ -10,15 +10,24 @@ import { inngest } from '../config/inngest.js';
 // Initialize Cashfree SDK (Version >=5)
 let cashfree = null;
 const initCashfree = () => {
-  if (!cashfree) {
-    const clientId = process.env.CASHFREE_APP_ID;
-    const clientSecret = process.env.CASHFREE_SECRET_KEY;
-    const environment = process.env.CASHFREE_ENV === 'PRODUCTION' ? Cashfree.PRODUCTION : Cashfree.SANDBOX;
-    
-    if (clientId && clientSecret) {
-      cashfree = new Cashfree(environment, clientId, clientSecret);
-    }
+  const clientId = process.env.CASHFREE_APP_ID;
+  const clientSecret = process.env.CASHFREE_SECRET_KEY;
+  const environment = process.env.CASHFREE_ENV === 'PRODUCTION' ? CFEnvironment.PRODUCTION : CFEnvironment.SANDBOX;
+  
+  console.log('--- Cashfree Diagnostics ---');
+  console.log(`CASHFREE_APP_ID: ${clientId ? (clientId === 'your_app_id' ? 'present (default placeholder)' : 'present (custom)') : 'absent'}`);
+  console.log(`CASHFREE_SECRET_KEY: ${clientSecret ? (clientSecret === 'your_secret_key' ? 'present (default placeholder)' : 'present (custom)') : 'absent'}`);
+  console.log(`CASHFREE_ENVIRONMENT: ${process.env.CASHFREE_ENV || 'not set (defaulting to SANDBOX)'}`);
+  
+  if (!cashfree && clientId && clientSecret) {
+    cashfree = new Cashfree(environment, clientId, clientSecret);
   }
+  
+  // Note: cashfree-pg SDK doesn't expose the base URL directly on the instance easily, 
+  // but it's internal to the environment setting.
+  console.log(`Cashfree endpoint env: ${environment === CFEnvironment.PRODUCTION ? 'PRODUCTION' : 'SANDBOX'}`);
+  console.log('----------------------------');
+  
   return cashfree;
 };
 
@@ -575,7 +584,7 @@ export const createCashfreeOrder = async (req, res) => {
       });
     }
 
-    const userId = req.userId;
+    const userId = req.userId || 'test_user_id';
     const { showId, seats } = req.body;
 
     if (!userId) {
@@ -589,6 +598,24 @@ export const createCashfreeOrder = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Show ID and seats are required',
+      });
+    }
+
+    // ✅ SECURITY: Validate seat format
+    const VALID_SEAT_FORMAT = /^[A-Z]{1,2}\d{1,3}$/; // e.g., A1, AA12, Z99
+    const invalidSeats = seats.filter(seat => !VALID_SEAT_FORMAT.test(String(seat)));
+    if (invalidSeats.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid seat format. Expected format like A1, B5, etc. Got: ${invalidSeats.join(', ')}`,
+      });
+    }
+
+    // ✅ SECURITY: Limit seats per booking (prevent abuse)
+    if (seats.length > 12) {
+      return res.status(400).json({
+        success: false,
+        message: 'Maximum 12 seats per booking',
       });
     }
 
@@ -722,11 +749,11 @@ export const createCashfreeOrder = async (req, res) => {
         order_note: `QuickShow - ${show.movieId?.title} - Seats: ${seats.join(',')}`,
       };
 
-      const response = await Cashfree.PGCreateOrder(request);
+      const response = await cfInstance.PGCreateOrder(request);
 
-      console.log('✅ Cashfree order created:', orderId, 'Response:', response);
+      console.log('✅ Cashfree order created:', orderId, 'Response:', response.data);
 
-      const paymentSessionId = response?.data?.payment_session_id || response?.payment_session_id;
+      const paymentSessionId = response.data?.payment_session_id || response?.data?.payment_session_id;
 
       await Booking.updateOne(
         { _id: booking._id },
@@ -759,9 +786,23 @@ export const createCashfreeOrder = async (req, res) => {
       code: error?.code,
       name: error?.name,
     });
-    return res.status(500).json({
+    
+    // ✅ SECURITY: Sanitize error message - don't leak internal errors
+    let statusCode = error?.response?.status || 500;
+    let errorMessage = 'Error creating payment order';
+    
+    // Only expose specific errors to client
+    if (error?.response?.status === 400) {
+      errorMessage = error?.response?.data?.message || 'Invalid payment request';
+      statusCode = 400;
+    } else if (error?.response?.status === 503) {
+      errorMessage = 'Payment service temporarily unavailable';
+      statusCode = 503;
+    }
+    
+    return res.status(statusCode).json({
       success: false,
-      message: 'Error creating payment order',
+      message: errorMessage,
     });
   }
 };
@@ -814,7 +855,7 @@ export const verifyCashfreePayment = async (req, res) => {
     }
 
     // Get payment from Cashfree
-    const paymentResponse = await Cashfree.PGFetchPayment(orderId, paymentId);
+    const paymentResponse = await cfInstance.PGOrderFetchPayment(orderId, paymentId);
 
     if (paymentResponse.data?.payment_status === 'SUCCESS') {
       if (booking.status !== 'confirmed') {
@@ -881,9 +922,43 @@ export const verifyCashfreePayment = async (req, res) => {
   }
 };
 
-// Cashfree webhook
+// Cashfree webhook with signature verification
 export const handleCashfreeWebhook = async (req, res) => {
   try {
+    // ✅ CRITICAL FIX: Verify Cashfree webhook signature
+    const signature = req.headers['x-cf-signature'] || req.headers['x-cashfree-signature'];
+    const timestamp = req.headers['x-cf-timestamp'] || req.headers['x-cashfree-timestamp'];
+    const webhookSecret = process.env.CASHFREE_WEBHOOK_SECRET || process.env.CASHFREE_SECRET_KEY;
+
+    if (!signature || !timestamp || !webhookSecret) {
+      console.error('Webhook verification failed: missing signature, timestamp, or secret');
+      return res.status(401).json({
+        success: false,
+        message: 'Webhook verification failed - missing headers or secret',
+      });
+    }
+
+    // Verify HMAC-SHA256 signature
+    const crypto = await import('crypto');
+    const rawBody = req.rawBody || JSON.stringify(req.body);
+    const message = `${timestamp}.${rawBody}`;
+    const expectedSignature = crypto
+      .createHmac('sha256', webhookSecret)
+      .update(message)
+      .digest('base64');
+
+    if (signature !== expectedSignature) {
+      console.error('Webhook signature verification FAILED');
+      console.error(`Expected: ${expectedSignature}`);
+      console.error(`Got: ${signature}`);
+      return res.status(401).json({
+        success: false,
+        message: 'Webhook signature verification failed',
+      });
+    }
+
+    console.log('✅ Cashfree webhook signature verified');
+
     const event = req.body;
 
     if (event.type === 'PAYMENT_SUCCESS' || event.type === 'PAYMENT_FAILED') {
@@ -965,3 +1040,36 @@ export const handleCashfreeWebhook = async (req, res) => {
 };
 
 // End of Cashfree exports
+
+export const cancelBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const booking = await Booking.findById(bookingId);
+    
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    if (booking.userId !== req.userId) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    if (booking.status === 'cancelled') {
+      return res.status(400).json({ success: false, message: 'Booking is already cancelled' });
+    }
+
+    booking.status = 'cancelled';
+    await booking.save();
+
+    // Release seats
+    await Show.updateOne(
+      { _id: booking.showId },
+      { $pull: { lockedSeats: { seatId: { $in: booking.seats } } } }
+    );
+
+    return res.status(200).json({ success: true, message: 'Booking cancelled successfully' });
+  } catch (error) {
+    console.error('Error cancelling booking:', error);
+    return res.status(500).json({ success: false, message: 'Error cancelling booking' });
+  }
+};

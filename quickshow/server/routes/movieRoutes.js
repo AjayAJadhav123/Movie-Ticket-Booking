@@ -13,7 +13,7 @@ import {
   searchTMDBMovies,
   getRecommendations,
 } from '../controllers/movieController.js';
-import { requireAdminMiddleware, requireAuthMiddleware } from '../middleware/auth.js';
+import { optionalAuth, requireAdminMiddleware, requireAuthMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -33,12 +33,13 @@ router.get('/search', searchMovies);
 
 router.get('/search-tmdb', searchTMDBMovies);
 
-router.get('/recommendations', requireAuthMiddleware, getRecommendations);
+// Guests receive popular titles, while signed-in users receive personalized results.
+router.get('/recommendations', optionalAuth, getRecommendations);
 
 router.get('/:id', getMovieById);
 
-router.post('/add', requireAdminMiddleware, addMovieFromTMDB);
+router.post('/add', requireAuthMiddleware, requireAdminMiddleware, addMovieFromTMDB);
 
-router.delete('/:id', requireAdminMiddleware, deleteMovie);
+router.delete('/:id', requireAuthMiddleware, requireAdminMiddleware, deleteMovie);
 
 export default router;

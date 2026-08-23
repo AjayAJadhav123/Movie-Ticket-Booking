@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import axios from 'axios';
 import { useAuth } from '@clerk/clerk-react';
 
+
 const AppContext = createContext();
 
 // Wrapper component to use useAuth hook
@@ -31,6 +32,9 @@ function AppProviderInner({ children }) {
   if (!apiClientRef.current) {
     apiClientRef.current = axios.create({
       baseURL: API_BASE,
+      // A failed API must display an error state instead of keeping a page
+      // loader visible forever.
+      timeout: 10000,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -55,7 +59,15 @@ function AppProviderInner({ children }) {
     const requestInterceptorId = apiClient.interceptors.request.use(
       async (config) => {
         try {
-          // Get token from ref (always current)
+          // If we have an adminToken, use it first (Admin Session Isolation)
+          const adminToken = localStorage.getItem('adminToken');
+          if (adminToken) {
+            config.headers = config.headers || {};
+            config.headers.Authorization = `Bearer ${adminToken}`;
+            return config;
+          }
+
+          // Otherwise, get token from Clerk ref (always current)
           const token = await getTokenRef.current();
           if (token) {
             config.headers = config.headers || {};
@@ -74,17 +86,29 @@ function AppProviderInner({ children }) {
     };
   }, [isLoaded, apiClient]);
 
-  const fetchMovies = useCallback(async (filters = {}) => {
+  const fetchMovies = useCallback(async (filters = {}, append = false) => {
     try {
       setLoading(true);
       const response = await apiClient.get('/api/movie/list', { params: filters });
       if (response.data.success) {
-        setMovies(response.data.data);
+        if (append) {
+          setMovies((prev) => {
+            const newMovies = response.data.data || [];
+            const existingIds = new Set(prev.map(m => String(m.id || m._id)));
+            const uniqueNew = newMovies.filter(m => !existingIds.has(String(m.id || m._id)));
+            return [...prev, ...uniqueNew];
+          });
+        } else {
+          setMovies(response.data.data || []);
+        }
         setError(null);
+        return response.data;
       }
+      return { success: false };
     } catch (err) {
       console.error('Error fetching movies:', err);
       setError(err.response?.data?.message || 'Error fetching movies');
+      return { success: false, message: err.response?.data?.message };
     } finally {
       setLoading(false);
     }
@@ -92,60 +116,121 @@ function AppProviderInner({ children }) {
 
   const fetchLatestMovies = useCallback(async () => {
     try {
+      console.log('📡 AppContext: Fetching latest movies from API...');
       const response = await apiClient.get('/api/movie/latest');
+      console.log('📥 AppContext: API response:', {
+        success: response.data.success,
+        dataCount: response.data.data?.length,
+        message: response.data.message,
+        source: response.data.source,
+      });
       if (response.data.success) {
         setLatestMovies(response.data.data || []);
+        console.log('✅ AppContext: Latest movies set:', response.data.data?.length);
+        
+        // Return source info so components can detect fallback mode
+        return {
+          success: true,
+          isFallback: response.data.source === 'fallback',
+          message: response.data.message,
+        };
       }
+      return { success: false };
     } catch (err) {
-      console.error('Error fetching latest movies:', err);
+      console.error('❌ AppContext: Error fetching latest movies:', err);
       setLatestMovies([]);
+      return { success: false };
     }
   }, []);
 
   const fetchTrendingMovies = useCallback(async () => {
     try {
+      console.log('📡 AppContext: Fetching trending movies...');
       const response = await apiClient.get('/api/movie/trending');
       if (response.data.success) {
         setTrendingMovies(response.data.data || []);
+        console.log('✅ AppContext: Trending movies set:', response.data.data?.length);
+      } else {
+        console.warn('⚠️ AppContext: Trending fetch returned error:', response.data.message);
+        setTrendingMovies([]);
+        setError(response.data.message);
       }
     } catch (err) {
-      console.error('Error fetching trending movies:', err);
+      console.error('❌ AppContext: Error fetching trending movies:', err.message);
+      if (err.response?.status === 503) {
+        setError('TMDB service is temporarily unavailable.');
+      }
       setTrendingMovies([]);
     }
   }, []);
 
   const fetchNowPlayingMovies = useCallback(async () => {
     try {
+      console.log('📡 AppContext: Fetching now playing movies...');
       const response = await apiClient.get('/api/movie/now-playing');
       if (response.data.success) {
         setNowPlayingMovies(response.data.data || []);
+        console.log('✅ AppContext: Now playing movies set:', response.data.data?.length);
+      } else {
+        console.warn('⚠️ AppContext: Now playing fetch returned error:', response.data.message);
+        setNowPlayingMovies([]);
+        setError(response.data.message);
       }
     } catch (err) {
-      console.error('Error fetching now playing movies:', err);
+      console.error('❌ AppContext: Error fetching now playing movies:', err.message);
+      if (err.response?.status === 503) {
+        setError('TMDB service is temporarily unavailable.');
+      }
       setNowPlayingMovies([]);
     }
   }, []);
 
   const fetchUpcomingMovies = useCallback(async () => {
     try {
+      console.log('📡 AppContext: Fetching upcoming movies...');
       const response = await apiClient.get('/api/movie/upcoming');
       if (response.data.success) {
         setUpcomingMovies(response.data.data || []);
+        console.log('✅ AppContext: Upcoming movies set:', response.data.data?.length);
+      } else {
+        console.warn('⚠️ AppContext: Upcoming fetch returned error:', response.data.message);
+        setUpcomingMovies([]);
+        setError(response.data.message);
       }
     } catch (err) {
-      console.error('Error fetching upcoming movies:', err);
+      console.error('❌ AppContext: Error fetching upcoming movies:', err.message);
+      if (err.response?.status === 503) {
+        setError('TMDB service is temporarily unavailable.');
+      }
       setUpcomingMovies([]);
     }
   }, []);
 
   const fetchPopularMovies = useCallback(async () => {
     try {
+      console.log('📡 AppContext: Fetching popular movies from API...');
       const response = await apiClient.get('/api/movie/popular');
+      console.log('📥 AppContext: API response:', {
+        success: response.data.success,
+        dataCount: response.data.data?.length,
+        message: response.data.message,
+        source: response.data.source,
+      });
       if (response.data.success) {
         setPopularMovies(response.data.data || []);
+        console.log('✅ AppContext: Popular movies set:', response.data.data?.length);
+      } else {
+        console.warn('⚠️ AppContext: API returned error:', response.data.message);
+        setPopularMovies([]);
+        setError(response.data.message);
       }
     } catch (err) {
-      console.error('Error fetching popular movies:', err);
+      console.error('❌ AppContext: Error fetching popular movies:', err.message);
+      if (err.response?.status === 503) {
+        setError('TMDB service is temporarily unavailable. Please try again later.');
+      } else {
+        setError('Failed to fetch movies. Please check your connection.');
+      }
       setPopularMovies([]);
     }
   }, []);
@@ -168,11 +253,19 @@ function AppProviderInner({ children }) {
   const fetchMovieById = useCallback(async (movieId) => {
     try {
       setLoading(true);
-      const response = await apiClient.get(`/api/movie/${movieId}`);
-      if (response.data.success) {
-        setError(null);
-        return response.data.data;
+      // Try backend first
+      try {
+        const response = await apiClient.get(`/api/movie/${movieId}`);
+        if (response.data.success && response.data.data) {
+          setError(null);
+          return response.data.data;
+        }
+      } catch (backendErr) {
+        if (import.meta.env.DEV) console.warn('Backend movie fetch failed, trying TMDB directly:', backendErr.message);
       }
+      // If backend fails, we do NOT fallback to client-side TMDB to protect the API key
+      setError('Movie not found');
+      return null;
     } catch (err) {
       console.error('Error fetching movie:', err);
       setError(err.response?.data?.message || 'Error fetching movie');
@@ -247,7 +340,17 @@ function AppProviderInner({ children }) {
     try {
       const response = await apiClient.post('/api/user/add-favorite', { movieId });
       if (response.data.success) {
-        setFavorites((prev) => [...prev, response.data.data]);
+        // Optimistically update the state instead of refetching
+        setFavorites((prev) => {
+          // Avoid adding duplicates
+          if (prev.some((fav) => fav._id === movieId)) {
+            return prev;
+          }
+          // Add the movie to favorites (we might not have the full movie object, so fetch it)
+          return [...prev, { _id: movieId }];
+        });
+        // Fetch the full favorites list in the background to ensure consistency
+        setTimeout(() => fetchFavorites(), 100);
         return true;
       }
     } catch (err) {
@@ -255,12 +358,13 @@ function AppProviderInner({ children }) {
       setError(err.response?.data?.message || 'Error adding favorite');
       return false;
     }
-  }, []);
+  }, [fetchFavorites]);
 
   const removeFavorite = useCallback(async (movieId) => {
     try {
       const response = await apiClient.post('/api/user/remove-favorite', { movieId });
       if (response.data.success) {
+        // Optimistically update the state
         setFavorites((prev) => prev.filter((m) => m._id !== movieId));
         return true;
       }
@@ -269,7 +373,7 @@ function AppProviderInner({ children }) {
       setError(err.response?.data?.message || 'Error removing favorite');
       return false;
     }
-  }, []);
+  }, [fetchFavorites]);
 
   const createStripeSession = useCallback(async (showId, seats) => {
     try {

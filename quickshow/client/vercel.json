@@ -1,12 +1,22 @@
 {
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "vite",
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://movie-ticket-booking-o9ga.onrender.com/api/$1"
+      "destination": "$VITE_BACKEND_URL/api/$1"
     },
     {
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "env": {
+    "VITE_BACKEND_URL": "@vite_backend_url",
+    "VITE_CLERK_PUBLISHABLE_KEY": "@vite_clerk_publishable_key",
+    "VITE_STRIPE_PUBLIC_KEY": "@vite_stripe_public_key"
+  },
+  "buildOutput": "dist"
 }

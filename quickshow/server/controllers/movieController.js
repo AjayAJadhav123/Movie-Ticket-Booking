@@ -1,14 +1,151 @@
 import axios from 'axios';
+import mongoose from 'mongoose';
 import Movie from '../models/Movie.js';
 
-const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+const TMDB_BASE_URL = 'https://api.tmdb.org/3';
 
 // Function to get TMDB API key at runtime
 const getTMDBKey = () => process.env.TMDB_API_KEY;
 
+
+
+const DEFAULT_TMDB_TIMEOUT_MS = 3000;
+const TMDB_TRANSIENT_ERROR_CODES = new Set([
+  'ETIMEDOUT',
+  'ECONNRESET',
+  'ENOTFOUND',
+  'EAI_AGAIN',
+  'ECONNABORTED',
+]);
+
+const toGenreNames = (genres) =>
+  Array.isArray(genres)
+    ? genres
+        .map((genre) => (typeof genre === 'string' ? genre : genre?.name))
+        .filter(Boolean)
+    : [];
+
+const normalizeMovie = (movie = {}) => {
+  const candidateId = movie.id ?? movie.tmdbId ?? movie._id;
+  const normalizedId = candidateId != null ? String(candidateId) : '';
+  const poster = movie.poster ?? movie.poster_path ?? null;
+  const backdrop = movie.backdrop ?? movie.backdrop_path ?? null;
+  const ratingRaw = movie.rating ?? movie.vote_average ?? 0;
+  const rating = Number.isFinite(Number(ratingRaw)) ? Number(ratingRaw) : 0;
+  const releaseDate = movie.releaseDate ?? movie.release_date ?? null;
+  const genres = toGenreNames(movie.genres);
+
+  return {
+    ...movie,
+    id: candidateId ?? null,
+    _id: normalizedId,
+    tmdbId: movie.tmdbId ?? movie.id ?? null,
+    title: movie.title ?? '',
+    poster,
+    backdrop,
+    overview: movie.overview ?? '',
+    rating,
+    releaseDate,
+    genres,
+    runtime: movie.runtime ?? null,
+    cast: Array.isArray(movie.cast) ? movie.cast : [],
+    trailer: movie.trailer ?? null,
+    poster_path: poster,
+    backdrop_path: backdrop,
+    release_date: releaseDate,
+    vote_average: rating,
+  };
+};
+
+async function fetchFromTMDB(endpoint, params, timeoutMs = DEFAULT_TMDB_TIMEOUT_MS) {
+  return axios.get(`${TMDB_BASE_URL}${endpoint}`, {
+    params,
+    timeout: timeoutMs,
+  });
+}
+
+async function fetchTMDBResults(endpoint, params, timeoutMs = DEFAULT_TMDB_TIMEOUT_MS) {
+  const response = await fetchFromTMDB(endpoint, params, timeoutMs);
+  return response.data?.results || [];
+}
+
+const isTMDBUnavailableError = (error) =>
+  TMDB_TRANSIENT_ERROR_CODES.has(error?.code) ||
+  error?.message?.toLowerCase()?.includes('timeout');
+
+const toTMDBUnavailableResponse = (res, endpointLabel) =>
+  res.status(503).json({
+    success: false,
+    message: `${endpointLabel} unavailable. Please try again shortly.`,
+    data: [],
+  });
+
+const isDatabaseAvailable = () => mongoose.connection.readyState === 1;
+const toCatalogueMovie = (movie) => normalizeMovie(movie);
+
 export const getMovieList = async (req, res) => {
   try {
     const { page = 1, genre, language, search } = req.query;
+
+    const TMDB_API_KEY = getTMDBKey();
+    if (!TMDB_API_KEY) {
+      return res.status(503).json({
+        success: false,
+        message: 'TMDB API key not configured',
+      });
+    }
+
+    // The public catalogue must work even when a development database is not
+    // available. Query TMDB directly in that case instead of buffering a
+    // Mongoose operation until it times out.
+    if (!isDatabaseAvailable()) {
+      const endpoint = search ? '/search/movie' : '/discover/movie';
+      const popularFallbackEndpoint = '/movie/popular';
+      try {
+        const tmdbMovies = await fetchTMDBResults(endpoint, {
+          api_key: TMDB_API_KEY,
+          page: Math.max(Number(page) || 1, 1),
+          language: language || 'en-US',
+          ...(search ? { query: search } : { sort_by: 'popularity.desc' }),
+        });
+        const normalized = tmdbMovies.map(toCatalogueMovie);
+        const filtered = genre
+          ? normalized.filter((movie) => movie.genres?.includes(genre))
+          : normalized;
+
+        return res.status(200).json({
+          success: true,
+          data: filtered,
+          pagination: { total: filtered.length, page: Number(page) || 1, pages: 1 },
+          source: 'tmdb',
+        });
+      } catch (tmdbError) {
+        console.error('TMDB list error (discover):', tmdbError.message);
+        // Discover timed out — fall back to /movie/popular which is faster
+        try {
+          const popularMovies = await fetchTMDBResults(popularFallbackEndpoint, {
+            api_key: TMDB_API_KEY,
+            page: Math.max(Number(page) || 1, 1),
+          }, 3000);
+          const normalized = popularMovies.map(toCatalogueMovie);
+          return res.status(200).json({
+            success: true,
+            data: normalized,
+            pagination: { total: normalized.length, page: Number(page) || 1, pages: 10 },
+            source: 'tmdb-popular',
+          });
+        } catch (popularError) {
+          console.error('TMDB popular fallback also failed:', popularError.message);
+          return res.status(503).json({
+            success: false,
+            message: 'TMDB service temporarily unavailable. Please try again shortly.',
+            data: [],
+            pagination: { total: 0, page: 1, pages: 0 },
+            source: 'error',
+          });
+        }
+      }
+    }
 
     let query = {};
 
@@ -51,84 +188,77 @@ export const getMovieList = async (req, res) => {
 
 export const getMovieById = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id).replace(/^tmdb_/, '');
 
     // Try MongoDB first (for database movies)
     try {
+      if (!isDatabaseAvailable() || !mongoose.Types.ObjectId.isValid(id)) {
+        throw new Error('Database lookup skipped');
+      }
       const movie = await Movie.findById(id);
       if (movie) {
         return res.status(200).json({
           success: true,
-          data: movie,
+          data: toCatalogueMovie({ ...movie.toObject(), id: movie.tmdbId ?? movie._id }),
         });
       }
     } catch (dbErr) {
-      // If it's not a valid MongoDB ID, try TMDB
+      // If it's not a valid MongoDB ID, try TMDB or fallback
     }
 
     // If not found in database, try TMDB by ID
     const TMDB_API_KEY = getTMDBKey();
-    if (!TMDB_API_KEY) {
-      return res.status(404).json({
-        success: false,
-        message: 'Movie not found',
-      });
-    }
-
-    try {
-      const tmdbResponse = await axios.get(`${TMDB_BASE_URL}/movie/${id}`, {
-        params: { api_key: TMDB_API_KEY },
-        timeout: 5000,
-      });
-
-      if (tmdbResponse.data) {
-        // Fetch additional details
-        const creditsResponse = await axios.get(
-          `${TMDB_BASE_URL}/movie/${id}/credits`,
-          {
-            params: { api_key: TMDB_API_KEY },
-            timeout: 5000,
-          }
-        );
-
-        const videosResponse = await axios.get(
-          `${TMDB_BASE_URL}/movie/${id}/videos`,
-          {
-            params: { api_key: TMDB_API_KEY },
-            timeout: 5000,
-          }
-        );
-
-        const trailer = videosResponse.data.results?.find(
-          (video) => video.type === 'Trailer'
-        );
-
-        const cast = creditsResponse.data.cast
-          ?.slice(0, 10)
-          .map((actor) => actor.name) || [];
-
-        const movieData = {
-          id: tmdbResponse.data.id,
-          _id: `tmdb_${tmdbResponse.data.id}`, // Create pseudo ID for frontend consistency
-          title: tmdbResponse.data.title,
-          overview: tmdbResponse.data.overview,
-          poster_path: tmdbResponse.data.poster_path,
-          backdrop_path: tmdbResponse.data.backdrop_path,
-          release_date: tmdbResponse.data.release_date,
-          genres: tmdbResponse.data.genres?.map((g) => g.name) || [],
-          cast,
-          vote_average: tmdbResponse.data.vote_average,
-          language: tmdbResponse.data.original_language,
-          trailer: trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : null,
-        };
-
-        return res.status(200).json({
-          success: true,
-          data: movieData,
+    if (TMDB_API_KEY) {
+      try {
+        const response = await axios.get(`${TMDB_BASE_URL}/movie/${id}`, {
+          params: { 
+            api_key: TMDB_API_KEY,
+            append_to_response: 'credits,videos,similar'
+          },
+          timeout: 8000,
         });
+
+        if (response.data) {
+          const tmdbData = response.data;
+          
+          const trailer = tmdbData.videos?.results?.find(
+            (video) => video.type === 'Trailer'
+          );
+
+          const cast = tmdbData.credits?.cast
+            ?.slice(0, 10)
+            .map((actor) => actor.name) || [];
+            
+          const similar = tmdbData.similar?.results
+            ?.filter((m) => m.poster_path)
+            ?.slice(0, 10)
+            .map(toCatalogueMovie) || [];
+
+          const movieData = toCatalogueMovie({
+            id: tmdbData.id,
+            tmdbId: tmdbData.id,
+            title: tmdbData.title,
+            overview: tmdbData.overview,
+            poster_path: tmdbData.poster_path,
+            backdrop_path: tmdbData.backdrop_path,
+            release_date: tmdbData.release_date,
+            genres: tmdbData.genres?.map((g) => g.name) || [],
+            cast,
+            vote_average: tmdbData.vote_average,
+            language: tmdbData.original_language,
+            runtime: tmdbData.runtime ?? null,
+            trailer: trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : null,
+            similar,
+          });
+
+          return res.status(200).json({
+            success: true,
+            data: movieData,
+          });
+        }
+      } catch (tmdbErr) {
+        console.error('Error fetching from TMDB:', tmdbErr.message);
       }
-    } catch (tmdbErr) {
-      console.error('Error fetching from TMDB:', tmdbErr.message);
     }
 
     return res.status(404).json({
@@ -223,315 +353,238 @@ export const addMovieFromTMDB = async (req, res) => {
 
 export const getNowPlayingMovies = async (req, res) => {
   try {
+    const { page = 1 } = req.query;
     const TMDB_API_KEY = getTMDBKey();
     
     if (!TMDB_API_KEY) {
       return res.status(503).json({
         success: false,
         message: 'TMDB API key not configured',
+        data: [],
+        pagination: { total: 0, page: 1, pages: 0 },
+        source: 'error',
       });
     }
 
-    let retries = 0;
-    const maxRetries = 2;
+    console.log(`📡 TMDB /movie/now_playing request: page=${page}`);
+    const response = await fetchFromTMDB('/movie/now_playing', {
+      api_key: TMDB_API_KEY,
+      page,
+    }, 3000);
 
-    while (retries < maxRetries) {
-      try {
-        const response = await axios.get(`${TMDB_BASE_URL}/movie/now_playing`, {
-          params: {
-            api_key: TMDB_API_KEY,
-            page: 1,
-          },
-          timeout: 5000,
-        });
+    console.log(`✅ TMDB /movie/now_playing response: results=${response.data.results?.length}`);
 
-        if (response.data && response.data.results) {
-          // Normalize all movies to have _id
-          const normalizedMovies = response.data.results.slice(0, 10).map((movie) => ({
-            ...movie,
-            _id: String(movie.id),  // Add _id from TMDB id
-          }));
-          return res.status(200).json({
-            success: true,
-            data: normalizedMovies,
-          });
-        }
-      } catch (err) {
-        retries++;
-        if (retries < maxRetries) {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
-      }
-    }
-
-    console.warn('TMDB now_playing endpoint unavailable after retries');
     return res.status(200).json({
       success: true,
-      data: [],
-      message: 'Currently no data available from TMDB. Please try again later.',
+      data: response.data.results.map(toCatalogueMovie),
+      pagination: { total: response.data.total_results, page: response.data.page, pages: response.data.total_pages },
+      source: 'tmdb',
     });
   } catch (error) {
-    console.error('Error fetching now playing movies from TMDB:', error.message);
-    return res.status(200).json({
-      success: true,
+    console.error(`❌ TMDB /movie/now_playing failed:`, error.message);
+    return res.status(503).json({
+      success: false,
+      message: 'TMDB service temporarily unavailable. Please try again in a few moments.',
       data: [],
-      message: 'TMDB service temporarily unavailable',
+      pagination: { total: 0, page: 1, pages: 0 },
+      source: 'error',
     });
   }
 };
 
 export const getTrendingMovies = async (req, res) => {
   try {
+    const { page = 1 } = req.query;
     const TMDB_API_KEY = getTMDBKey();
     
     if (!TMDB_API_KEY) {
       return res.status(503).json({
         success: false,
         message: 'TMDB API key not configured',
+        data: [],
+        pagination: { total: 0, page: 1, pages: 0 },
+        source: 'error',
       });
     }
 
-    let retries = 0;
-    const maxRetries = 2;
-    let lastError = null;
+    console.log(`📡 TMDB /trending/movie/day request: page=${page}`);
+    const response = await fetchFromTMDB('/trending/movie/day', {
+      api_key: TMDB_API_KEY,
+      page,
+    }, 3000);
 
-    while (retries < maxRetries) {
-      try {
-        const response = await axios.get(`${TMDB_BASE_URL}/trending/movie/day`, {
-          params: {
-            api_key: TMDB_API_KEY,
-          },
-          timeout: 5000,
-        });
+    console.log(`✅ TMDB /trending/movie/day response: results=${response.data.results?.length}`);
 
-        if (response.data && response.data.results) {
-          // Normalize all movies to have _id
-          const normalizedMovies = response.data.results.slice(0, 10).map((movie) => ({
-            ...movie,
-            _id: String(movie.id),  // Add _id from TMDB id
-          }));
-          return res.status(200).json({
-            success: true,
-            data: normalizedMovies,
-          });
-        }
-      } catch (err) {
-        lastError = err;
-        retries++;
-        if (retries < maxRetries) {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
-      }
-    }
-
-    console.warn('TMDB trending endpoint unavailable after retries');
     return res.status(200).json({
       success: true,
-      data: [],
-      message: 'Currently no data available from TMDB. Please try again later.',
+      data: response.data.results.map(toCatalogueMovie),
+      pagination: { total: response.data.total_results, page: response.data.page, pages: response.data.total_pages },
+      source: 'tmdb',
     });
   } catch (error) {
-    console.error('Error fetching trending movies from TMDB:', error.message);
-    return res.status(200).json({
-      success: true,
+    console.error(`❌ TMDB /trending/movie/day failed:`, error.message);
+    return res.status(503).json({
+      success: false,
+      message: 'TMDB service temporarily unavailable. Please try again in a few moments.',
       data: [],
-      message: 'TMDB service temporarily unavailable',
+      pagination: { total: 0, page: 1, pages: 0 },
+      source: 'error',
     });
   }
 };
 
 export const getUpcomingMovies = async (req, res) => {
   try {
+    const { page = 1 } = req.query;
     const TMDB_API_KEY = getTMDBKey();
     
     if (!TMDB_API_KEY) {
       return res.status(503).json({
         success: false,
         message: 'TMDB API key not configured',
+        data: [],
+        pagination: { total: 0, page: 1, pages: 0 },
+        source: 'error',
       });
     }
 
-    let retries = 0;
-    const maxRetries = 2;
-    let lastError = null;
+    console.log(`📡 TMDB /movie/upcoming request: page=${page}`);
+    const response = await fetchFromTMDB('/movie/upcoming', {
+      api_key: TMDB_API_KEY,
+      page,
+    }, 3000);
 
-    while (retries < maxRetries) {
-      try {
-        const response = await axios.get(`${TMDB_BASE_URL}/movie/upcoming`, {
-          params: {
-            api_key: TMDB_API_KEY,
-            page: 1,
-          },
-          timeout: 5000,
-        });
+    console.log(`✅ TMDB /movie/upcoming response: results=${response.data.results?.length}`);
 
-        if (response.data && response.data.results) {
-          // Normalize all movies to have _id
-          const normalizedMovies = response.data.results.slice(0, 10).map((movie) => ({
-            ...movie,
-            _id: String(movie.id),  // Add _id from TMDB id
-          }));
-          return res.status(200).json({
-            success: true,
-            data: normalizedMovies,
-          });
-        }
-      } catch (err) {
-        lastError = err;
-        retries++;
-        if (retries < maxRetries) {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
-      }
-    }
-
-    console.warn('TMDB upcoming endpoint unavailable after retries');
     return res.status(200).json({
       success: true,
-      data: [],
-      message: 'Currently no data available from TMDB. Please try again later.',
+      data: response.data.results.map(toCatalogueMovie),
+      pagination: { total: response.data.total_results, page: response.data.page, pages: response.data.total_pages },
+      source: 'tmdb',
     });
   } catch (error) {
-    console.error('Error fetching upcoming movies from TMDB:', error.message);
-    return res.status(200).json({
-      success: true,
+    console.error(`❌ TMDB /movie/upcoming failed:`, error.message);
+    return res.status(503).json({
+      success: false,
+      message: 'TMDB service temporarily unavailable. Please try again in a few moments.',
       data: [],
-      message: 'TMDB service temporarily unavailable',
+      pagination: { total: 0, page: 1, pages: 0 },
+      source: 'error',
     });
   }
 };
 
 export const getPopularMovies = async (req, res) => {
   try {
+    const { page = 1 } = req.query;
     const TMDB_API_KEY = getTMDBKey();
     
     if (!TMDB_API_KEY) {
       return res.status(503).json({
         success: false,
         message: 'TMDB API key not configured',
+        data: [],
+        pagination: { total: 0, page: 1, pages: 0 },
+        source: 'error',
       });
     }
 
-    let retries = 0;
-    const maxRetries = 2;
-    let lastError = null;
+    console.log(`📡 TMDB /movie/popular request: page=${page}, timeout=3000ms`);
+    const start = Date.now();
+    const response = await fetchFromTMDB('/movie/popular', {
+      api_key: TMDB_API_KEY,
+      page,
+    }, 3000);
+    const elapsed = Date.now() - start;
 
-    while (retries < maxRetries) {
-      try {
-        const response = await axios.get(`${TMDB_BASE_URL}/movie/popular`, {
-          params: {
-            api_key: TMDB_API_KEY,
-            page: 1,
-          },
-          timeout: 5000,
-        });
+    console.log(`✅ TMDB /movie/popular response: status=${response.status}, time=${elapsed}ms, results=${response.data.results?.length || 0}, total_pages=${response.data.total_pages}`);
 
-        if (response.data && response.data.results) {
-          // Normalize all movies to have _id
-          const normalizedMovies = response.data.results.slice(0, 10).map((movie) => ({
-            ...movie,
-            _id: String(movie.id),  // Add _id from TMDB id
-          }));
-          return res.status(200).json({
-            success: true,
-            data: normalizedMovies,
-          });
-        }
-      } catch (err) {
-        lastError = err;
-        retries++;
-        if (retries < maxRetries) {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
-      }
-    }
-
-    console.warn('TMDB popular endpoint unavailable after retries');
     return res.status(200).json({
       success: true,
-      data: [],
-      message: 'Currently no data available from TMDB. Please try again later.',
+      data: response.data.results.map(toCatalogueMovie),
+      pagination: { total: response.data.total_results, page: response.data.page, pages: response.data.total_pages },
+      source: 'tmdb',
     });
   } catch (error) {
-    console.error('Error fetching popular movies from TMDB:', error.message);
-    return res.status(200).json({
-      success: true,
+    console.error(`❌ TMDB /movie/popular failed: code=${error.code}, message=${error.message}`);
+    
+    // Return 503 Service Unavailable instead of silently serving demo movies
+    return res.status(503).json({
+      success: false,
+      message: 'TMDB service temporarily unavailable. Please try again in a few moments.',
       data: [],
-      message: 'TMDB service temporarily unavailable',
+      pagination: { total: 0, page: 1, pages: 0 },
+      source: 'error',
+      error: {
+        code: error.code,
+        message: error.message,
+      },
     });
   }
 };
 
 export const getLatestMovies = async (req, res) => {
   try {
+    const { page = 1 } = req.query;
     const TMDB_API_KEY = getTMDBKey();
     
     if (!TMDB_API_KEY) {
       return res.status(503).json({
         success: false,
         message: 'TMDB API key not configured',
+        data: [],
+        pagination: { total: 0, page: 1, pages: 0 },
+        source: 'error',
       });
     }
 
-    // Fetch multiple pages to get more recent movies
-    let allMovies = [];
-    let retries = 0;
-    const maxRetries = 2;
-
-    for (let page = 1; page <= 3; page++) {
+    // Try now_playing first; if it times out fall back to popular (faster)
+    console.log(`📡 TMDB /movie/now_playing request (for latest): page=${page}`);
+    let response = null;
+    try {
+      response = await fetchFromTMDB('/movie/now_playing', {
+        api_key: TMDB_API_KEY,
+        region: 'IN',
+        page,
+      }, 3000);
+      console.log(`✅ TMDB /movie/now_playing response: results=${response.data.results?.length}`);
+    } catch (nowPlayingErr) {
+      console.warn(`⏱️ /movie/now_playing timed out, trying /movie/popular as fallback:`, nowPlayingErr.message);
       try {
-        const response = await axios.get(`${TMDB_BASE_URL}/movie/now_playing`, {
-          params: {
-            api_key: TMDB_API_KEY,
-            region: 'IN',
-            page: page,
-          },
-          timeout: 5000,
-        });
-
-        if (response.data && response.data.results) {
-          allMovies = allMovies.concat(response.data.results);
-        }
-      } catch (err) {
-        retries++;
-        if (retries >= maxRetries) break;
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        response = await fetchFromTMDB('/movie/popular', {
+          api_key: TMDB_API_KEY,
+          page,
+        }, 3000);
+        console.log(`✅ TMDB /movie/popular response: results=${response.data.results?.length}`);
+      } catch (popularErr) {
+        console.error(`❌ /movie/popular also failed:`, popularErr.message);
+        throw popularErr; // Re-throw to be caught by outer catch
       }
     }
+    
+    if (response) {
+      const validMovies = response.data.results
+        .filter((m) => m.release_date && m.poster_path)
+        .map(toCatalogueMovie);
 
-    // Remove duplicates by id
-    const uniqueMovies = Array.from(
-      new Map(allMovies.map((m) => [m.id, m])).values()
-    );
-
-    // Sort by release_date descending (newest first)
-    const sortedMovies = uniqueMovies
-      .filter((m) => m.release_date && m.poster_path)
-      .sort((a, b) => new Date(b.release_date) - new Date(a.release_date))
-      .slice(0, 20)
-      .map((movie) => ({
-        ...movie,
-        _id: String(movie.id),  // Add _id from TMDB id
-      }));
-
-    if (sortedMovies.length === 0) {
       return res.status(200).json({
         success: true,
-        data: [],
-        message: 'No latest movies available',
+        data: validMovies,
+        pagination: { total: response.data.total_results, page: response.data.page, pages: response.data.total_pages },
+        source: 'tmdb',
       });
     }
-
-    return res.status(200).json({
-      success: true,
-      data: sortedMovies,
-    });
+    
+    // Should not reach here, but just in case
+    throw new Error('No response from TMDB');
   } catch (error) {
-    console.error('Error fetching latest movies:', error.message);
-    return res.status(200).json({
-      success: true,
+    console.error(`❌ TMDB latest movies request failed:`, error.message);
+    return res.status(503).json({
+      success: false,
+      message: 'TMDB service temporarily unavailable. Please try again in a few moments.',
       data: [],
-      message: 'TMDB service temporarily unavailable',
+      pagination: { total: 0, page: 1, pages: 0 },
+      source: 'error',
     });
   }
 };
@@ -564,72 +617,91 @@ export const deleteMovie = async (req, res) => {
 
 export const searchMovies = async (req, res) => {
   try {
-    const { query } = req.query;
+    const { query, search, localOnly, page = 1 } = req.query;
+    const activeQuery = query || search;
+    const pageNum = Number(page) || 1;
 
-    if (!query || query.trim().length < 1) {
+    if (!activeQuery || activeQuery.trim().length < 1) {
       return res.status(400).json({
         success: false,
         message: 'Search query is required',
       });
     }
 
-    const searchTerm = query.trim();
+    const searchTerm = activeQuery.trim().toLowerCase();
     const TMDB_API_KEY = getTMDBKey();
 
-    // Search in database first
+    // Search in database first (with 2s timeout to avoid hanging when DB is offline)
+    // Only fetch DB results on page 1 to avoid duplicating them on subsequent pages
     let dbResults = [];
-    try {
-      dbResults = await Movie.find({
-        title: { $regex: searchTerm, $options: 'i' },
-      }).limit(10);
-    } catch (dbErr) {
-      console.error('Database search error:', dbErr.message);
+    if (pageNum === 1 && isDatabaseAvailable()) {
+      try {
+        dbResults = await Movie.find({
+          title: { $regex: searchTerm, $options: 'i' },
+        }).limit(10).maxTimeMS(2000);
+      } catch (dbErr) {
+        console.warn('Database search unavailable:', dbErr.message);
+      }
     }
 
-    // Search TMDB
+    if (localOnly === 'true') {
+      const normalizedDbResults = dbResults.map(movie => toCatalogueMovie(movie.toObject ? movie.toObject() : movie));
+      return res.status(200).json({
+        success: true,
+        data: normalizedDbResults,
+        pagination: { total: normalizedDbResults.length, page: 1, pages: 1 },
+        source: 'database',
+      });
+    }
+
+    // Search TMDB with a hard 3-second deadline (fast fail when unreachable)
     let tmdbResults = [];
+    let pagination = { total: 0, page: pageNum, pages: 1 };
+    
     if (TMDB_API_KEY) {
       try {
+        const controller = new AbortController();
+        const tmdbTimeout = setTimeout(() => controller.abort(), 8000);
         const response = await axios.get(`${TMDB_BASE_URL}/search/movie`, {
-          params: {
-            api_key: TMDB_API_KEY,
-            query: searchTerm,
-            page: 1,
-          },
-          timeout: 5000,
+          params: { api_key: TMDB_API_KEY, query: searchTerm, page: pageNum },
+          timeout: 8000,
+          signal: controller.signal,
         });
+        clearTimeout(tmdbTimeout);
 
         if (response.data && response.data.results) {
+          pagination = { 
+            total: response.data.total_results, 
+            page: response.data.page, 
+            pages: response.data.total_pages 
+          };
           tmdbResults = response.data.results
             .filter((movie) => movie.poster_path && movie.release_date)
-            .slice(0, 10)
-            .map((movie) => ({
-              id: movie.id,
-              _id: String(movie.id),
-              title: movie.title,
-              overview: movie.overview,
-              poster_path: movie.poster_path,
-              backdrop_path: movie.backdrop_path,
-              release_date: movie.release_date,
-              vote_average: movie.vote_average,
-              genres: movie.genres || [],
-              language: movie.original_language,
-            }));
+            .map((movie) =>
+              toCatalogueMovie({
+                ...movie,
+                genres: movie.genres || [],
+                language: movie.original_language,
+              })
+            );
         }
       } catch (tmdbError) {
-        console.error('TMDB search error:', tmdbError.message);
+        console.warn('TMDB search unavailable:', tmdbError.message);
       }
     }
 
     // Combine results (database first, then TMDB, avoiding duplicates by TMDB ID)
+    const normalizedDbResults = dbResults.map(movie => toCatalogueMovie(movie.toObject ? movie.toObject() : movie));
     const tmdbIds = new Set(tmdbResults.map(m => m.id));
-    const dbFiltered = dbResults.filter(m => !tmdbIds.has(m.tmdbId));
+    const dbFiltered = normalizedDbResults.filter(m => !tmdbIds.has(m.tmdbId));
     
-    const combinedResults = [...dbFiltered, ...tmdbResults];
+    let combinedResults = [...dbFiltered, ...tmdbResults];
 
     return res.status(200).json({
       success: true,
       data: combinedResults,
+      pagination,
+      source: tmdbResults.length > 0 ? 'tmdb' : 'database',
     });
   } catch (error) {
     console.error('Error searching movies:', error);
@@ -642,20 +714,27 @@ export const searchMovies = async (req, res) => {
 
 export const searchTMDBMovies = async (req, res) => {
   try {
-    const { query } = req.query;
+    const { query, page = 1 } = req.query;
 
     if (!query || query.trim().length < 2) {
-      return res.status(400).json({
-        success: false,
-        message: 'Search query must be at least 2 characters',
+      return res.status(200).json({
+        success: true,
+        data: [],
+        pagination: { total: 0, page: 1, pages: 1 },
       });
     }
 
     const TMDB_API_KEY = getTMDBKey();
     if (!TMDB_API_KEY) {
-      return res.status(503).json({
-        success: false,
-        message: 'TMDB API key not configured',
+      return res.status(200).json({
+        success: true,
+        data: FALLBACK_DEMO_MOVIES.filter(movie =>
+          movie.title.toLowerCase().includes(query.toLowerCase()) ||
+          movie.overview.toLowerCase().includes(query.toLowerCase())
+        ),
+        pagination: { total: 1, page: 1, pages: 1 },
+        message: 'Showing demo movies (TMDB API key not configured)',
+        source: 'fallback',
       });
     }
 
@@ -664,15 +743,14 @@ export const searchTMDBMovies = async (req, res) => {
         params: {
           api_key: TMDB_API_KEY,
           query: query.trim(),
-          page: 1,
+          page: Number(page) || 1,
         },
-        timeout: 5000,
+        timeout: 4000,
       });
 
       if (response.data && response.data.results) {
         const results = response.data.results
           .filter((movie) => movie.poster_path && movie.release_date)
-          .slice(0, 10)
           .map((movie) => ({
             id: movie.id,
             title: movie.title,
@@ -686,19 +764,35 @@ export const searchTMDBMovies = async (req, res) => {
         return res.status(200).json({
           success: true,
           data: results,
+          pagination: {
+            total: response.data.total_results,
+            page: response.data.page,
+            pages: response.data.total_pages,
+          }
         });
       }
     } catch (tmdbError) {
       console.error('TMDB search error:', tmdbError.message);
-      return res.status(503).json({
-        success: false,
-        message: 'TMDB service temporarily unavailable',
+      const fallbackResults = FALLBACK_DEMO_MOVIES.filter(movie =>
+        movie.title.toLowerCase().includes(query.toLowerCase()) ||
+        movie.overview.toLowerCase().includes(query.toLowerCase()) ||
+        movie.genres.some(genre => genre.toLowerCase().includes(query.toLowerCase()))
+      ).map(toCatalogueMovie);
+
+      return res.status(200).json({
+        success: true,
+        data: fallbackResults,
+        pagination: { total: fallbackResults.length, page: 1, pages: 1 },
+        message: 'Showing demo movies (TMDB unavailable)',
+        source: 'fallback',
       });
     }
 
     return res.status(200).json({
       success: true,
       data: [],
+      pagination: { total: 0, page: 1, pages: 1 },
+      message: 'No results found',
     });
   } catch (error) {
     console.error('Error searching TMDB movies:', error);
@@ -711,13 +805,12 @@ export const searchTMDBMovies = async (req, res) => {
 
 export const getRecommendations = async (req, res) => {
   try {
-    const { userId } = req.query;
-
-    if (!userId || !userId.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'userId is required',
-      });
+    // Guests should still see useful recommendations rather than receiving a 401.
+    // Never accept a user ID from the query string: that could expose another
+    // user's personalized results.
+    const userId = req.userId;
+    if (!userId) {
+      return getPopularMoviesAsRecommendations(req, res);
     }
 
     const AI_SERVICE_URL = process.env.AI_SERVICE_URL;
@@ -760,12 +853,18 @@ export const getRecommendations = async (req, res) => {
 
         const validRecommendations = recommendations.filter((r) => r !== null);
 
-        return res.status(200).json({
-          success: true,
-          data: validRecommendations,
-          source: 'ai_personalized',
-        });
+        if (validRecommendations.length > 0) {
+          return res.status(200).json({
+            success: true,
+            data: validRecommendations,
+            source: 'ai_personalized',
+          });
+        }
       }
+
+      // A healthy AI request may legitimately have no matching movies. Do not
+      // leave the HTTP request open; provide the same useful fallback instead.
+      return getPopularMoviesAsRecommendations(req, res);
     } catch (aiError) {
       console.error('AI service error:', aiError.message);
       // Fallback to popular movies

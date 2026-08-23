@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -13,21 +15,24 @@ html {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: #ffffff;
   color: #0f172a;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
+/* ── Container ────────────────────────────────────────────── */
 .container {
   @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
 }
 
+/* ── Buttons ──────────────────────────────────────────────── */
 .btn {
-  @apply px-4 py-2 rounded-lg font-semibold transition-all duration-200;
+  @apply px-4 py-2 rounded-lg font-semibold transition-all duration-200 inline-flex items-center justify-center;
 }
 
 .btn-primary {
@@ -35,34 +40,53 @@ body {
 }
 
 .btn-secondary {
-  @apply btn bg-purple-600 text-white hover:bg-purple-700 active:scale-95 shadow-sm hover:shadow-md;
+  @apply btn bg-slate-800 text-white hover:bg-slate-900 active:scale-95 shadow-sm hover:shadow-md;
 }
 
 .btn-outline {
-  @apply btn border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50;
+  @apply btn border border-slate-300 text-slate-700 hover:border-indigo-500 hover:text-indigo-600 hover:bg-indigo-50;
 }
 
+/* ── Cards ────────────────────────────────────────────────── */
 .card {
-  @apply bg-white rounded-lg overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-shadow;
+  @apply bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm;
 }
 
 .card-hover {
-  @apply transition-all duration-300 hover:shadow-lg hover:border-indigo-300;
+  @apply transition-all duration-200 hover:shadow-md hover:border-slate-300;
 }
 
+/* ── Typography ───────────────────────────────────────────── */
+.section-title {
+  @apply text-2xl md:text-3xl font-bold text-slate-900 tracking-tight mb-6;
+}
+
+/* ── Animations ───────────────────────────────────────────── */
 .fade-in {
   animation: fadeIn 0.3s ease-in;
 }
 
 @keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fadeInUp {
   from {
     opacity: 0;
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
+.animate-fade-in-up {
+  animation: fadeInUp 0.35s ease-out both;
+}
+
+/* ── Gradient text ────────────────────────────────────────── */
 .gradient-text {
   background: linear-gradient(135deg, #4f46e5, #7c3aed);
   -webkit-background-clip: text;
@@ -70,18 +94,12 @@ body {
   background-clip: text;
 }
 
-.backdrop-blur-sm {
-  backdrop-filter: blur(4px);
-}
-
+/* ── Glassmorphism ────────────────────────────────────────── */
 .glass-effect {
   @apply bg-white/80 backdrop-blur-sm border border-slate-200;
 }
 
-.section-title {
-  @apply text-3xl md:text-4xl font-bold text-slate-900 mb-8;
-}
-
+/* ── Hero overlay ─────────────────────────────────────────── */
 .hero-overlay {
   @apply absolute inset-0 bg-gradient-to-r from-white via-white/80 to-transparent;
 }
@@ -90,17 +108,38 @@ body {
   @apply absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent;
 }
 
-.smooth-scroll {
-  scroll-behavior: smooth;
+/* ── Custom scrollbar ─────────────────────────────────────── */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
 }
 
-/* Navbar height constant for spacing calculations */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 4px;
+}
+
+/* ── Focus ring ───────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
+/* ── Navbar height constant ───────────────────────────────── */
 :root {
   --navbar-height: 64px;
   --footer-height: 200px;
 }
 
-/* Hide Clerk badge/banner */
+/* ── Hide Clerk badge ─────────────────────────────────────── */
 [data-clerk-element="badge"] {
   display: none !important;
 }

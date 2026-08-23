@@ -6,7 +6,7 @@ import Movie from '../models/Movie.js';
 // Load .env file from server directory
 dotenv.config({ path: 'c:\\Users\\aj386\\Desktop\\Movie Ticket Booking\\quickshow\\server\\.env' });
 
-const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+const TMDB_BASE_URL = 'https://api.tmdb.org/3';
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
 
 // Popular movies to import - using real TMDB IDs

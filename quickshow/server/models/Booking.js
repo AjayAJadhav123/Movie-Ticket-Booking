@@ -82,8 +82,9 @@ const bookingSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// TTL index for automatic deletion of expired bookings (10 minutes)
-bookingSchema.index({ createdAt: 1 }, { expireAfterSeconds: 600 });
+// TTL index: auto-delete expired bookings using the expiresAt field
+// Confirmed bookings should have expiresAt set to null/far future to prevent deletion
+bookingSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 const Booking = mongoose.model('Booking', bookingSchema);
 export default Booking;

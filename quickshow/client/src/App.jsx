@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ClerkProvider, RedirectToSignIn, useUser } from '@clerk/clerk-react';
-import { ToastContainer } from 'react-toastify';
-import { useState } from 'react';
+import { ClerkProvider, RedirectToSignIn, useUser, useAuth, useClerk } from '@clerk/clerk-react';
+import { ToastContainer, toast } from 'react-toastify';
+import { Toaster } from 'react-hot-toast';
+import { useState, useEffect } from 'react';
 import 'react-toastify/dist/ReactToastify.css';
 
 import Navbar from './components/Navbar';
@@ -21,11 +22,16 @@ import SignInPage from './pages/SignInPage';
 import SignUpPage from './pages/SignUpPage';
 
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminLogin from './pages/admin/AdminLogin';
 import AddShow from './pages/admin/AddShow';
 import ListShows from './pages/admin/ListShows';
 import AdminMovies from './pages/admin/AdminMovies';
 import ViewBookings from './pages/admin/ViewBookings';
 import AdminAnalytics from './pages/admin/AdminAnalytics';
+import ManageCinemas from './pages/admin/ManageCinemas';
+import ManageScreens from './pages/admin/ManageScreens';
+import AdminLayout from './components/admin/AdminLayout';
+import { Outlet } from 'react-router-dom';
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
@@ -36,20 +42,105 @@ const isStripeKeyFormat = clerkPubKey && clerkPubKey.includes('VFbE1M6AKJxN7MqV'
 
 function ProtectedAdminRoute({ children }) {
   const { user, isLoaded } = useUser();
+  const { getToken } = useAuth();
+  const { signOut } = useClerk();
+  const [status, setStatus] = useState('loading'); // 'loading' | 'admin' | 'denied' | 'unauthenticated' | 'denied_redirect'
 
-  if (!isLoaded) {
-    return <div>Loading...</div>;
+  useEffect(() => {
+    // Only run this check if we are in the initial 'loading' state
+    // This prevents infinite loops and duplicate API calls
+    if (status !== 'loading') return;
+
+    const adminToken = localStorage.getItem('adminToken');
+    
+    // If not using adminToken and Clerk is still loading, wait
+    if (!adminToken && !isLoaded) return;
+
+    // Call the backend for an authoritative admin check.
+    const performAdminCheck = async () => {
+      // Prioritize the custom admin token
+      let tokenToVerify = adminToken;
+      
+      // If no admin token, fallback to Clerk token if logged in
+      if (!tokenToVerify) {
+        if (!user) {
+          setStatus('unauthenticated');
+          return;
+        }
+        tokenToVerify = await getToken();
+      }
+
+      if (!tokenToVerify) {
+        setStatus('unauthenticated');
+        return;
+      }
+
+      const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/user/check-admin`, {
+          headers: { Authorization: `Bearer ${tokenToVerify}` },
+        });
+
+        if (!res.ok) {
+          localStorage.removeItem('adminToken'); // Clear invalid token
+          await signOut();
+          toast.error('Admin access required.');
+          setStatus('denied_redirect');
+          return;
+        }
+
+        const data = await res.json();
+
+        if (data.isAdmin) {
+          setStatus('admin');
+        } else {
+          localStorage.removeItem('adminToken');
+          await signOut();
+          toast.error('Admin access required.');
+          setStatus('denied_redirect');
+        }
+      } catch (err) {
+        console.error('[ADMIN CHECK] Error:', err.message);
+        localStorage.removeItem('adminToken'); // Ensure token is cleared on crash
+        await signOut();
+        toast.error('Admin authentication error.');
+        setStatus('denied_redirect');
+      }
+    };
+
+    performAdminCheck();
+  }, [isLoaded, user, getToken, signOut, status]);
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
+        <p className="text-slate-500">Checking authorization...</p>
+      </div>
+    );
   }
 
-  if (!user) {
-    return <RedirectToSignIn />;
+  if (status === 'unauthenticated') {
+    return <Navigate to="/admin" replace />;
   }
 
-  const isAdmin =
-    user.publicMetadata?.isAdmin === true || user.privateMetadata?.isAdmin === true;
+  if (status === 'denied_redirect') {
+    return <Navigate to="/admin" replace />;
+  }
 
-  if (!isAdmin) {
-    return <Navigate to="/" replace />;
+  if (status === 'denied') {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 max-w-md w-full text-center">
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h2>
+          <p className="text-slate-600 mb-6">Your account does not have administrator privileges.</p>
+          <a href="/" className="inline-flex items-center justify-center w-full px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium transition-colors">
+            Return Home
+          </a>
+        </div>
+      </div>
+    );
   }
 
   return children;
@@ -127,8 +218,8 @@ export default function App() {
       publishableKey={clerkPubKey}
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
-      afterSignInUrl="/"
-      afterSignUpUrl="/"
+      signInFallbackRedirectUrl="/"
+      signUpFallbackRedirectUrl="/"
     >
       <BrowserRouter>
         <AppProvider>
@@ -139,113 +230,64 @@ export default function App() {
   );
 }
 
+function PublicLayout() {
+  return (
+    <div className="flex flex-col min-h-screen bg-white">
+      <Navbar />
+      <main className="flex-grow bg-white">
+        <Outlet />
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
 function AIContent() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const { isSignedIn } = useUser();
 
   return (
-    <div className="flex flex-col min-h-screen bg-white">
-      <Navbar />
-      <main className="flex-grow bg-white">
-        <Routes>
+    <div className="flex flex-col min-h-screen">
+      <Routes>
+        {/* Public Routes with Navbar and Footer */}
+        <Route element={<PublicLayout />}>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
           <Route path="/movies" element={<AllMovies />} />
           <Route path="/movie/:id" element={<MovieDetails />} />
 
-          {/* Auth Routes */}
+          {/* Standard Auth Routes */}
           <Route path="/sign-in/*" element={<SignInPage />} />
           <Route path="/sign-up/*" element={<SignUpPage />} />
 
-          {/* Protected Routes */}
-          <Route
-            path="/seat-layout/:showId"
-            element={
-              <ProtectedRoute>
-                <SeatLayout />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/my-bookings"
-            element={
-              <ProtectedRoute>
-                <MyBookings />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/booking/:bookingId"
-            element={
-              <ProtectedRoute>
-                <BookingTicket />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/favorites"
-            element={
-              <ProtectedRoute>
-                <Favorites />
-              </ProtectedRoute>
-            }
-          />
+          {/* Protected Public Routes */}
+          <Route path="/seat-layout/:showId" element={<ProtectedRoute><SeatLayout /></ProtectedRoute>} />
+          <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
+          <Route path="/booking/:bookingId" element={<ProtectedRoute><BookingTicket /></ProtectedRoute>} />
+          <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
+        </Route>
 
-          {/* Admin Routes */}
-          <Route
-            path="/admin/dashboard"
-            element={
-              <ProtectedAdminRoute>
-                <AdminDashboard />
-              </ProtectedAdminRoute>
-            }
-          />
-          <Route
-            path="/admin/analytics"
-            element={
-              <ProtectedAdminRoute>
-                <AdminAnalytics />
-              </ProtectedAdminRoute>
-            }
-          />
-          <Route
-            path="/admin/movies"
-            element={
-              <ProtectedAdminRoute>
-                <AdminMovies />
-              </ProtectedAdminRoute>
-            }
-          />
-          <Route
-            path="/admin/add-shows"
-            element={
-              <ProtectedAdminRoute>
-                <AddShow />
-              </ProtectedAdminRoute>
-            }
-          />
-          <Route
-            path="/admin/list-shows"
-            element={
-              <ProtectedAdminRoute>
-                <ListShows />
-              </ProtectedAdminRoute>
-            }
-          />
-          <Route
-            path="/admin/bookings"
-            element={
-              <ProtectedAdminRoute>
-                <ViewBookings />
-              </ProtectedAdminRoute>
-            }
-          />
+        {/* Admin Routes */}
+        <Route path="/admin">
+          {/* Admin Login at /admin exactly */}
+          <Route index element={<AdminLogin />} />
+          
+          {/* Admin Dashboard with Sidebar (No public Navbar/Footer) */}
+          <Route element={<ProtectedAdminRoute><AdminLayout /></ProtectedAdminRoute>}>
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="analytics" element={<AdminAnalytics />} />
+            <Route path="cinemas" element={<ManageCinemas />} />
+            <Route path="screens" element={<ManageScreens />} />
+            <Route path="movies" element={<AdminMovies />} />
+            <Route path="add-shows" element={<AddShow />} />
+            <Route path="list-shows" element={<ListShows />} />
+            <Route path="bookings" element={<ViewBookings />} />
+          </Route>
+        </Route>
 
-          {/* 404 */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </main>
-      <Footer />
+        {/* 404 */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
 
       {/* AI Chat - Only show if signed in */}
       {isSignedIn && (
@@ -267,6 +309,7 @@ function AIContent() {
         pauseOnHover
         theme="dark"
       />
+      <Toaster position="top-right" />
     </div>
   );
 }

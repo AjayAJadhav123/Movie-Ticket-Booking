@@ -3,11 +3,14 @@ import {
   getShowList,
   getShowById,
   createShow,
+  updateShow,
+  duplicateShow,
   removeShow,
   getAvailableDates,
   getShowsByMovieAndDate,
+  getShowStats,
 } from '../controllers/showController.js';
-import { requireAdminMiddleware } from '../middleware/auth.js';
+import { requireAdminMiddleware, requireAuthMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -19,8 +22,14 @@ router.get('/by-movie-date', getShowsByMovieAndDate);
 
 router.get('/:id', getShowById);
 
-router.post('/add', requireAdminMiddleware, createShow);
+router.get('/:id/stats', getShowStats);
 
-router.delete('/:id', requireAdminMiddleware, removeShow);
+router.post('/add', requireAuthMiddleware, requireAdminMiddleware, createShow);
+
+router.post('/:id/duplicate', requireAuthMiddleware, requireAdminMiddleware, duplicateShow);
+
+router.put('/:id', requireAuthMiddleware, requireAdminMiddleware, updateShow);
+
+router.delete('/:id', requireAuthMiddleware, requireAdminMiddleware, removeShow);
 
 export default router;

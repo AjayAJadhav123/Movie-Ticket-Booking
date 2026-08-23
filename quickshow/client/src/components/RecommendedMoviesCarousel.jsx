@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Heart } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useUser } from '@clerk/clerk-react';
+import { toast } from 'react-toastify';
 import { useApp } from '../context/AppContext';
 import MovieCard from './MovieCard';
 
 export default function RecommendedMoviesCarousel({ movieId, movieTitle }) {
+  const { isSignedIn } = useUser();
+  const navigate = useNavigate();
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [scrollPosition, setScrollPosition] = useState(0);
+  const [processingFavorites, setProcessingFavorites] = useState({});
   const { apiClient, favorites, addFavorite, removeFavorite } = useApp();
   const scrollContainerRef = React.useRef(null);
 
@@ -117,17 +123,48 @@ export default function RecommendedMoviesCarousel({ movieId, movieTitle }) {
                   {/* Overlay */}
                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center">
                     <button
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        const isFav = favorites?.some((f) => f._id === movie._id);
-                        if (isFav) {
-                          removeFavorite(movie._id);
-                        } else {
-                          addFavorite(movie._id);
+                        
+                        // Prevent duplicate requests
+                        if (processingFavorites[movie._id]) {
+                          return;
+                        }
+                        
+                        if (!isSignedIn) {
+                          toast.info('Please sign in to add favorites');
+                          navigate('/sign-in');
+                          return;
+                        }
+                        
+                        setProcessingFavorites(prev => ({ ...prev, [movie._id]: true }));
+                        
+                        try {
+                          const isFav = favorites?.some((f) => f._id === movie._id);
+                          if (isFav) {
+                            const success = await removeFavorite(movie._id);
+                            if (success) {
+                              toast.success('Removed from favorites');
+                            } else {
+                              toast.error('Failed to remove favorite');
+                            }
+                          } else {
+                            const success = await addFavorite(movie._id);
+                            if (success) {
+                              toast.success('Added to favorites');
+                            } else {
+                              toast.error('Failed to add favorite');
+                            }
+                          }
+                        } finally {
+                          setProcessingFavorites(prev => ({ ...prev, [movie._id]: false }));
                         }
                       }}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-2 bg-white rounded-full hover:bg-indigo-600 hover:text-white text-red-500"
+                      disabled={processingFavorites[movie._id]}
+                      className={`opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-2 bg-white rounded-full hover:bg-indigo-600 hover:text-white text-red-500 ${
+                        processingFavorites[movie._id] ? 'cursor-not-allowed opacity-50' : ''
+                      }`}
                     >
                       <Heart
                         size={20}

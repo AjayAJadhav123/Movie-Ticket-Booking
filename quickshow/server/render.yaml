@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: quickshow-backend
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+    healthCheckPath: /health
+    healthCheckInterval: 30
+    maxInstances: 1
+    minInstances: 1
+    autoDeploy: true
+    repo: https://github.com/your-username/your-repo
+    branch: main
+    
+    # Environment variables that must be set in Render dashboard:
+    # MONGODB_URI - MongoDB Atlas connection string
+    # CLERK_SECRET_KEY - Clerk secret key
+    # CLERK_WEBHOOK_SECRET - Clerk webhook secret
+    # CLERK_PUBLISHABLE_KEY - Clerk publishable key
+    # CLERK_JWT_KEY - Clerk JWT public key
+    # STRIPE_SECRET_KEY - Stripe secret key (if using Stripe)
+    # STRIPE_WEBHOOK_SECRET - Stripe webhook secret (if using Stripe)
+    # CASHFREE_APP_ID - Cashfree app ID
+    # CASHFREE_SECRET_KEY - Cashfree secret key
+    # CASHFREE_ENV - Set to PRODUCTION for production, SANDBOX for testing
+    # CASHFREE_WEBHOOK_SECRET - Cashfree webhook secret (for signature verification)
+    # JWT_SECRET - Your secret for admin JWT tokens (minimum 32 characters)
+    # TMDB_API_KEY - TMDB API key
+    # FRONTEND_URL - Frontend URL (e.g., https://quickshow.vercel.app)
+    # BACKEND_URL - Backend URL (e.g., https://quickshow-backend.render.com)
+    
+    # Webhooks:
+    notifyOnDeploy: true

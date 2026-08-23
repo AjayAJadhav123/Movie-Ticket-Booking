@@ -5,7 +5,7 @@ import Show from '../models/Show.js';
 import axios from 'axios';
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
-const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+const TMDB_BASE_URL = 'https://api.tmdb.org/3';
 
 /**
  * Calculate similarity between two movies based on:

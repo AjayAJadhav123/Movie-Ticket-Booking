@@ -1,373 +1,689 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { toast } from 'react-toastify';
+import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import { Search, Plus, Trash2, ChevronRight, ChevronLeft, Calendar, Clock, MapPin, DollarSign } from 'lucide-react';
+import SeatLayoutEditor from '../../components/admin/SeatLayoutEditor';
 
 export default function AddShow() {
   const { apiClient } = useApp();
   const navigate = useNavigate();
-  const [movies, setMovies] = useState([]);
-  const [searchMovieName, setSearchMovieName] = useState('');
-  const [tmdbSearchResults, setTmdbSearchResults] = useState([]);
+
+  // Step state management
+  const [currentStep, setCurrentStep] = useState(1);
+  const totalSteps = 5;
+
+  // Step 1: Movie Selection
+  const [searchQuery, setSearchQuery] = useState('');
+  const [tmdbResults, setTmdbResults] = useState([]);
   const [searchingTMDB, setSearchingTMDB] = useState(false);
-  const [formData, setFormData] = useState({
-    movieId: '',
-    tmdbId: '',
-    date: '',
-    time: '',
-    theatre: '',
-    screen: '',
-    price: '',
-    totalSeats: '100',
+  const [selectedMovie, setSelectedMovie] = useState(null);
+
+  // Step 2: Cinema Details
+  const [cinemas, setCinemas] = useState([]);
+  const [screens, setScreens] = useState([]);
+  const [selectedCinemaId, setSelectedCinemaId] = useState('');
+  const [selectedScreenId, setSelectedScreenId] = useState('');
+  const [cinemaData, setCinemaData] = useState({
+    cinemaName: '',
+    screenNumber: '',
+    screenType: 'Standard',
   });
+
+  // Step 3: Date Selection
+  const [selectedDate, setSelectedDate] = useState('');
+
+  // Step 4: Showtimes
+  const [showtimes, setShowtimes] = useState([
+    { startTime: '', endTime: '', price: '' }
+  ]);
+
+  // Step 5: Seat Configuration & Preview
+  const [seatConfig, setSeatConfig] = useState({
+    totalSeats: 100,
+    rows: 10,
+    seatsPerRow: 10,
+    seatLayoutEditorData: [],
+  });
+
   const [loading, setLoading] = useState(false);
 
+  // Fetch Cinemas on mount
   useEffect(() => {
-    fetchMovies();
+    fetchCinemas();
   }, []);
 
-  const fetchMovies = async () => {
+  const fetchCinemas = async () => {
     try {
-      const response = await apiClient.get('/api/movie/list?page=1');
+      const response = await apiClient.get('/api/cinema', { params: { status: 'active' } });
       if (response.data.success) {
-        setMovies(response.data.data);
+        setCinemas(response.data.data);
       }
     } catch (error) {
-      console.error('Error fetching movies:', error);
-      toast.error('Error loading movies');
+      console.error('Error fetching cinemas:', error);
+      toast.error('Failed to load cinemas');
     }
   };
 
-  const searchTMDBMovies = async (searchTerm) => {
-    if (!searchTerm.trim()) {
-      setTmdbSearchResults([]);
-      return;
-    }
-
+  const fetchScreens = async (cinemaId) => {
     try {
-      setSearchingTMDB(true);
-      const response = await apiClient.get('/api/movie/search-tmdb', {
-        params: { query: searchTerm },
-      });
+      const response = await apiClient.get(`/api/screen/cinema/${cinemaId}`);
       if (response.data.success) {
-        setTmdbSearchResults(response.data.data || []);
+        setScreens(response.data.data);
       }
     } catch (error) {
-      console.error('Error searching TMDB:', error);
-      setTmdbSearchResults([]);
+      console.error('Error fetching screens:', error);
+      toast.error('Failed to load screens');
+    }
+  };
+
+  const handleCinemaChange = (e) => {
+    const cinemaId = e.target.value;
+    setSelectedCinemaId(cinemaId);
+    setSelectedScreenId('');
+    
+    const selectedC = cinemas.find(c => c._id === cinemaId);
+    if (selectedC) {
+      setCinemaData(prev => ({ ...prev, cinemaName: selectedC.name }));
+    }
+    
+    if (cinemaId) {
+      fetchScreens(cinemaId);
+    } else {
+      setScreens([]);
+    }
+  };
+
+  const handleScreenChange = (e) => {
+    const screenId = e.target.value;
+    setSelectedScreenId(screenId);
+    
+    const selectedS = screens.find(s => s._id === screenId);
+    if (selectedS) {
+      setCinemaData(prev => ({
+        ...prev,
+        screenNumber: selectedS.name,
+        screenType: selectedS.screenType,
+      }));
+      
+      // Transform DB layout to Editor layout
+      let editorLayout = [];
+      if (selectedS.seatLayout && selectedS.seatLayout.length > 0) {
+        const rowsMap = {};
+        selectedS.seatLayout.forEach(seat => {
+          if (!rowsMap[seat.row]) rowsMap[seat.row] = [];
+          rowsMap[seat.row].push({
+            id: seat.seatNumber,
+            col: seat.number,
+            status: seat.isAvailable ? 'available' : 'disabled'
+          });
+        });
+        
+        Object.keys(rowsMap).sort().forEach(r => {
+          editorLayout.push({
+            row: r,
+            cols: rowsMap[r].sort((a,b) => a.col - b.col)
+          });
+        });
+      }
+
+      setSeatConfig({
+        totalSeats: selectedS.totalCapacity || (selectedS.rows * selectedS.seatsPerRow),
+        rows: selectedS.rows,
+        seatsPerRow: selectedS.seatsPerRow,
+        seatLayoutEditorData: editorLayout,
+      });
+    }
+  };
+
+  // Search local database movies with debounce
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      if (searchQuery.trim().length > 2) {
+        searchLocalMovies(searchQuery);
+      } else {
+        setTmdbResults([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchQuery]);
+
+  const searchLocalMovies = async (query) => {
+    try {
+      setSearchingTMDB(true);
+      const response = await apiClient.get('/api/movie/search', {
+        params: { search: query, localOnly: true },
+      });
+      if (response.data.success) {
+        setTmdbResults(response.data.data || []);
+      }
+    } catch (error) {
+      console.error('Error searching local movies:', error);
+      toast.error('Error searching movies');
     } finally {
       setSearchingTMDB(false);
     }
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+  const handleMovieSelect = (movie) => {
+    setSelectedMovie({
+      id: movie.id,
+      _id: movie._id,
+      tmdbId: movie.tmdbId,
+      title: movie.title,
+      poster: movie.poster_path,
+      backdrop: movie.backdrop_path,
+      releaseDate: movie.release_date,
+      rating: movie.vote_average,
+    });
+    setCurrentStep(2);
   };
 
-  const handleMovieSelect = (movieId, isTMDB = false) => {
-    if (isTMDB) {
-      setFormData((prev) => ({
-        ...prev,
-        tmdbId: movieId,
-        movieId: '', // Clear DB movie ID
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        movieId,
-        tmdbId: '', // Clear TMDB ID
-      }));
+  const addShowtime = () => {
+    setShowtimes([...showtimes, { startTime: '', endTime: '', price: '' }]);
+  };
+
+  const removeShowtime = (index) => {
+    if (showtimes.length > 1) {
+      setShowtimes(showtimes.filter((_, i) => i !== index));
     }
-    setSearchMovieName('');
-    setTmdbSearchResults([]);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const updateShowtime = (index, updates) => {
+    const updated = [...showtimes];
+    updated[index] = { ...updated[index], ...updates };
+    setShowtimes(updated);
+  };
 
-    const movieId = formData.movieId || formData.tmdbId;
+  const calculateEndTime = (startTime) => {
+    if (!startTime) return '';
+    const [hours, minutes] = startTime.split(':');
+    const startDate = new Date();
+    startDate.setHours(parseInt(hours), parseInt(minutes));
     
-    if (!movieId || !formData.date || !formData.time || !formData.price || !formData.theatre || !formData.screen) {
-      toast.error('All fields are required');
-      return;
-    }
+    // Assume 2.5 hours movie duration
+    const endDate = new Date(startDate.getTime() + 2.5 * 60 * 60 * 1000);
+    return endDate.toTimeString().slice(0, 5);
+  };
 
+  const validateStep = (step) => {
+    switch (step) {
+      case 1:
+        return selectedMovie !== null;
+      case 2:
+        return selectedCinemaId && selectedScreenId;
+      case 3:
+        return selectedDate && new Date(selectedDate) > new Date(new Date().setDate(new Date().getDate()-1));
+      case 4:
+        return showtimes.every(st => st.startTime && st.endTime && st.price && parseFloat(st.price) > 0);
+      case 5:
+        return seatConfig.totalSeats > 0;
+      default:
+        return false;
+    }
+  };
+
+  const nextStep = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(Math.min(currentStep + 1, totalSteps));
+    } else {
+      toast.error('Please complete all required fields');
+    }
+  };
+
+  const prevStep = () => {
+    setCurrentStep(Math.max(currentStep - 1, 1));
+  };
+
+  const createShows = async () => {
     try {
       setLoading(true);
-      const payload = {
-        movieId: formData.movieId || undefined,
-        tmdbId: formData.tmdbId || undefined,
-        date: new Date(formData.date).toISOString(),
-        time: formData.time,
-        theatre: formData.theatre,
-        screen: formData.screen,
-        price: parseFloat(formData.price),
-        totalSeats: parseInt(formData.totalSeats),
-      };
 
-      // Remove undefined fields
-      Object.keys(payload).forEach(key => payload[key] === undefined && delete payload[key]);
+      const showPromises = showtimes.map(async (showtime) => {
+        // Convert internal layout format to MongoDB flat format
+        const finalSeatLayout = [];
+        if (seatConfig.seatLayoutEditorData) {
+          seatConfig.seatLayoutEditorData.forEach(rowItem => {
+            rowItem.cols.forEach(colItem => {
+              finalSeatLayout.push({
+                row: rowItem.row,
+                number: colItem.col,
+                seatNumber: colItem.id,
+                type: 'Standard',
+                isAvailable: colItem.status === 'available'
+              });
+            });
+          });
+        }
 
-      const response = await apiClient.post('/api/show/add', payload);
+        const payload = {
+          movieId: selectedMovie._id,
+          tmdbId: selectedMovie.tmdbId || selectedMovie.id,
+          movieTitle: selectedMovie.title,
+          date: new Date(selectedDate).toISOString(),
+          time: showtime.startTime,
+          endTime: showtime.endTime,
+          theatre: cinemaData.cinemaName,
+          screen: cinemaData.screenNumber, // Using actual screen name from DB
+          screenType: cinemaData.screenType,
+          price: parseFloat(showtime.price),
+          totalSeats: seatConfig.totalSeats,
+          rows: seatConfig.rows,
+          seatsPerRow: seatConfig.seatsPerRow,
+          seatLayout: finalSeatLayout,
+        };
 
-      if (response.data.success) {
-        toast.success('Show added successfully');
-        setFormData({
-          movieId: '',
-          tmdbId: '',
-          date: '',
-          time: '',
-          theatre: '',
-          screen: '',
-          price: '',
-          totalSeats: '100',
-        });
+        return apiClient.post('/api/show/add', payload);
+      });
+
+      const results = await Promise.allSettled(showPromises);
+      const successful = results.filter(r => r.status === 'fulfilled' && r.value.data.success);
+      const failed = results.filter(r => r.status === 'rejected' || !r.value.data.success);
+
+      if (successful.length > 0) {
+        toast.success(`Successfully created ${successful.length} show(s)`);
+        if (failed.length > 0) {
+          toast.warning(`${failed.length} show(s) failed to create`);
+        }
         navigate('/admin/list-shows');
       } else {
-        toast.error(response.data.message || 'Error adding show');
+        toast.error('Failed to create any shows');
       }
     } catch (error) {
-      console.error('Error adding show:', error);
-      toast.error(error.response?.data?.message || 'Error adding show');
+      console.error('Error creating shows:', error);
+      toast.error('Error creating shows');
     } finally {
       setLoading(false);
     }
   };
 
-  const selectedMovie = movies.find((m) => m._id === formData.movieId);
-  const filteredMovies = searchMovieName
-    ? movies.filter((m) =>
-        m.title.toLowerCase().includes(searchMovieName.toLowerCase())
-      )
-    : [];
-
-  // Handle search input with debounce for TMDB
-  const handleSearchInput = (value) => {
-    setSearchMovieName(value);
-    if (value.trim().length > 2) {
-      searchTMDBMovies(value);
-    } else {
-      setTmdbSearchResults([]);
-    }
-  };
-
-  return (
-    <div className="container mx-auto px-4 py-6 md:py-8 lg:py-12 max-w-2xl pt-24">
-      <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 md:mb-8 text-slate-900">Add New Show</h1>
-
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-lg p-4 md:p-8 border border-slate-200">
-        {/* Movie Selection */}
-        <div className="mb-4 md:mb-6">
-          <label className="block text-slate-700 font-semibold mb-2 text-sm md:text-base">Movie</label>
-          
-          {formData.movieId && selectedMovie ? (
-            <div className="flex items-center justify-between p-4 bg-indigo-50 border border-indigo-300 rounded-lg mb-4">
-              <div>
-                <p className="font-semibold text-slate-900">{selectedMovie.title}</p>
-                <p className="text-xs text-slate-600">Database ID: {selectedMovie._id}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setFormData((prev) => ({ ...prev, movieId: '', tmdbId: '' }))}
-                className="text-indigo-600 hover:text-indigo-700 font-semibold"
-              >
-                Change
-              </button>
-            </div>
-          ) : formData.tmdbId ? (
-            <div className="flex items-center justify-between p-4 bg-purple-50 border border-purple-300 rounded-lg mb-4">
-              <div>
-                <p className="font-semibold text-slate-900">{tmdbSearchResults.find(m => m.id === parseInt(formData.tmdbId))?.title || 'Selected Movie'}</p>
-                <p className="text-xs text-slate-600">TMDB ID: {formData.tmdbId}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setFormData((prev) => ({ ...prev, movieId: '', tmdbId: '' }))}
-                className="text-purple-600 hover:text-purple-700 font-semibold"
-              >
-                Change
-              </button>
-            </div>
-          ) : (
-            <>
-              <input
-                type="text"
-                placeholder="Search movie by title..."
-                value={searchMovieName}
-                onChange={(e) => handleSearchInput(e.target.value)}
-                className="w-full px-3 md:px-4 py-2 md:py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600 text-sm md:text-base mb-2"
-              />
-              
-              {/* TMDB Search Results */}
-              {searchingTMDB && (
-                <div className="text-center py-3 text-slate-600 text-sm">Searching TMDB...</div>
-              )}
-              
-              {!searchingTMDB && searchMovieName.trim().length > 2 && tmdbSearchResults.length > 0 && (
-                <div className="border border-slate-300 rounded-lg mb-4 overflow-hidden">
-                  <div className="bg-purple-100 px-4 py-2 font-semibold text-sm text-purple-900 border-b">
-                    TMDB Results
-                  </div>
-                  <div className="max-h-48 overflow-y-auto">
-                    {tmdbSearchResults.map((movie) => (
-                      <button
-                        key={movie.id}
-                        type="button"
-                        onClick={() => handleMovieSelect(movie.id, true)}
-                        className="w-full text-left px-4 py-2 hover:bg-purple-50 border-b border-slate-200 last:border-b-0"
-                      >
-                        <p className="font-medium text-slate-900">{movie.title}</p>
-                        <p className="text-xs text-slate-600">
-                          {movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A'} • {movie.vote_average?.toFixed(1)}/10
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Database Movies */}
-              {searchMovieName && filteredMovies.length > 0 && (
-                <div className="border border-slate-300 rounded-lg mb-4 overflow-hidden">
-                  <div className="bg-indigo-100 px-4 py-2 font-semibold text-sm text-indigo-900 border-b">
-                    Database Movies
-                  </div>
-                  <div className="max-h-48 overflow-y-auto">
-                    {filteredMovies.map((movie) => (
-                      <button
-                        key={movie._id}
-                        type="button"
-                        onClick={() => handleMovieSelect(movie._id, false)}
-                        className="w-full text-left px-4 py-2 hover:bg-indigo-50 border-b border-slate-200 last:border-b-0"
-                      >
-                        <p className="font-medium text-slate-900">{movie.title}</p>
-                        <p className="text-xs text-slate-600">{movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A'}</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {searchMovieName && filteredMovies.length === 0 && tmdbSearchResults.length === 0 && !searchingTMDB && (
-                <p className="text-slate-600 text-sm py-2">No movies found</p>
-              )}
-
-              {!searchMovieName && (
-                <select
-                  value={formData.movieId}
-                  onChange={(e) => handleMovieSelect(e.target.value, false)}
-                  className="w-full px-3 md:px-4 py-2 md:py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600 text-sm md:text-base"
-                >
-                  <option value="">Select a movie from database</option>
-                  {movies.map((movie) => (
-                    <option key={movie._id} value={movie._id}>
-                      {movie.title}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </>
+  const renderStepIndicator = () => (
+    <div className="flex items-center justify-center mb-8">
+      {Array.from({ length: totalSteps }, (_, i) => i + 1).map((step) => (
+        <React.Fragment key={step}>
+          <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 text-sm font-semibold
+            ${step <= currentStep 
+              ? 'bg-indigo-600 border-indigo-600 text-white' 
+              : 'border-slate-300 text-slate-400'
+            }`}>
+            {step}
+          </div>
+          {step < totalSteps && (
+            <div className={`w-12 h-0.5 mx-2 
+              ${step < currentStep ? 'bg-indigo-600' : 'bg-slate-300'}
+            `} />
           )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+
+  const renderStep1 = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">Select Movie</h2>
+        <p className="text-slate-600">Search and select a movie from your database</p>
+      </div>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+        <input
+          type="text"
+          placeholder="Search imported movies by title..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-12 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600"
+        />
+      </div>
+
+      {searchingTMDB && (
+        <div className="text-center py-8">
+          <div className="animate-spin h-8 w-8 border-2 border-indigo-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-slate-600">Searching...</p>
+        </div>
+      )}
+
+      {!searchingTMDB && tmdbResults.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {tmdbResults.map((movie) => (
+            <button
+              key={movie.id}
+              onClick={() => handleMovieSelect(movie)}
+              className="card card-hover text-left p-4 transition-all hover:shadow-lg"
+            >
+              <div className="flex items-start space-x-4">
+                <div className="w-16 h-24 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0">
+                  {movie.poster_path ? (
+                    <img
+                      src={`https://image.tmdb.org/t/p/w200${movie.poster_path}`}
+                      alt={movie.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">
+                      No Image
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-slate-900 mb-1 line-clamp-2">{movie.title}</h3>
+                  <div className="text-sm text-slate-600 space-y-1">
+                    {movie.release_date && (
+                      <p>{new Date(movie.release_date).getFullYear()}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {searchQuery && !searchingTMDB && tmdbResults.length === 0 && (
+        <div className="text-center py-8">
+          <p className="text-slate-600">No movies found for "{searchQuery}"</p>
+        </div>
+      )}
+
+      {!searchQuery && (
+        <div className="text-center py-12">
+          <Search className="mx-auto h-12 w-12 text-slate-400 mb-4" />
+          <p className="text-slate-600">Start typing to search your local catalog</p>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderStep2 = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">Cinema & Screen Details</h2>
+        <p className="text-slate-600">Select the cinema and screen for the show</p>
+      </div>
+
+      {selectedMovie && (
+        <div className="card p-4 mb-6">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-18 bg-slate-100 rounded overflow-hidden">
+              {selectedMovie.poster && (
+                <img
+                  src={`https://image.tmdb.org/t/p/w200${selectedMovie.poster}`}
+                  alt={selectedMovie.title}
+                  className="w-full h-full object-cover"
+                />
+              )}
+            </div>
+            <div>
+              <h3 className="font-semibold text-slate-900">{selectedMovie.title}</h3>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label className="block text-slate-700 font-semibold mb-2">
+            <MapPin size={16} className="inline mr-2" />
+            Cinema Location
+          </label>
+          <select
+            value={selectedCinemaId}
+            onChange={handleCinemaChange}
+            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600"
+          >
+            <option value="">Select a Cinema</option>
+            {cinemas.map(cinema => (
+              <option key={cinema._id} value={cinema._id}>{cinema.name} - {cinema.city}</option>
+            ))}
+          </select>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
-          {/* Date */}
-          <div>
-            <label className="block text-slate-700 font-semibold mb-2 text-sm md:text-base">Date</label>
-            <input
-              type="date"
-              name="date"
-              value={formData.date}
-              onChange={handleInputChange}
-              className="w-full px-3 md:px-4 py-2 md:py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600 text-sm md:text-base"
-            />
-          </div>
-
-          {/* Time */}
-          <div>
-            <label className="block text-slate-700 font-semibold mb-2 text-sm md:text-base">Time</label>
-            <input
-              type="time"
-              name="time"
-              value={formData.time}
-              onChange={handleInputChange}
-              className="w-full px-3 md:px-4 py-2 md:py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600 text-sm md:text-base"
-            />
-          </div>
+        <div>
+          <label className="block text-slate-700 font-semibold mb-2">Screen</label>
+          <select
+            value={selectedScreenId}
+            onChange={handleScreenChange}
+            disabled={!selectedCinemaId || screens.length === 0}
+            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600 disabled:bg-slate-100"
+          >
+            <option value="">{selectedCinemaId ? 'Select a Screen' : 'Select Cinema first'}</option>
+            {screens.map(screen => (
+              <option key={screen._id} value={screen._id}>
+                {screen.name} ({screen.screenType})
+              </option>
+            ))}
+          </select>
         </div>
+      </div>
+    </div>
+  );
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
-          {/* Theatre */}
-          <div>
-            <label className="block text-slate-700 font-semibold mb-2 text-sm md:text-base">Theatre</label>
-            <input
-              type="text"
-              name="theatre"
-              value={formData.theatre}
-              onChange={handleInputChange}
-              placeholder="e.g., PVR Cinemas"
-              className="w-full px-3 md:px-4 py-2 md:py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600 text-sm md:text-base"
-            />
-          </div>
+  const renderStep3 = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">Select Date</h2>
+        <p className="text-slate-600">Choose the date for the shows</p>
+      </div>
 
-          {/* Screen */}
-          <div>
-            <label className="block text-slate-700 font-semibold mb-2 text-sm md:text-base">Screen</label>
-            <input
-              type="text"
-              name="screen"
-              value={formData.screen}
-              onChange={handleInputChange}
-              placeholder="e.g., Screen 1"
-              className="w-full px-3 md:px-4 py-2 md:py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600 text-sm md:text-base"
-            />
-          </div>
-        </div>
+      <div className="max-w-md mx-auto">
+        <label className="block text-slate-700 font-semibold mb-2">
+          <Calendar size={16} className="inline mr-2" />
+          Show Date
+        </label>
+        <input
+          type="date"
+          value={selectedDate}
+          min={new Date().toISOString().split('T')[0]}
+          onChange={(e) => setSelectedDate(e.target.value)}
+          className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600"
+        />
+      </div>
+    </div>
+  );
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
-          {/* Price */}
-          <div>
-            <label className="block text-slate-700 font-semibold mb-2 text-sm md:text-base">Price per Seat (₹)</label>
-            <input
-              type="number"
-              name="price"
-              value={formData.price}
-              onChange={handleInputChange}
-              step="10"
-              min="0"
-              placeholder="200"
-              className="w-full px-3 md:px-4 py-2 md:py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600 text-sm md:text-base"
-            />
-          </div>
+  const renderStep4 = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">Configure Showtimes</h2>
+        <p className="text-slate-600">Add multiple showtimes for this movie</p>
+      </div>
 
-          {/* Total Seats */}
-          <div>
-            <label className="block text-slate-700 font-semibold mb-2 text-sm md:text-base">Total Seats</label>
-            <input
-              type="number"
-              name="totalSeats"
-              value={formData.totalSeats}
-              onChange={handleInputChange}
-              min="1"
-              placeholder="100"
-              className="w-full px-3 md:px-4 py-2 md:py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600 text-sm md:text-base"
-            />
+      <div className="space-y-4">
+        {showtimes.map((showtime, index) => (
+          <div key={index} className="card p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-slate-900">Showtime #{index + 1}</h3>
+              {showtimes.length > 1 && (
+                <button
+                  onClick={() => removeShowtime(index)}
+                  className="text-red-600 hover:text-red-700 p-1"
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-slate-700 font-medium mb-2">
+                  <Clock size={16} className="inline mr-2" />
+                  Start Time
+                </label>
+                <input
+                  type="time"
+                  value={showtime.startTime}
+                  onChange={(e) => {
+                    updateShowtime(index, {
+                      startTime: e.target.value,
+                      endTime: calculateEndTime(e.target.value)
+                    });
+                  }}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-medium mb-2">End Time</label>
+                <input
+                  type="time"
+                  value={showtime.endTime}
+                  onChange={(e) => updateShowtime(index, { endTime: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-medium mb-2">
+                  <DollarSign size={16} className="inline mr-2" />
+                  Price (₹)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="10"
+                  placeholder="200"
+                  value={showtime.price}
+                  onChange={(e) => updateShowtime(index, { price: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600"
+                />
+              </div>
+            </div>
           </div>
-        </div>
+        ))}
 
         <button
-          type="submit"
-          disabled={loading || (!formData.movieId && !formData.tmdbId)}
-          className="w-full btn-primary disabled:opacity-50 py-3 md:py-4 text-sm md:text-base font-semibold"
+          onClick={addShowtime}
+          className="w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-600 hover:border-indigo-600 hover:text-indigo-600 transition-colors flex items-center justify-center gap-2"
         >
-          {loading ? 'Adding Show...' : 'Add Show'}
+          <Plus size={20} />
+          Add Showtime
         </button>
-      </form>
+      </div>
+    </div>
+  );
+
+  const renderStep5 = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">Review & Create</h2>
+        <p className="text-slate-600">Review all details before scheduling</p>
+      </div>
+
+      <div className="card p-6 mb-6 pointer-events-none">
+        <h3 className="font-semibold text-slate-900 mb-4">Screen Layout Details</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div>
+            <p className="text-sm text-slate-500">Total Available Seats</p>
+            <p className="font-bold text-indigo-600 text-lg">{seatConfig.totalSeats}</p>
+          </div>
+          <div>
+            <p className="text-sm text-slate-500">Rows</p>
+            <p className="font-bold text-slate-900 text-lg">{seatConfig.rows}</p>
+          </div>
+          <div>
+            <p className="text-sm text-slate-500">Seats per Row</p>
+            <p className="font-bold text-slate-900 text-lg">{seatConfig.seatsPerRow}</p>
+          </div>
+        </div>
+        
+        {seatConfig.seatLayoutEditorData.length > 0 && (
+          <div className="opacity-80 scale-95 origin-top mt-4">
+             <SeatLayoutEditor
+                rows={seatConfig.rows}
+                seatsPerRow={seatConfig.seatsPerRow}
+                layout={seatConfig.seatLayoutEditorData}
+                onChange={() => {}}
+              />
+          </div>
+        )}
+      </div>
+
+      <div className="card p-6">
+        <h3 className="font-semibold text-slate-900 mb-4">Show Preview</h3>
+        
+        <div className="space-y-4">
+          <div className="flex items-center space-x-4">
+            <div className="w-16 h-24 bg-slate-100 rounded overflow-hidden">
+              {selectedMovie?.poster && (
+                <img
+                  src={`https://image.tmdb.org/t/p/w200${selectedMovie.poster}`}
+                  alt={selectedMovie.title}
+                  className="w-full h-full object-cover"
+                />
+              )}
+            </div>
+            <div>
+              <h4 className="font-semibold text-slate-900">{selectedMovie?.title}</h4>
+              <p className="text-slate-600">{cinemaData.cinemaName}</p>
+              <p className="text-slate-600">{cinemaData.screenNumber} ({cinemaData.screenType})</p>
+              <p className="text-slate-600">{new Date(selectedDate).toLocaleDateString()}</p>
+            </div>
+          </div>
+
+          <div>
+            <h5 className="font-medium text-slate-900 mb-2">Showtimes:</h5>
+            <div className="space-y-2">
+              {showtimes.map((showtime, index) => (
+                <div key={index} className="flex justify-between items-center p-2 bg-slate-50 rounded">
+                  <span>{showtime.startTime} - {showtime.endTime}</span>
+                  <span className="font-semibold">₹{showtime.price}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6 pb-20">
+      <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Schedule New Show</h1>
+          <p className="text-sm text-slate-500 mt-1">Configure movie, cinema, and timings</p>
+        </div>
+      </div>
+
+      {renderStepIndicator()}
+
+      <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-8 min-h-[400px]">
+        {currentStep === 1 && renderStep1()}
+        {currentStep === 2 && renderStep2()}
+        {currentStep === 3 && renderStep3()}
+        {currentStep === 4 && renderStep4()}
+        {currentStep === 5 && renderStep5()}
+      </div>
+
+      <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+        <button
+          onClick={prevStep}
+          disabled={currentStep === 1}
+          className="btn-outline flex items-center gap-2"
+        >
+          <ChevronLeft size={20} />
+          Back
+        </button>
+        {currentStep < totalSteps ? (
+          <button
+            onClick={nextStep}
+            disabled={!validateStep(currentStep)}
+            className="btn-primary flex items-center gap-2"
+          >
+            Next Step
+            <ChevronRight size={20} />
+          </button>
+        ) : (
+          <button
+            onClick={createShows}
+            disabled={loading || !validateStep(5)}
+            className="btn-primary flex items-center gap-2"
+          >
+            {loading ? 'Creating...' : `Create ${showtimes.length} Show(s)`}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
-

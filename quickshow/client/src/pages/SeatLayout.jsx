@@ -13,8 +13,13 @@ import { ArrowLeft } from 'lucide-react';
 // Cashfree script handler
 const loadCashfreeScript = () => {
   return new Promise((resolve) => {
+    // Check if it's already loaded
+    if (window.Cashfree) {
+      resolve(true);
+      return;
+    }
     const script = document.createElement('script');
-    script.src = 'https://sdk.cashfree.com/js/ui.js';
+    script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
     script.async = true;
     script.onload = () => resolve(true);
     script.onerror = () => resolve(false);
@@ -84,11 +89,6 @@ export default function SeatLayout() {
   };
 
   const handleBooking = async () => {
-    console.log("Payment attempt - Clerk status:", {
-      clerkLoaded,
-      isSignedIn,
-      selectedSeats: selectedSeats.length
-    });
 
     if (!clerkLoaded) {
       toast.error('Clerk is still loading. Please wait.');
@@ -134,32 +134,25 @@ export default function SeatLayout() {
           return;
         }
 
-        console.log('✅ Cashfree order created:', {
-          orderId,
-          bookingId,
-          amount,
-          paymentSessionId
-        });
 
         // Initialize Cashfree and open checkout
         if (window.Cashfree && paymentSessionId) {
-          const checkoutOptions = {
-            paymentSessionId: paymentSessionId,
-            redirectTarget: '_self',
-          };
-
           try {
-            window.Cashfree.checkout(checkoutOptions).then((checkoutInstance) => {
-              if (checkoutInstance) {
-                checkoutInstance.open();
-              } else {
-                toast.error('Failed to initialize payment checkout');
+            const cashfree = window.Cashfree({
+              mode: "production",
+            });
+            
+            const checkoutOptions = {
+              paymentSessionId: paymentSessionId,
+              redirectTarget: '_self',
+            };
+            
+            cashfree.checkout(checkoutOptions).then((result) => {
+              if (result.error) {
+                console.error('Cashfree checkout error:', result.error);
+                toast.error(result.error.message || 'Failed to complete payment');
                 setIsBooking(false);
               }
-            }).catch((error) => {
-              console.error('Cashfree checkout error:', error);
-              toast.error('Failed to open payment checkout');
-              setIsBooking(false);
             });
           } catch (error) {
             console.error('Cashfree initialization error:', error);
@@ -211,7 +204,7 @@ export default function SeatLayout() {
 
   return (
     <>
-      <div className="min-h-screen pt-20 pb-16 bg-white">
+      <div className="min-h-screen pt-8 pb-16 bg-white">
         <div className="container mx-auto px-4 py-8">
           <button
             onClick={() => navigate(-1)}

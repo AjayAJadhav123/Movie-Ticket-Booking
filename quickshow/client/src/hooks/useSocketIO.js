@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { useAuth } from '@clerk/clerk-react';
 import io from 'socket.io-client';
 
 /**
@@ -6,6 +7,7 @@ import io from 'socket.io-client';
  * Manages connection lifecycle and event handling for real-time seat availability
  */
 export const useSocketIO = (showId) => {
+  const { getToken } = useAuth();
   const socketRef = useRef(null);
   const [lockedSeats, setLockedSeats] = useState(new Set());
   const [occupiedSeats, setOccupiedSeats] = useState(new Set());
@@ -17,86 +19,101 @@ export const useSocketIO = (showId) => {
 
     const SOCKET_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
-    // Create socket connection
-    const socket = io(SOCKET_URL, {
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      reconnectionAttempts: 5,
-      transports: ['websocket', 'polling'],
-    });
+    // Get auth token and establish connection
+    const setupSocket = async () => {
+      try {
+        const token = await getToken();
+        
+        // ✅ SECURITY: Pass auth token to Socket.IO
+        const socket = io(SOCKET_URL, {
+          reconnection: true,
+          reconnectionDelay: 1000,
+          reconnectionDelayMax: 5000,
+          reconnectionAttempts: 5,
+          transports: ['websocket', 'polling'],
+          extraHeaders: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-    socketRef.current = socket;
+        socketRef.current = socket;
 
-    // Connection handlers
-    socket.on('connect', () => {
-      console.log('🔌 Socket connected:', socket.id);
-      setIsConnected(true);
+        // Connection handlers
+        socket.on('connect', () => {
+          console.log('🔌 Socket connected:', socket.id);
+          setIsConnected(true);
 
-      // Join show-specific room
-      socket.emit('join:show', showId);
-    });
+          // Join show-specific room
+          socket.emit('join:show', showId);
+        });
 
-    socket.on('disconnect', () => {
-      console.log('❌ Socket disconnected');
-      setIsConnected(false);
-    });
+        socket.on('disconnect', () => {
+          console.log('❌ Socket disconnected');
+          setIsConnected(false);
+        });
 
-    socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
-    });
+        socket.on('connect_error', (error) => {
+          console.error('Socket connection error:', error);
+        });
 
-    // Seat lock event - when user locks seats for payment
-    socket.on('seats:locked', (data) => {
-      const { seats, userId } = data;
-      console.log('🔒 Seats locked:', seats, 'by user:', userId);
-      
-      setLockedSeats((prev) => {
-        const newSet = new Set(prev);
-        seats.forEach((seat) => newSet.add(seat));
-        return newSet;
-      });
-    });
+        // Seat lock event - when user locks seats for payment
+        socket.on('seats:locked', (data) => {
+          const { seats, userId } = data;
+          console.log('🔒 Seats locked:', seats, 'by user:', userId);
+          
+          setLockedSeats((prev) => {
+            const newSet = new Set(prev);
+            seats.forEach((seat) => newSet.add(seat));
+            return newSet;
+          });
+        });
 
-    // Seat occupied event - when payment succeeds
-    socket.on('seats:occupied', (data) => {
-      const { seats, userId } = data;
-      console.log('✅ Seats occupied (payment confirmed):', seats, 'by user:', userId);
-      
-      setOccupiedSeats((prev) => {
-        const newSet = new Set(prev);
-        seats.forEach((seat) => newSet.add(seat));
-        return newSet;
-      });
+        // Seat occupied event - when payment succeeds
+        socket.on('seats:occupied', (data) => {
+          const { seats, userId } = data;
+          console.log('✅ Seats occupied (payment confirmed):', seats, 'by user:', userId);
+          
+          setOccupiedSeats((prev) => {
+            const newSet = new Set(prev);
+            seats.forEach((seat) => newSet.add(seat));
+            return newSet;
+          });
 
-      // Remove from locked seats
-      setLockedSeats((prev) => {
-        const newSet = new Set(prev);
-        seats.forEach((seat) => newSet.delete(seat));
-        return newSet;
-      });
-    });
+          // Remove from locked seats
+          setLockedSeats((prev) => {
+            const newSet = new Set(prev);
+            seats.forEach((seat) => newSet.delete(seat));
+            return newSet;
+          });
+        });
 
-    // Seat released event - when payment fails or booking expires
-    socket.on('seats:released', (data) => {
-      const { seats, userId } = data;
-      console.log('🔓 Seats released:', seats, 'by user:', userId);
-      
-      setLockedSeats((prev) => {
-        const newSet = new Set(prev);
-        seats.forEach((seat) => newSet.delete(seat));
-        return newSet;
-      });
-    });
+        // Seat released event - when payment fails or booking expires
+        socket.on('seats:released', (data) => {
+          const { seats, userId } = data;
+          console.log('🔓 Seats released:', seats, 'by user:', userId);
+          
+          setLockedSeats((prev) => {
+            const newSet = new Set(prev);
+            seats.forEach((seat) => newSet.delete(seat));
+            return newSet;
+          });
+        });
+      } catch (error) {
+        console.error('Error setting up Socket.IO:', error);
+      }
+    };
+
+    setupSocket();
 
     // Cleanup
     return () => {
-      if (socket) {
-        socket.emit('leave:show', showId);
-        socket.disconnect();
+      if (socketRef.current) {
+        const showId_local = showId;
+        socketRef.current.emit('leave:show', showId_local);
+        socketRef.current.disconnect();
       }
     };
-  }, [showId]);
+  }, [showId, getToken]);
 
   // Function to manually join a show room (useful if reconnecting)
   const joinShow = useCallback((id) => {

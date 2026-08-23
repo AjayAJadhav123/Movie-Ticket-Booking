@@ -1,0 +1,17 @@
+{
+  "name": "quickshow",
+  "version": "1.0.0",
+  "description": "A modern, fully-functional movie ticket booking application built with the MERN stack (MongoDB, Express, React, Node.js) with integrated payment processing, email notifications, and admin dashboard.",
+  "main": "test-stripe.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "install-all": "npm install && npm install --prefix server && npm install --prefix client"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}

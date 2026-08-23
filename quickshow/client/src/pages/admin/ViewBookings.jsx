@@ -1,28 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Calendar, Clock, Ticket } from 'lucide-react';
+import { Calendar, Clock, Ticket, Search, Filter } from 'lucide-react';
 import Loading from '../../components/Loading';
+import { toast } from 'react-hot-toast';
 
 export default function ViewBookings() {
   const { apiClient } = useApp();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [pagination, setPagination] = useState({});
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     fetchBookings();
-  }, [statusFilter]);
+  }, [statusFilter, page]);
 
   const fetchBookings = async () => {
     try {
       setLoading(true);
-      const params = statusFilter ? { status: statusFilter } : {};
+      const params = { page };
+      if (statusFilter) params.status = statusFilter;
+      
       const response = await apiClient.get('/api/booking/admin-bookings', { params });
       if (response.data.success) {
         setBookings(response.data.data);
+        setPagination(response.data.pagination || {});
       }
     } catch (error) {
       console.error('Error fetching bookings:', error);
+      toast.error('Failed to fetch bookings');
     } finally {
       setLoading(false);
     }
@@ -31,109 +39,156 @@ export default function ViewBookings() {
   const getStatusColor = (status) => {
     switch (status) {
       case 'confirmed':
-        return 'bg-green-100 text-green-800';
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-amber-100 text-amber-800 border-amber-200';
       case 'cancelled':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-800 border-red-200';
       default:
-        return 'bg-slate-100 text-slate-800';
+        return 'bg-slate-100 text-slate-800 border-slate-200';
     }
   };
 
-  return (
-    <div className="container mx-auto px-4 py-6 md:py-8 lg:py-12">
-      <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 md:mb-8">All Bookings</h1>
+  // Local filter for search (if backend doesn't support text search yet)
+  const filteredBookings = bookings.filter(b => 
+    b.movieTitle?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    b.userId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    b._id?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-      <div className="mb-6 flex gap-2 flex-wrap">
-        {['', 'confirmed', 'pending', 'cancelled'].map((status) => (
-          <button
-            key={status}
-            onClick={() => setStatusFilter(status)}
-            className={`px-3 md:px-4 py-2 rounded-lg font-semibold transition-colors text-xs md:text-sm ${
-              statusFilter === status
-                ? 'bg-indigo-600 text-slate-900'
-                : 'bg-gray-200 text-slate-800 hover:bg-gray-300'
-            }`}
-          >
-            {status || 'All'}
-          </button>
-        ))}
+  return (
+    <div className="max-w-7xl mx-auto space-y-6 pb-12">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <Ticket className="text-indigo-600" /> All Bookings
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">Monitor and manage all customer bookings</p>
+        </div>
       </div>
 
-      {loading ? (
-        <Loading />
-      ) : bookings.length === 0 ? (
-        <div className="text-center py-8 md:py-12 bg-slate-50 rounded-lg">
-          <p className="text-slate-500 text-base md:text-lg">No bookings found.</p>
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="relative w-full md:max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+          <input
+            type="text"
+            placeholder="Search by movie or user ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition"
+          />
+        </div>
+        
+        <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 hide-scrollbar">
+          {['', 'confirmed', 'pending', 'cancelled'].map((status) => (
+            <button
+              key={status}
+              onClick={() => { setStatusFilter(status); setPage(1); }}
+              className={`px-4 py-2 rounded-xl font-semibold transition-colors text-sm whitespace-nowrap flex items-center gap-2 ${
+                statusFilter === status
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {status === '' && <Filter size={14} />}
+              {status ? status.charAt(0).toUpperCase() + status.slice(1) : 'All Status'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading && bookings.length === 0 ? (
+        <div className="text-center py-12 text-indigo-600">Loading bookings...</div>
+      ) : filteredBookings.length === 0 ? (
+        <div className="bg-white p-12 text-center rounded-2xl shadow-sm border border-slate-200">
+          <Ticket size={48} className="mx-auto text-slate-300 mb-4" />
+          <p className="text-slate-600 text-lg font-medium">No bookings found</p>
+          <p className="text-slate-500 text-sm mt-1">Try adjusting your search or filters.</p>
         </div>
       ) : (
-        <div className="grid gap-3 md:gap-4 lg:gap-6">
-          {bookings.map((booking) => (
-            <div
-              key={booking._id}
-              className="bg-slate-50 rounded-lg shadow-lg p-4 md:p-6 hover:shadow-xl transition-shadow"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
-                <div className="lg:col-span-1">
-                  <p className="text-slate-600 mb-1 font-semibold text-xs md:text-sm">Movie</p>
-                  <p className="font-semibold text-sm md:text-lg truncate">{booking.movieTitle}</p>
-                </div>
-
-                <div className="md:col-span-1 lg:col-span-1">
-                  <p className="text-slate-600 mb-1 font-semibold text-xs md:text-sm">User</p>
-                  <p className="font-semibold text-xs md:text-sm truncate text-slate-800">{booking.userId}</p>
-                </div>
-
-                <div className="md:col-span-1 lg:col-span-1">
-                  <p className="text-slate-600 mb-1 font-semibold text-xs md:text-sm">Show Details</p>
-                  <div className="text-xs md:text-sm space-y-1">
-                    <div className="flex items-center gap-1">
-                      <Calendar size={14} className="flex-shrink-0" />
-                      <span className="truncate">{new Date(booking.showDate).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock size={14} className="flex-shrink-0" />
-                      {booking.showTime}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="md:col-span-1 lg:col-span-1">
-                  <p className="text-slate-600 mb-1 font-semibold text-xs md:text-sm">Seats & Amount</p>
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {booking.seats.slice(0, 2).map((seat) => (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200 uppercase tracking-wider text-xs">
+                <tr>
+                  <th className="px-6 py-4">Booking ID & User</th>
+                  <th className="px-6 py-4">Movie</th>
+                  <th className="px-6 py-4">Show Details</th>
+                  <th className="px-6 py-4">Seats & Amount</th>
+                  <th className="px-6 py-4 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredBookings.map((booking) => (
+                  <tr key={booking._id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="font-mono text-xs text-indigo-600 mb-1">
+                        #{booking._id.slice(-6).toUpperCase()}
+                      </div>
+                      <div className="text-slate-600 text-xs truncate max-w-[150px]" title={booking.userId}>
+                        {booking.userId}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 font-semibold text-slate-900 line-clamp-2 max-w-[200px]">
+                      {booking.movieTitle || booking.showId?.movieId?.title || 'Unknown'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5 text-slate-900 font-medium">
+                        <Calendar size={14} className="text-slate-400" />
+                        {new Date(booking.showDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-slate-500 text-xs mt-1">
+                        <Clock size={14} className="text-slate-400" />
+                        {booking.showTime}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded inline-block mb-1">
+                        {booking.seats.join(', ')} ({booking.seats.length} seats)
+                      </div>
+                      <div className="text-slate-900 font-bold">₹{booking.amount?.toFixed(2) || '0.00'}</div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
                       <span
-                        key={seat}
-                        className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-xs font-semibold"
+                        className={`inline-block px-3 py-1 rounded-full font-semibold text-xs border ${getStatusColor(
+                          booking.status
+                        )}`}
                       >
-                        {seat}
+                        {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
                       </span>
-                    ))}
-                    {booking.seats.length > 2 && (
-                      <span className="text-xs text-slate-500 flex items-center">
-                        +{booking.seats.length - 2}
-                      </span>
-                    )}
-                  </div>
-                  <p className="font-bold text-indigo-600 text-sm md:text-base">₹{booking.amount.toFixed(2)}</p>
-                </div>
-
-                <div className="md:col-span-2 lg:col-span-1 flex items-end">
-                  <span
-                    className={`inline-block px-3 py-1 rounded-full font-semibold text-xs md:text-sm w-full md:w-auto text-center lg:text-center ${getStatusColor(
-                      booking.status
-                    )}`}
-                  >
-                    {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                  </span>
-                </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Pagination */}
+          {pagination.pages > 1 && (
+            <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-t border-slate-200">
+              <span className="text-sm text-slate-600 font-medium">
+                Page {pagination.page} of {pagination.pages}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold disabled:opacity-50 hover:bg-slate-100 transition"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
+                  disabled={page === pagination.pages}
+                  className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold disabled:opacity-50 hover:bg-slate-100 transition"
+                >
+                  Next
+                </button>
               </div>
             </div>
-          ))}
+          )}
         </div>
       )}
     </div>
   );
 }
-

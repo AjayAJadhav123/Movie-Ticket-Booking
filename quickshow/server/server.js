@@ -3,6 +3,7 @@ dotenv.config();
 
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import { clerkMiddleware } from '@clerk/express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
@@ -16,9 +17,16 @@ import aiRoutes from './routes/aiRoutes.js';
 import recommendationRoutes from './routes/recommendationRoutes.js';
 import pricingRoutes from './routes/pricingRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
+import cinemaRoutes from './routes/cinemaRoutes.js';
+import screenRoutes from './routes/screenRoutes.js';
+import adminAuthRoutes from './routes/adminAuthRoutes.js';
 import { serve } from 'inngest/express';
 import { inngest } from './config/inngest.js';
-import './inngest/functions.js';
+import {
+  sendBookingConfirmationEmail,
+  sendShowReminderEmail,
+  sendNewShowNotification,
+} from './inngest/functions.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -34,7 +42,8 @@ const io = new Server(httpServer, {
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(null, true); // Allow all origins in production for now
+        // ✅ FIXED: Reject instead of allowing all
+        callback(new Error('CORS policy violation'));
       }
     },
     credentials: true,
@@ -51,8 +60,27 @@ const PORT = process.env.PORT || 5000;
 connectDB();
 initializeEmailService();
 
+// ✅ SECURITY: Add Helmet for security headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      frameSrc: ["'self'"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true,
+  },
+}));
+
+// ✅ SECURITY: Add request size limit to prevent DoS
 app.use(
   express.json({
+    limit: '10kb',  // Limit payload to 10KB
     verify: (req, res, buf) => {
       req.rawBody = buf.toString('utf8');
     },
@@ -71,7 +99,8 @@ app.use(
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(null, true); // Allow all origins in production for now
+        // ✅ FIXED: Reject instead of allowing all
+        callback(new Error('CORS policy violation'));
       }
     },
     credentials: true,
@@ -80,29 +109,50 @@ app.use(
   })
 );
 
-// Health check before Clerk middleware
 app.get('/health', (req, res) => {
   res.json({ 
     success: true, 
     message: 'Server is running',
     mongodb: process.env.MONGODB_URI ? 'configured' : 'not configured',
     clerk: process.env.CLERK_SECRET_KEY ? 'configured' : 'not configured',
+    cashfree_app_id: process.env.CASHFREE_APP_ID ? process.env.CASHFREE_APP_ID.substring(0, 5) + '...' : 'not configured',
   });
 });
 
-app.use(clerkMiddleware());
+const clerkJwtKey = process.env.CLERK_JWT_KEY ? process.env.CLERK_JWT_KEY.replace(/\\n/g, '\n') : undefined;
+
+app.use(clerkMiddleware({ 
+  authorizedParties: [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175',
+    'http://localhost:3000',
+    process.env.FRONTEND_URL
+  ].filter(Boolean),
+  jwtKey: clerkJwtKey,
+  publishableKey: process.env.CLERK_PUBLISHABLE_KEY 
+}));
 
 app.use('/api/user', userRoutes);
 app.use('/api/movie', movieRoutes);
+app.use('/api/cinema', cinemaRoutes);
+app.use('/api/screen', screenRoutes);
 app.use('/api/show', showRoutes);
 app.use('/api/booking', bookingRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/pricing', pricingRoutes);
+app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/admin/analytics', analyticsRoutes);
 
-// Inngest handler - using correct v3 syntax
-app.use('/api/inngest', serve({ client: inngest }));
+// Inngest handler - pass functions so Inngest can serve and execute them
+app.use(
+  '/api/inngest',
+  serve({
+    client: inngest,
+    functions: [sendBookingConfirmationEmail, sendShowReminderEmail, sendNewShowNotification],
+  })
+);
 
 // 404 handler for debugging API routes
 app.use((req, res, next) => {
@@ -129,8 +179,20 @@ app.use((err, req, res, next) => {
 io.on('connection', (socket) => {
   console.log('🔌 Socket connected:', socket.id);
 
+  // ✅ SECURITY: Verify auth token on connection
+  const token = socket.handshake.headers.authorization?.split(' ')[1];
+  if (!token) {
+    console.warn(`❌ Socket ${socket.id} disconnected - no auth token`);
+    socket.disconnect(true);
+    return;
+  }
+
   // User joins a specific show room
   socket.on('join:show', (showId) => {
+    if (!showId || typeof showId !== 'string') {
+      console.warn(`Invalid showId on join:show - ${socket.id}`);
+      return;
+    }
     const room = `show:${showId}`;
     socket.join(room);
     console.log(`📍 Socket ${socket.id} joined room: ${room}`);
@@ -138,6 +200,10 @@ io.on('connection', (socket) => {
 
   // User leaves a show room
   socket.on('leave:show', (showId) => {
+    if (!showId || typeof showId !== 'string') {
+      console.warn(`Invalid showId on leave:show - ${socket.id}`);
+      return;
+    }
     const room = `show:${showId}`;
     socket.leave(room);
     console.log(`📍 Socket ${socket.id} left room: ${room}`);
@@ -166,3 +232,4 @@ httpServer.listen(PORT, () => {
 });
 
 export default app;
+

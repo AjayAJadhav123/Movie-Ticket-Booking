@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Send, Loader, MessageCircle } from 'lucide-react';
+import { X, Send, Loader, MessageCircle, AlertTriangle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export default function AIChat({ isOpen, onClose }) {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: 'Hi! I\'m QuickShow AI, your movie booking assistant. 🎬 I can help you find movies, check showtimes, see prices, and guide you through booking. What would you like to know?',
+      content: 'Hi! I\'m QuickShow AI, your movie booking assistant. I can help you find movies, check showtimes, see prices, and guide you through booking. What would you like to know?',
     },
   ]);
   const [input, setInput] = useState('');
@@ -122,8 +122,9 @@ export default function AIChat({ isOpen, onClose }) {
 
       {/* Error Display */}
       {error && (
-        <div className="px-4 py-2 bg-red-50 border-t border-red-200 text-red-700 text-xs">
-          ⚠️ {error}
+        <div className="px-4 py-2 bg-red-50 border-t border-red-200 text-red-700 text-xs flex items-center gap-1.5">
+          <AlertTriangle size={12} />
+          {error}
         </div>
       )}
 

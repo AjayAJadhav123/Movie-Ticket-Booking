@@ -51,7 +51,8 @@ export const sendBookingConfirmationEmail = inngest.createFunction(
         month: 'long',
         day: 'numeric',
       });
-      const formattedAmount = (amount / 100).toFixed(2);
+      // amount is stored in rupees (not paise)
+      const formattedAmount = Number(amount).toFixed(2);
 
       const html = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px;">
@@ -88,7 +89,7 @@ export const sendBookingConfirmationEmail = inngest.createFunction(
                 </div>
                 <div>
                   <p style="margin: 0 0 5px 0; font-size: 12px; color: #667eea; font-weight: bold;">💰 AMOUNT</p>
-                  <p style="margin: 0; font-size: 14px; color: #333; font-weight: bold;">$${formattedAmount}</p>
+                  <p style="margin: 0; font-size: 14px; color: #333; font-weight: bold;">₹${formattedAmount}</p>
                 </div>
               </div>
             </div>

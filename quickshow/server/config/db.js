@@ -9,11 +9,17 @@ const connectDB = async () => {
   }
 
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI);
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+    console.log('MongoDB: attempting connection...');
+    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+      // Do not let an unreachable Atlas cluster keep every API request waiting.
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
+      family: 4 // Force IPv4 to fix DNS/routing timeout issues with Atlas
+    });
+    console.log('MongoDB: connected');
     return conn;
   } catch (error) {
-    console.error(`❌ MongoDB Connection Error: ${error.message}`);
+    console.error(`MongoDB: connection failed - ${error.message}`);
     console.warn(`⚠️  Server starting without database connection.`);
     console.warn(`    API endpoints will return error responses.`);
     return null;

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import Loading from '../../components/Loading';
-import { Search, Trash2, Plus, AlertCircle, Loader } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { Search, Trash2, Plus, AlertCircle, Loader, X, Film } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 export default function AdminMovies() {
   const { apiClient } = useApp();
@@ -58,37 +58,21 @@ export default function AdminMovies() {
       toast.error('Please enter a movie title');
       return;
     }
-
     try {
       setTmdbLoading(true);
-      const response = await apiClient.get('/api/movie/now-playing');
-
+      const response = await apiClient.get('/api/movie/search-tmdb', {
+        params: { query: tmdbSearchTerm }
+      });
       if (!response.data.success) {
         setTmdbApiKeyMissing(true);
-        toast.error('TMDB API key is not configured. Contact admin.');
+        toast.error(response.data.message || 'Error searching TMDB');
         return;
       }
-
-      // Filter results based on search term
-      const filtered = response.data.data.filter(
-        (movie) =>
-          movie.title.toLowerCase().includes(tmdbSearchTerm.toLowerCase()) ||
-          (movie.original_title &&
-            movie.original_title
-              .toLowerCase()
-              .includes(tmdbSearchTerm.toLowerCase()))
-      );
-
-      setTmdbResults(filtered);
-
-      if (filtered.length === 0) {
-        toast.info('No movies found matching your search');
-      }
+      setTmdbResults(response.data.data);
+      if (response.data.data.length === 0) toast.error('No movies found matching your search');
     } catch (error) {
       console.error('Error searching TMDB:', error);
-      if (error.response?.data?.message?.includes('TMDB API key')) {
-        setTmdbApiKeyMissing(true);
-      }
+      if (error.response?.data?.message?.includes('TMDB API key')) setTmdbApiKeyMissing(true);
       toast.error(error.response?.data?.message || 'Error searching TMDB');
     } finally {
       setTmdbLoading(false);
@@ -98,39 +82,40 @@ export default function AdminMovies() {
   const importMovie = async (tmdbMovie) => {
     try {
       const response = await apiClient.post('/api/movie/add', {
-        tmdbId: tmdbMovie.id,
+        tmdbId: tmdbMovie.id || tmdbMovie.tmdbId,
+        title: tmdbMovie.title,
+        overview: tmdbMovie.overview,
+        poster_path: tmdbMovie.poster_path,
+        backdrop_path: tmdbMovie.backdrop_path,
+        release_date: tmdbMovie.release_date,
+        rating: tmdbMovie.vote_average || tmdbMovie.rating,
+        genres: tmdbMovie.genres || [],
+        language: tmdbMovie.original_language || tmdbMovie.language,
+        duration: tmdbMovie.runtime || tmdbMovie.duration || 120,
       });
 
       if (response.data.success) {
-        toast.success(`Movie "${tmdbMovie.title}" imported successfully`);
-        setShowTMDBModal(false);
-        setTmdbSearchTerm('');
-        setTmdbResults([]);
-        setPage(1);
+        toast.success(`"${tmdbMovie.title}" imported successfully!`);
         fetchMovies();
       }
     } catch (error) {
       console.error('Error importing movie:', error);
-      toast.error(
-        error.response?.data?.message ||
-          'Error importing movie (may already exist)'
-      );
+      toast.error(error.response?.data?.message || 'Error importing movie');
     }
   };
 
-  const deleteMovie = async (movieId, movieTitle) => {
-    if (window.confirm(`Delete "${movieTitle}"?`)) {
+  const deleteMovie = async (id, title) => {
+    if (window.confirm(`Are you sure you want to delete "${title}"? This cannot be undone.`)) {
       try {
-        setDeleting(movieId);
-        const response = await apiClient.delete(`/api/movie/${movieId}`);
-
+        setDeleting(id);
+        const response = await apiClient.delete(`/api/movie/${id}`);
         if (response.data.success) {
-          toast.success('Movie deleted successfully');
+          toast.success(`"${title}" deleted successfully`);
           fetchMovies();
         }
       } catch (error) {
         console.error('Error deleting movie:', error);
-        toast.error('Error deleting movie');
+        toast.error(error.response?.data?.message || 'Error deleting movie');
       } finally {
         setDeleting(null);
       }
@@ -138,62 +123,51 @@ export default function AdminMovies() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 md:py-8 lg:py-12">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 md:mb-8">
-        <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold">Manage Movies</h1>
+    <div className="max-w-7xl mx-auto space-y-6">
+      
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <Film className="text-indigo-600" /> Manage Movies
+          </h1>
+          <p className="text-slate-500 text-sm mt-1">Import and manage movies synced from TMDB</p>
+        </div>
         <button
           onClick={() => setShowTMDBModal(true)}
-          className="flex items-center gap-2 px-3 md:px-4 py-2 bg-indigo-600 text-slate-900 rounded-lg hover:bg-indigo-700 transition-colors font-semibold text-sm md:text-base w-full sm:w-auto justify-center sm:justify-start"
+          className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-indigo-700 transition flex items-center gap-2"
         >
-          <Plus size={18} />
-          Import from TMDB
+          <Plus size={18} /> Import from TMDB
         </button>
       </div>
 
       {/* Search and Filter */}
-      <div className="bg-slate-50 rounded-lg shadow-lg p-4 md:p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-3 text-slate-400" size={18} />
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input
               type="text"
-              placeholder="Search movies..."
+              placeholder="Search synced movies by title..."
               value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setPage(1);
-              }}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm md:text-base"
+              onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition"
             />
           </div>
-
-          {/* Genre Filter */}
           <select
             value={selectedGenre}
-            onChange={(e) => {
-              setSelectedGenre(e.target.value);
-              setPage(1);
-            }}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm md:text-base"
+            onChange={(e) => { setSelectedGenre(e.target.value); setPage(1); }}
+            className="px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 bg-white min-w-[200px]"
           >
             <option value="">All Genres</option>
             {genres.map((genre) => (
-              <option key={genre} value={genre}>
-                {genre}
-              </option>
+              <option key={genre} value={genre}>{genre}</option>
             ))}
           </select>
-
-          {/* Reset Filters */}
           {(searchTerm || selectedGenre) && (
             <button
-              onClick={() => {
-                setSearchTerm('');
-                setSelectedGenre('');
-                setPage(1);
-              }}
-              className="px-4 py-2 bg-gray-200 text-slate-800 rounded-lg hover:bg-gray-300 transition-colors text-sm md:text-base"
+              onClick={() => { setSearchTerm(''); setSelectedGenre(''); setPage(1); }}
+              className="px-4 py-2.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition font-medium"
             >
               Clear Filters
             </button>
@@ -201,109 +175,60 @@ export default function AdminMovies() {
         </div>
       </div>
 
-      {/* Movies Table/Grid */}
+      {/* Movie List */}
       {loading ? (
         <Loading />
       ) : movies.length === 0 ? (
-        <div className="text-center py-8 md:py-12 bg-slate-50 rounded-lg">
-          <AlertCircle size={40} className="mx-auto text-slate-400 mb-3 md:mb-4" />
-          <p className="text-slate-500 text-base md:text-lg">No movies found.</p>
-          <p className="text-slate-400 text-sm md:text-base">
-            {searchTerm || selectedGenre
-              ? 'Try different search or filter criteria.'
-              : 'Import movies from TMDB to get started.'}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
+          <AlertCircle size={48} className="mx-auto text-slate-300 mb-4" />
+          <h3 className="text-lg font-semibold text-slate-600 mb-2">No Movies Found</h3>
+          <p className="text-slate-500 text-sm">
+            {searchTerm || selectedGenre ? 'Try different search or filter criteria.' : 'Click "Import from TMDB" to add movies to your database.'}
           </p>
         </div>
       ) : (
-        <div className="bg-slate-50 rounded-lg shadow-lg overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-max md:min-w-0">
-              <thead className="bg-slate-100 border-b border-gray-200">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200 uppercase tracking-wider text-xs">
                 <tr>
-                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold text-slate-700">
-                    Poster
-                  </th>
-                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold text-slate-700">
-                    Title
-                  </th>
-                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold text-slate-700 hidden sm:table-cell">
-                    Release
-                  </th>
-                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold text-slate-700 hidden lg:table-cell">
-                    Rating
-                  </th>
-                  <th className="px-3 md:px-6 py-3 md:py-4 text-left text-xs md:text-sm font-semibold text-slate-700 hidden md:table-cell">
-                    Genres
-                  </th>
-                  <th className="px-3 md:px-6 py-3 md:py-4 text-center text-xs md:text-sm font-semibold text-slate-700">
-                    Action
-                  </th>
+                  <th className="px-6 py-4">Poster</th>
+                  <th className="px-6 py-4">Title</th>
+                  <th className="px-6 py-4">Release Date</th>
+                  <th className="px-6 py-4">Rating</th>
+                  <th className="px-6 py-4 hidden md:table-cell">Genres</th>
+                  <th className="px-6 py-4 text-center">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100">
                 {movies.map((movie) => (
-                  <tr key={movie._id} className="border-b border-gray-200 hover:bg-gray-50 text-xs md:text-sm">
-                    <td className="px-3 md:px-6 py-3 md:py-4">
+                  <tr key={movie._id} className="hover:bg-slate-50 transition">
+                    <td className="px-6 py-3">
                       {movie.poster_path ? (
-                        <img
-                          src={`https://image.tmdb.org/t/p/w92${movie.poster_path}`}
-                          alt={movie.title}
-                          className="h-12 md:h-16 object-cover rounded"
-                        />
+                        <img src={`https://image.tmdb.org/t/p/w92${movie.poster_path}`} alt={movie.title} className="h-16 w-12 object-cover rounded-md shadow-sm" />
                       ) : (
-                        <div className="h-12 md:h-16 w-8 md:w-12 bg-gray-200 rounded flex items-center justify-center text-xs text-slate-500">
-                          No Image
-                        </div>
+                        <div className="h-16 w-12 bg-slate-200 rounded-md flex items-center justify-center text-[10px] text-slate-500 text-center">No Image</div>
                       )}
                     </td>
-                    <td className="px-3 md:px-6 py-3 md:py-4">
-                      <div>
-                        <p className="font-semibold text-slate-800 truncate">{movie.title}</p>
-                        <p className="text-xs text-slate-500">ID: {movie.tmdbId}</p>
-                      </div>
-                    </td>
-                    <td className="px-3 md:px-6 py-3 md:py-4 text-slate-600 hidden sm:table-cell whitespace-nowrap">
-                      {movie.release_date
-                        ? new Date(movie.release_date).toLocaleDateString()
-                        : 'N/A'}
-                    </td>
-                    <td className="px-3 md:px-6 py-3 md:py-4 hidden lg:table-cell whitespace-nowrap">
-                      <span className="text-sm font-semibold text-slate-800">
-                        ★ {movie.rating?.toFixed(1)}
-                      </span>
-                    </td>
-                    <td className="px-3 md:px-6 py-3 md:py-4 hidden md:table-cell">
+                    <td className="px-6 py-3 font-semibold text-slate-800">{movie.title}</td>
+                    <td className="px-6 py-3 text-slate-600">{movie.release_date ? new Date(movie.release_date).toLocaleDateString() : 'N/A'}</td>
+                    <td className="px-6 py-3 text-slate-600 font-medium">★ {movie.rating?.toFixed(1) || '0.0'}</td>
+                    <td className="px-6 py-3 hidden md:table-cell">
                       <div className="flex flex-wrap gap-1">
-                        {movie.genres && movie.genres.length > 0 ? (
-                          movie.genres.slice(0, 2).map((genre) => (
-                            <span
-                              key={genre}
-                              className="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded whitespace-nowrap"
-                            >
-                              {genre}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-xs text-slate-500">No genres</span>
-                        )}
-                        {movie.genres && movie.genres.length > 2 && (
-                          <span className="text-xs text-slate-500">
-                            +{movie.genres.length - 2}
-                          </span>
-                        )}
+                        {movie.genres?.slice(0, 2).map((genre) => (
+                          <span key={genre} className="bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-0.5 rounded-md text-xs">{genre}</span>
+                        ))}
+                        {movie.genres?.length > 2 && <span className="text-xs text-slate-400 pt-1">+{movie.genres.length - 2}</span>}
                       </div>
                     </td>
-                    <td className="px-3 md:px-6 py-3 md:py-4 text-center">
+                    <td className="px-6 py-3 text-center">
                       <button
                         onClick={() => deleteMovie(movie._id, movie.title)}
                         disabled={deleting === movie._id}
-                        className="text-red-600 hover:text-red-800 disabled:opacity-50 transition-colors inline-flex"
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
+                        title="Delete Movie"
                       >
-                        {deleting === movie._id ? (
-                          <Loader size={16} className="animate-spin md:w-5 md:h-5" />
-                        ) : (
-                          <Trash2 size={16} className="md:w-5 md:h-5" />
-                        )}
+                        {deleting === movie._id ? <Loader size={18} className="animate-spin" /> : <Trash2 size={18} />}
                       </button>
                     </td>
                   </tr>
@@ -311,25 +236,25 @@ export default function AdminMovies() {
               </tbody>
             </table>
           </div>
-
+          
           {/* Pagination */}
           {pagination.pages > 1 && (
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 md:gap-4 px-4 md:px-6 py-3 md:py-4 bg-gray-50 border-t border-gray-200">
-              <div className="text-xs md:text-sm text-slate-600">
-                Page {pagination.page} of {pagination.pages} ({pagination.total} total)
-              </div>
+            <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-t border-slate-200">
+              <span className="text-sm text-slate-600 font-medium">
+                Page {pagination.page} of {pagination.pages}
+              </span>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setPage(Math.max(1, page - 1))}
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-3 md:px-4 py-2 bg-gray-200 text-slate-800 rounded text-xs md:text-sm disabled:opacity-50 font-semibold"
+                  className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold disabled:opacity-50 hover:bg-slate-100 transition"
                 >
                   Previous
                 </button>
                 <button
-                  onClick={() => setPage(Math.min(pagination.pages, page + 1))}
+                  onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
                   disabled={page === pagination.pages}
-                  className="px-3 md:px-4 py-2 bg-gray-200 text-slate-800 rounded text-xs md:text-sm disabled:opacity-50 font-semibold"
+                  className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold disabled:opacity-50 hover:bg-slate-100 transition"
                 >
                   Next
                 </button>
@@ -341,90 +266,81 @@ export default function AdminMovies() {
 
       {/* TMDB Import Modal */}
       {showTMDBModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-slate-50 rounded-lg shadow-xl w-full max-w-md md:max-w-2xl max-h-[90vh] overflow-auto">
-            <div className="sticky top-0 bg-slate-50 border-b border-gray-200 p-3 md:p-6 flex justify-between items-center">
-              <h2 className="text-lg md:text-2xl font-bold">Import from TMDB</h2>
-              <button
-                onClick={() => {
-                  setShowTMDBModal(false);
-                  setTmdbSearchTerm('');
-                  setTmdbResults([]);
-                  setTmdbApiKeyMissing(false);
-                }}
-                className="text-slate-400 hover:text-slate-600 text-2xl"
-              >
-                ×
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+              <h2 className="text-xl font-bold text-slate-900">Import from TMDB</h2>
+              <button onClick={() => setShowTMDBModal(false)} className="text-slate-500 hover:bg-slate-200 p-2 rounded-full transition">
+                <X size={20} />
               </button>
             </div>
-
-            <div className="p-3 md:p-6">
-              {tmdbApiKeyMissing && (
-                <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3 md:p-4 flex gap-3">
-                  <AlertCircle className="text-yellow-600 flex-shrink-0" size={20} />
+            
+            <div className="p-6">
+              {tmdbApiKeyMissing ? (
+                <div className="bg-red-50 text-red-700 p-4 rounded-xl flex gap-3">
+                  <AlertCircle size={20} />
                   <div>
-                    <p className="font-semibold text-yellow-800 text-sm md:text-base">TMDB API Key Missing</p>
-                    <p className="text-xs md:text-sm text-yellow-700 mt-1">
-                      Add TMDB_API_KEY to your server .env file to enable movie imports.
-                    </p>
+                    <p className="font-bold">TMDB API Key Missing</p>
+                    <p className="text-sm">Please set TMDB_API_KEY in server/.env to use this feature.</p>
                   </div>
                 </div>
+              ) : (
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    placeholder="Search TMDB for movies..."
+                    value={tmdbSearchTerm}
+                    onChange={(e) => setTmdbSearchTerm(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && searchTMDB()}
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                  />
+                  <button
+                    onClick={searchTMDB}
+                    disabled={tmdbLoading}
+                    className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-semibold hover:bg-indigo-700 disabled:opacity-50 transition flex items-center gap-2"
+                  >
+                    {tmdbLoading ? <Loader size={18} className="animate-spin" /> : <Search size={18} />}
+                    Search
+                  </button>
+                </div>
               )}
+            </div>
 
-              <div className="flex gap-2 mb-4">
-                <input
-                  type="text"
-                  placeholder="Search movie title..."
-                  value={tmdbSearchTerm}
-                  onChange={(e) => setTmdbSearchTerm(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && searchTMDB()}
-                  className="flex-1 px-3 md:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm md:text-base"
-                  disabled={tmdbApiKeyMissing}
-                />
-                <button
-                  onClick={searchTMDB}
-                  disabled={tmdbLoading || tmdbApiKeyMissing}
-                  className="px-3 md:px-6 py-2 bg-indigo-600 text-slate-900 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-2 text-sm md:text-base font-semibold"
-                >
-                  {tmdbLoading ? <Loader size={16} className="animate-spin" /> : <Search size={16} />}
-                  Search
-                </button>
-              </div>
-
-              {tmdbResults.length === 0 && tmdbSearchTerm && !tmdbLoading && (
-                <p className="text-slate-500 text-center py-8 text-sm md:text-base">No results found</p>
-              )}
-
-              <div className="space-y-2 md:space-y-3">
-                {tmdbResults.map((movie) => (
-                  <div key={movie.id} className="border border-gray-200 rounded-lg p-3 md:p-4 flex gap-3 md:gap-4 hover:bg-gray-50">
-                    {movie.poster_path ? (
-                      <img
-                        src={`https://image.tmdb.org/t/p/w92${movie.poster_path}`}
-                        alt={movie.title}
-                        className="h-16 md:h-20 w-12 md:w-14 object-cover rounded flex-shrink-0"
-                      />
-                    ) : (
-                      <div className="h-16 md:h-20 w-12 md:w-14 bg-gray-200 rounded flex items-center justify-center text-xs flex-shrink-0">
-                        No Image
+            <div className="flex-1 overflow-y-auto p-6 pt-0 bg-slate-50">
+              {tmdbResults.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+                  {tmdbResults.map((movie) => (
+                    <div key={movie.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-md transition group">
+                      {movie.poster_path ? (
+                        <img src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`} alt={movie.title} className="w-full h-48 object-cover" />
+                      ) : (
+                        <div className="w-full h-48 bg-slate-100 flex items-center justify-center text-slate-400">No Image</div>
+                      )}
+                      <div className="p-4">
+                        <h4 className="font-bold text-slate-900 truncate" title={movie.title}>{movie.title}</h4>
+                        <div className="flex justify-between items-center mt-2 text-xs text-slate-500">
+                          <span>{movie.release_date ? movie.release_date.split('-')[0] : 'N/A'}</span>
+                          <span className="font-semibold text-amber-500">★ {movie.vote_average?.toFixed(1) || movie.rating?.toFixed(1)}</span>
+                        </div>
+                        <button
+                          onClick={() => importMovie(movie)}
+                          className="w-full mt-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 transition"
+                        >
+                          Import
+                        </button>
                       </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm md:text-base truncate">{movie.title}</p>
-                      <p className="text-xs md:text-sm text-slate-600">{movie.release_date}</p>
-                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">
-                        {movie.overview}
-                      </p>
                     </div>
-                    <button
-                      onClick={() => importMovie(movie)}
-                      className="px-3 md:px-4 py-2 bg-green-600 text-slate-900 rounded hover:bg-green-700 whitespace-nowrap h-fit text-xs md:text-sm font-semibold flex-shrink-0"
-                    >
-                      Import
-                    </button>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : tmdbLoading ? (
+                <div className="flex justify-center items-center py-12 text-indigo-600">
+                  <Loader size={32} className="animate-spin" />
+                </div>
+              ) : (
+                <div className="text-center py-12 text-slate-400">
+                  Search for a movie title to import from TMDB.
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -432,4 +348,3 @@ export default function AdminMovies() {
     </div>
   );
 }
-

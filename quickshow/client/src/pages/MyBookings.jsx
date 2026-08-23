@@ -130,7 +130,7 @@ export default function MyBookings() {
   };
 
   return (
-    <div className="min-h-screen pt-20 pb-16 bg-white">
+    <div className="min-h-screen pt-8 pb-16 bg-white">
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
@@ -139,20 +139,21 @@ export default function MyBookings() {
         </div>
 
         {/* Filter Tabs */}
-        {displayBookings.length > 0 && (
-          <div className="flex gap-2 md:gap-4 mb-8 flex-wrap">
+        {bookings.length > 0 && (
+          <div className="flex gap-2 mb-8 flex-wrap">
             {[
               { value: 'all', label: 'All' },
               { value: 'confirmed', label: 'Confirmed' },
               { value: 'pending', label: 'Pending' },
+              { value: 'cancelled', label: 'Cancelled' },
             ].map((tab) => (
               <button
                 key={tab.value}
                 onClick={() => setFilterStatus(tab.value)}
-                className={`px-4 py-2 rounded-lg font-semibold transition-all text-sm md:text-base ${
+                className={`px-4 py-2 rounded-lg font-medium transition-all text-sm ${
                   filterStatus === tab.value
-                    ? 'bg-indigo-600 text-slate-900 shadow-lg shadow-indigo-500/50'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-700'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
                 {tab.label}

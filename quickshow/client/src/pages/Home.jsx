@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
 import { useApp } from '../context/AppContext';
 import MovieCard from '../components/MovieCard';
 import RecommendedMovies from '../components/RecommendedMovies';
 import TrailerModal from '../components/TrailerModal';
 import Loading from '../components/Loading';
-import { Play, ChevronLeft, ChevronRight, Ticket, Calendar, Clock } from 'lucide-react';
+import { Play, ChevronLeft, ChevronRight, Ticket, Calendar, Clock, Star } from 'lucide-react';
 import { useMovieImageWithFallback } from '../hooks/useMovieImage';
 import { getPlaceholderImage } from '../utils/imageUtils';
 
@@ -77,10 +77,10 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-white pt-20">
-      {/* HERO SECTION */}
+    <div className="min-h-screen bg-white">
+      {/* Hero Section */}
       {featuredMovie && (
-        <div className="relative h-96 md:h-screen overflow-hidden bg-gradient-to-b from-slate-100 to-white mb-12">
+        <div className="relative h-64 sm:h-80 md:h-screen overflow-hidden bg-gradient-to-b from-slate-100 to-white mb-8 md:mb-12">
           <div
             className="absolute inset-0 bg-cover bg-center"
             style={{ backgroundImage: `url(${featuredImageUrl})` }}
@@ -91,15 +91,15 @@ export default function Home() {
             <div className="absolute inset-0 bg-gradient-to-r from-white via-white/40 to-transparent"></div>
           </div>
 
-          <div className="relative h-full flex flex-col justify-center px-4 md:px-12">
-            <div className="max-w-2xl">
+          <div className="relative h-full flex flex-col justify-center px-4 sm:px-6 md:px-12 overflow-y-auto md:overflow-visible">
+            <div className="max-w-2xl w-full">
               {/* Genres */}
               {featuredMovie.genres && featuredMovie.genres.length > 0 && (
-                <div className="flex gap-2 mb-4 flex-wrap">
+                <div className="flex gap-2 mb-3 md:mb-4 flex-wrap">
                   {featuredMovie.genres.slice(0, 3).map((genre) => (
                     <span
                       key={genre}
-                      className="text-xs md:text-sm px-3 md:px-4 py-1 md:py-2 bg-indigo-100 text-indigo-700 rounded-lg border border-indigo-300 font-medium"
+                      className="text-xs md:text-sm px-2 md:px-3 py-0.5 md:py-1 bg-indigo-100 text-indigo-700 rounded-lg border border-indigo-300 font-medium"
                     >
                       {genre}
                     </span>
@@ -108,46 +108,47 @@ export default function Home() {
               )}
 
               {/* Title */}
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-4 md:mb-6 text-slate-900 drop-shadow-lg leading-tight">
+              <h1 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-bold mb-3 md:mb-5 text-slate-900 drop-shadow-lg leading-tight">
                 {featuredMovie.title}
               </h1>
 
               {/* Meta Info */}
-              <div className="flex flex-wrap gap-4 md:gap-8 mb-6 md:mb-8 text-slate-700">
+              <div className="flex flex-wrap gap-3 md:gap-5 mb-4 md:mb-6 text-slate-700">
                 {featuredMovie.vote_average && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm md:text-base font-semibold text-amber-500">★ {featuredMovie.vote_average.toFixed(1)}</span>
-                    <span className="text-xs md:text-sm">/10</span>
+                  <div className="flex items-center gap-1">
+                    <Star size={14} className="text-amber-500 fill-amber-500" />
+                    <span className="text-xs md:text-base font-semibold text-amber-500">{featuredMovie.vote_average.toFixed(1)}</span>
+                    <span className="text-[10px] md:text-sm text-slate-500">/10</span>
                   </div>
                 )}
                 {featuredMovie.release_date && (
-                  <div className="text-sm md:text-base">
+                  <div className="text-xs md:text-base">
                     {new Date(featuredMovie.release_date).getFullYear()}
                   </div>
                 )}
               </div>
 
               {/* Description */}
-              <p className="text-sm md:text-base lg:text-lg text-slate-700 mb-8 md:mb-12 line-clamp-3 md:line-clamp-4 max-w-2xl drop-shadow-lg">
+              <p className="text-xs md:text-base lg:text-lg text-slate-700 mb-6 md:mb-10 line-clamp-3 md:line-clamp-4 max-w-2xl drop-shadow-lg">
                 {featuredMovie.overview}
               </p>
 
               {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
+              <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
                 <button
                   onClick={() => navigate('/movies')}
-                  className="flex items-center justify-center gap-2 px-6 md:px-8 py-3 md:py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition-all hover:shadow-lg"
+                  className="flex items-center justify-center gap-1.5 md:gap-2 px-4 md:px-6 py-2.5 md:py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition-all hover:shadow-lg text-sm md:text-base"
                 >
-                  <Ticket size={20} />
+                  <Ticket size={16} />
                   Book Tickets
                 </button>
 
                 {featuredMovie.trailer && (
                   <button
                     onClick={() => setTrailerMovie(featuredMovie)}
-                    className="flex items-center justify-center gap-2 px-6 md:px-8 py-3 md:py-4 bg-slate-200 hover:bg-slate-300 text-slate-900 rounded-lg font-semibold transition-all"
+                    className="flex items-center justify-center gap-1.5 md:gap-2 px-4 md:px-6 py-2.5 md:py-3.5 bg-slate-200 hover:bg-slate-300 text-slate-900 rounded-lg font-semibold transition-all text-sm md:text-base"
                   >
-                    <Play size={20} fill="currentColor" />
+                    <Play size={16} fill="currentColor" />
                     Watch Trailer
                   </button>
                 )}
@@ -156,29 +157,29 @@ export default function Home() {
           </div>
 
           {/* Hero Navigation */}
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-3">
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 md:gap-3">
             <button
               onClick={() => handleHeroNavigation('prev')}
-              className="p-2 md:p-3 bg-white/80 hover:bg-white rounded-full text-slate-900 transition-all"
+              className="p-1.5 md:p-2 bg-white/80 hover:bg-white rounded-full text-slate-900 transition-all"
             >
-              <ChevronLeft size={20} />
+              <ChevronLeft size={16} className="md:w-5 md:h-5" />
             </button>
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-1 items-center">
               {heroMovies.slice(0, 5).map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentHeroIndex(idx)}
-                  className={`w-2 h-2 rounded-full transition-all ${
-                    idx === (currentHeroIndex % heroMovies.length) ? 'bg-slate-900 w-6' : 'bg-slate-400'
+                  className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full transition-all ${
+                    idx === (currentHeroIndex % heroMovies.length) ? 'bg-slate-900 w-4 md:w-6' : 'bg-slate-400'
                   }`}
                 />
               ))}
             </div>
             <button
               onClick={() => handleHeroNavigation('next')}
-              className="p-2 md:p-3 bg-white/80 hover:bg-white rounded-full text-slate-900 transition-all"
+              className="p-1.5 md:p-2 bg-white/80 hover:bg-white rounded-full text-slate-900 transition-all"
             >
-              <ChevronRight size={20} />
+              <ChevronRight size={16} className="md:w-5 md:h-5" />
             </button>
           </div>
         </div>
@@ -245,35 +246,43 @@ export default function Home() {
         {/* COMING SOON SECTION */}
         {upcomingMovies.length > 0 && (
           <section className="mb-16 md:mb-24">
-            <h2 className="section-title">Coming Soon</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {upcomingMovies.map((movie) => (
-                <div key={movie.id || movie._id} className="card card-hover group overflow-hidden">
-                  <div className="relative h-56 overflow-hidden bg-slate-100">
-                    <img
-                      src={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : getPlaceholderImage('poster')}
-                      alt={movie.title}
-                      onError={(e) => {
-                        e.target.src = getPlaceholderImage('poster');
-                      }}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Calendar className="text-white/30" size={40} />
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="section-title">Coming Soon</h2>
+              <a href="/movies" className="text-indigo-600 hover:text-indigo-700 transition text-sm font-semibold">
+                View All &rarr;
+              </a>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+              {upcomingMovies.map((movie) => {
+                const movieId = movie._id || movie.id;
+                if (!movieId) return null;
+                return (
+                  <a key={movieId} href={`/movie/${movieId}`} className="group card card-hover overflow-hidden block">
+                    <div className="relative overflow-hidden bg-slate-100" style={{ aspectRatio: '2/3' }}>
+                      <img
+                        src={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : getPlaceholderImage('poster')}
+                        alt={movie.title}
+                        onError={(e) => { e.target.src = getPlaceholderImage('poster'); }}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      <div className="absolute bottom-2.5 left-2.5 right-2.5">
+                        <span className="inline-flex items-center gap-1 bg-amber-500 text-white text-xs font-semibold px-2 py-0.5 rounded">
+                          <Calendar size={10} /> Coming Soon
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-bold text-base line-clamp-2 mb-2 text-slate-900">{movie.title}</h3>
-                    <p className="text-sm text-slate-600 mb-4">
-                      Releases {new Date(movie.release_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </p>
-                    <button className="w-full text-indigo-600 hover:text-indigo-700 transition font-semibold text-sm">
-                      View Details
-                    </button>
-                  </div>
-                </div>
-              ))}
+                    <div className="p-3">
+                      <h3 className="font-semibold text-sm line-clamp-2 text-slate-900 group-hover:text-indigo-600 transition-colors">{movie.title}</h3>
+                      {movie.release_date && (
+                        <p className="text-xs text-slate-500 mt-1">
+                          {new Date(movie.release_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </p>
+                      )}
+                    </div>
+                  </a>
+                );
+              })}
             </div>
           </section>
         )}
@@ -352,7 +361,10 @@ export default function Home() {
                         ₹{booking.amount.toFixed(2)}
                       </div>
                     </div>
-                    <button className="w-full text-indigo-600 hover:text-indigo-700 transition font-semibold text-sm">
+                    <button
+                      onClick={() => navigate(`/booking/${booking._id}`)}
+                      className="w-full btn-primary text-sm py-2"
+                    >
                       View Ticket
                     </button>
                   </div>
@@ -363,17 +375,13 @@ export default function Home() {
         )}
 
         {/* PROMOTIONAL BANNER */}
-        <section className="mb-16 md:mb-24">
-          <div className="relative rounded-2xl overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 via-pink-600 to-indigo-600 opacity-80"></div>
-            <div className="absolute inset-0 bg-black/30"></div>
-            <div className="relative px-8 md:px-16 py-12 md:py-20 text-center">
-              <h2 className="text-3xl md:text-5xl font-bold text-white mb-4 md:mb-6">Book Your Favorite Movies</h2>
-              <p className="text-slate-100 text-base md:text-lg mb-8 md:mb-10 max-w-2xl mx-auto">Get the best cinema experience with QuickShow. Fast booking, secure payments, and great seats.</p>
-              <button className="px-8 md:px-12 py-3 md:py-4 bg-white text-indigo-600 font-bold rounded-lg hover:shadow-lg hover:shadow-white/20 transition">
-                Book Now
-              </button>
-            </div>
+        <section className="mb-16 md:mb-20">
+          <div className="bg-slate-50 border border-slate-200 rounded-xl px-8 md:px-16 py-12 md:py-16 text-center">
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-3">Ready to watch something great?</h2>
+            <p className="text-slate-500 text-sm md:text-base mb-6 max-w-lg mx-auto">Browse our full catalogue and book tickets in seconds.</p>
+            <Link to="/movies" className="inline-flex btn-primary px-8 py-3">
+              Browse Movies
+            </Link>
           </div>
         </section>
       </div>

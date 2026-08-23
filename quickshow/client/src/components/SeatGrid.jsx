@@ -4,15 +4,6 @@ import { useApp } from '../context/AppContext';
 export default function SeatGrid({ show, onSeatsChange, socketLockedSeats = new Set(), socketOccupiedSeats = new Set() }) {
   const { selectedSeats, setSelectedSeats } = useApp();
 
-  const generateSeats = (total = 100) => {
-    const seats = [];
-    for (let i = 1; i <= total; i++) {
-      seats.push(i.toString());
-    }
-    return seats;
-  };
-
-  const allSeats = generateSeats(show?.totalSeats || 100);
   const occupiedSeats = show?.occupiedSeats || [];
   const allLockedSeats = new Set([
     ...(show?.lockedSeats?.map(l => l.seatNumber) || []),
@@ -22,28 +13,54 @@ export default function SeatGrid({ show, onSeatsChange, socketLockedSeats = new 
     ...occupiedSeats,
     ...Array.from(socketOccupiedSeats),
   ]);
-  
-  // Responsive seats per row: 6 on mobile, 8 on tablet, 10 on desktop
-  const getSeatsPerRow = () => {
-    if (typeof window === 'undefined') return 10;
-    if (window.innerWidth < 640) return 6; // sm
-    if (window.innerWidth < 1024) return 8; // md to lg
-    return 10; // lg+
+
+  const getLayout = () => {
+    if (show?.seatLayout && show.seatLayout.length > 0) {
+      const rowsMap = {};
+      show.seatLayout.forEach(seat => {
+        if (!rowsMap[seat.row]) rowsMap[seat.row] = [];
+        rowsMap[seat.row].push({
+          id: seat.seatNumber,
+          col: seat.number,
+          status: seat.isAvailable ? 'available' : 'disabled' // disabled means aisle/removed
+        });
+      });
+      
+      const layout = [];
+      Object.keys(rowsMap).sort().forEach(r => {
+        layout.push({
+          row: r,
+          cols: rowsMap[r].sort((a,b) => a.col - b.col)
+        });
+      });
+      return layout;
+    }
+    
+    // Fallback if no seatLayout exists
+    const rows = show?.rows || 10;
+    const cols = show?.seatsPerRow || 10;
+    const layout = [];
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    
+    for (let r = 0; r < rows; r++) {
+      const rowLabel = r < 26 ? alphabet[r] : `${alphabet[Math.floor(r/26)-1]}${alphabet[r%26]}`;
+      const colsArr = [];
+      for (let c = 1; c <= cols; c++) {
+        colsArr.push({
+          id: `${rowLabel}${c}`,
+          col: c,
+          status: 'available'
+        });
+      }
+      layout.push({ row: rowLabel, cols: colsArr });
+    }
+    return layout;
   };
 
-  const [seatsPerRow, setSeatsPerRow] = React.useState(10);
+  const layout = getLayout();
 
-  React.useEffect(() => {
-    const handleResize = () => {
-      setSeatsPerRow(getSeatsPerRow());
-    };
-
-    setSeatsPerRow(getSeatsPerRow());
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  const toggleSeat = (seatNumber) => {
+  const toggleSeat = (seatNumber, isSeatDisabled) => {
+    if (isSeatDisabled) return; // Cannot select an aisle/hidden seat
     // Prevent selecting occupied or locked seats
     if (allOccupiedSeats.has(seatNumber) || allLockedSeats.has(seatNumber)) return;
 
@@ -57,90 +74,88 @@ export default function SeatGrid({ show, onSeatsChange, socketLockedSeats = new 
     }
   };
 
-  const getSeatStatus = (seatNumber) => {
+  const getSeatDisplayStatus = (seatNumber, layoutStatus) => {
+    if (layoutStatus === 'disabled') return 'hidden';
     if (allOccupiedSeats.has(seatNumber)) return 'occupied';
     if (allLockedSeats.has(seatNumber)) return 'locked';
     if (selectedSeats.includes(seatNumber)) return 'selected';
     return 'available';
   };
 
-  // Responsive button sizes
-  const getSeatButtonClasses = () => {
-    if (typeof window === 'undefined') return 'w-10 h-10';
-    if (window.innerWidth < 640) return 'w-9 h-9 text-xs'; // sm: 36x36
-    if (window.innerWidth < 1024) return 'w-10 h-10 text-xs'; // md: 40x40
-    return 'w-10 h-10 text-xs'; // lg: 40x40
-  };
-
   return (
     <div className="card p-4 md:p-6 w-full overflow-x-auto">
       <div className="mb-6 md:mb-8">
         <h3 className="text-center text-slate-600 mb-3 md:mb-4 font-semibold text-sm md:text-base uppercase tracking-wide">Screen</h3>
-        <div className="h-1 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 rounded"></div>
+        <div className="h-1 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 rounded shadow-[0_10px_20px_rgba(99,102,241,0.2)]"></div>
       </div>
 
       <div className="flex justify-center mb-6 md:mb-8 w-full">
-        <div className="inline-block min-w-fit">
-          {Array.from({ length: Math.ceil(allSeats.length / seatsPerRow) }).map(
-            (_, rowIndex) => (
-              <div key={rowIndex} className="flex justify-center gap-1 md:gap-2 mb-2 md:mb-3">
-                <span className="text-xs text-slate-500 w-5 md:w-4 font-bold text-right mr-1 md:mr-2 flex items-center">
-                  {String.fromCharCode(65 + rowIndex)}
-                </span>
-                {allSeats
-                  .slice(rowIndex * seatsPerRow, (rowIndex + 1) * seatsPerRow)
-                  .map((seatNumber) => {
-                    const status = getSeatStatus(seatNumber);
-                    return (
-                      <button
-                        key={seatNumber}
-                        onClick={() => toggleSeat(seatNumber)}
-                        disabled={status === 'occupied' || status === 'locked'}
-                        className={`
-                          rounded-t-lg font-xs transition-all min-h-9 min-w-9 md:w-10 md:h-10 w-9 h-9
-                          ${
-                            status === 'occupied'
-                              ? 'bg-slate-400 cursor-not-allowed text-slate-600'
-                              : status === 'locked'
-                              ? 'bg-yellow-400 cursor-not-allowed text-slate-700 animate-pulse'
-                              : status === 'selected'
-                              ? 'bg-indigo-600 text-white cursor-pointer hover:bg-indigo-700'
-                              : 'bg-green-500 hover:bg-green-600 text-white cursor-pointer'
-                          }
-                        `}
-                        title={`Seat ${String.fromCharCode(65 + rowIndex)}${seatNumber % seatsPerRow || seatsPerRow}${status === 'locked' ? ' (Temporarily Locked)' : ''}`}
-                      >
-                        <span className="text-xs leading-none">
-                          {seatNumber % seatsPerRow || seatsPerRow}
-                        </span>
-                      </button>
-                    );
-                  })}
-                <span className="text-xs text-slate-500 w-5 md:w-4 font-bold ml-1 md:ml-2 flex items-center">
-                  {String.fromCharCode(65 + rowIndex)}
-                </span>
+        <div className="inline-flex flex-col gap-2 min-w-fit items-center">
+          {layout.map((rowItem) => (
+            <div key={rowItem.row} className="flex items-center gap-2 md:gap-3">
+              <div className="w-5 md:w-6 text-xs font-bold text-slate-400 text-right shrink-0">
+                {rowItem.row}
               </div>
-            )
-          )}
+              
+              <div className="flex gap-1 md:gap-1.5">
+                {rowItem.cols.map((seat) => {
+                  const status = getSeatDisplayStatus(seat.id, seat.status);
+                  
+                  if (status === 'hidden') {
+                    return (
+                      <div key={seat.id} className="w-7 h-7 md:w-9 md:h-9 opacity-0 pointer-events-none"></div>
+                    );
+                  }
+
+                  return (
+                    <button
+                      key={seat.id}
+                      onClick={() => toggleSeat(seat.id, false)}
+                      disabled={status === 'occupied' || status === 'locked'}
+                      className={`
+                        w-7 h-7 md:w-9 md:h-9 rounded-t-lg rounded-b-sm text-[9px] md:text-[11px] font-semibold flex items-center justify-center transition-all
+                        ${
+                          status === 'occupied'
+                            ? 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60'
+                            : status === 'locked'
+                            ? 'bg-yellow-400 text-yellow-800 cursor-not-allowed animate-pulse'
+                            : status === 'selected'
+                            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 transform -translate-y-0.5'
+                            : 'bg-green-100 text-green-700 border border-green-200 hover:bg-green-200 hover:border-green-300'
+                        }
+                      `}
+                      title={`Seat ${seat.id}${status === 'locked' ? ' (Temporarily Locked)' : ''}`}
+                    >
+                      {seat.col}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="w-5 md:w-6 text-xs font-bold text-slate-400 text-left shrink-0">
+                {rowItem.row}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="flex justify-center gap-3 md:gap-6 text-xs md:text-sm flex-wrap px-2">
+      <div className="flex justify-center gap-4 md:gap-6 text-xs md:text-sm flex-wrap px-2 pt-6 border-t border-slate-100">
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-green-500 rounded-t flex-shrink-0"></div>
-          <span className="text-slate-700">Available</span>
+          <div className="w-4 h-4 bg-green-100 border border-green-200 rounded-t-sm"></div>
+          <span className="text-slate-600">Available</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-indigo-600 rounded-t flex-shrink-0"></div>
-          <span className="text-slate-700">Selected</span>
+          <div className="w-4 h-4 bg-indigo-600 rounded-t-sm"></div>
+          <span className="text-slate-600">Selected</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-yellow-400 rounded-t flex-shrink-0 animate-pulse"></div>
-          <span className="text-slate-700">Temporarily Locked</span>
+          <div className="w-4 h-4 bg-yellow-400 rounded-t-sm animate-pulse"></div>
+          <span className="text-slate-600">Locked</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-slate-400 rounded-t flex-shrink-0"></div>
-          <span className="text-slate-700">Occupied</span>
+          <div className="w-4 h-4 bg-slate-300 opacity-60 rounded-t-sm"></div>
+          <span className="text-slate-600">Occupied</span>
         </div>
       </div>
 
@@ -151,16 +166,16 @@ export default function SeatGrid({ show, onSeatsChange, socketLockedSeats = new 
             {selectedSeats.map((seat) => (
               <span
                 key={seat}
-                className="bg-indigo-100 text-indigo-600 px-2 md:px-3 py-1 rounded font-semibold text-xs md:text-sm border border-indigo-300"
+                className="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg font-semibold text-sm border border-indigo-200 shadow-sm"
               >
                 {seat}
               </span>
             ))}
           </div>
-          <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-slate-200">
+          <div className="mt-4 pt-4 border-t border-slate-100">
             <div className="flex justify-between items-center">
-              <span className="font-semibold text-sm md:text-base text-slate-700">Total Price:</span>
-              <span className="text-xl md:text-2xl font-bold text-indigo-600">
+              <span className="font-semibold text-slate-600">Subtotal:</span>
+              <span className="text-xl md:text-2xl font-bold text-slate-900">
                 ₹{(show?.price * selectedSeats.length).toFixed(2)}
               </span>
             </div>
@@ -170,4 +185,3 @@ export default function SeatGrid({ show, onSeatsChange, socketLockedSeats = new 
     </div>
   );
 }
-

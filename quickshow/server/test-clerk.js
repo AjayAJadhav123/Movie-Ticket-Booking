@@ -1,0 +1,1 @@
+require('dotenv').config(); const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzEyMyIsImlhdCI6MTc4NzQyMTE5NX0.tSpDZQ6z2MUmE9ugO4u-E-oTJjQEYB_82svLXavMYsg'; delete process.env.CLERK_SECRET_KEY; const { verifyToken } = require('@clerk/express'); verifyToken(token, { publishableKey: process.env.CLERK_PUBLISHABLE_KEY }).then(console.log).catch(console.error);

@@ -16,6 +16,7 @@ export default function BookingTicket() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [qrCode, setQrCode] = useState(null);
+  const [isCancelling, setIsCancelling] = useState(false);
   const ticketRef = useRef(null);
 
   useEffect(() => {
@@ -81,18 +82,31 @@ export default function BookingTicket() {
     }
   };
 
-  const handleDownload = async () => {
+  const handleDownload = () => {
+    // Browsers can save the print dialog as a PDF without an extra rasterizing
+    // dependency. The previous html2canvas call referenced an undeclared
+    // package and made this button fail at runtime.
+    handlePrint();
+    toast.info('Choose “Save as PDF” in the print dialog to download your ticket.');
+  };
+
+  const handleCancel = async () => {
+    if (!window.confirm('Are you sure you want to cancel this booking? This action cannot be undone.')) {
+      return;
+    }
+    
     try {
-      const element = ticketRef.current;
-      const canvas = await html2canvas(element);
-      const link = document.createElement('a');
-      link.href = canvas.toDataURL('image/png');
-      link.download = `QuickShow-Ticket-${booking._id}.png`;
-      link.click();
-      toast.success('Ticket downloaded successfully');
+      setIsCancelling(true);
+      const response = await apiClient.post(`/api/booking/${bookingId}/cancel`);
+      if (response.data.success) {
+        toast.success(response.data.message || 'Booking cancelled successfully');
+        setBooking({ ...booking, status: 'cancelled' });
+      }
     } catch (err) {
-      console.error('Error downloading ticket:', err);
-      toast.error('Error downloading ticket');
+      console.error('Error cancelling booking:', err);
+      toast.error(err.response?.data?.message || 'Error cancelling booking');
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -184,7 +198,7 @@ export default function BookingTicket() {
   });
 
   return (
-    <div className="min-h-screen pt-20 pb-16 bg-white">
+    <div className="min-h-screen pt-8 pb-16 bg-white">
       <div className="container mx-auto px-4 py-8">
         <button
           onClick={() => navigate('/my-bookings')}
@@ -208,8 +222,17 @@ export default function BookingTicket() {
             className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition-all font-semibold text-sm md:text-base"
           >
             <Download size={18} />
-            Download
+            Save as PDF
           </button>
+          {booking.status === 'confirmed' && (
+            <button
+              onClick={handleCancel}
+              disabled={isCancelling}
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-all font-semibold text-sm md:text-base ml-auto"
+            >
+              {isCancelling ? 'Cancelling...' : 'Cancel Booking'}
+            </button>
+          )}
         </div>
 
         {/* Ticket */}
@@ -376,7 +399,7 @@ export default function BookingTicket() {
             {/* Bottom Info */}
             <div className="text-center pt-4 md:pt-6 border-t border-slate-300 mt-4 md:mt-6">
               <p className="text-slate-700 mb-1 text-sm md:text-base">Thank you for booking with QuickShow!</p>
-              <p className="text-xs md:text-sm text-slate-500">Enjoy your movie! 🍿</p>
+              <p className="text-xs md:text-sm text-slate-500">Enjoy your movie experience!</p>
             </div>
           </div>
         </div>

@@ -4,9 +4,52 @@ import Show from '../models/Show.js';
 import Booking from '../models/Booking.js';
 import User from '../models/User.js';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Initialize OpenAI lazily when needed
+let openai = null;
+
+function getOpenAIClient() {
+  if (!openai) {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY environment variable is not set');
+    }
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openai;
+}
+
+// The booking helper must remain usable if an API key is absent, expired, or
+// rate-limited. This deliberately gives only guidance; it never invents
+// showtimes, prices, or availability.
+function getLocalAssistantReply(message) {
+  const text = message.toLowerCase().trim();
+
+  if (/^(hi|hello|hey)\b/.test(text)) {
+    return 'Hi! I can help you browse movies, find a showtime, check seats, and guide you through booking. Which movie are you interested in?';
+  }
+  if (/show|time|slot|available|seat|ticket/.test(text)) {
+    return 'Open a movie, choose one of its available dates and showtimes, then select your seats. The seat map marks occupied seats and shows the remaining availability before payment.';
+  }
+  if (/price|cost|fee|payment/.test(text)) {
+    return 'Each show page displays the current per-seat price. The booking screen calculates the total, including the displayed taxes and fees, before you continue to payment.';
+  }
+  if (/recommend|suggest|genre|watch/.test(text)) {
+    return 'You can browse Trending, Now Showing, and Popular titles on the home page, or use the Movies search box to find a title or genre.';
+  }
+  if (/book|booking/.test(text)) {
+    return 'Choose a movie, select a date and showtime, pick your seats, and use Proceed to Payment. Your ticket appears in My Bookings after payment is confirmed.';
+  }
+  return 'I can help you find a movie, check available shows and seats, or explain the booking process. Try asking “What movies are showing?” or “How do I book tickets?”';
+}
+
+const sendLocalAssistantReply = (res, message, reason) =>
+  res.status(200).json({
+    success: true,
+    data: { message: getLocalAssistantReply(message), conversationId: null },
+    source: 'local_assistant',
+    ...(reason ? { notice: reason } : {}),
+  });
 
 // System prompt for QuickShow AI Assistant
 const SYSTEM_PROMPT = `You are QuickShow AI, a helpful movie booking assistant for the QuickShow movie ticket booking platform.
@@ -265,11 +308,11 @@ export const chatWithAI = async (req, res) => {
     }
 
     if (!process.env.OPENAI_API_KEY) {
-      return res.status(503).json({
-        success: false,
-        message: 'AI service not configured',
-      });
+      return sendLocalAssistantReply(res, message, 'AI service is not configured. Using the built-in booking helper.');
     }
+
+    // Get OpenAI client (lazy-loaded)
+    const openai = getOpenAIClient();
 
     // Build messages array
     const messages = [
@@ -340,9 +383,13 @@ export const chatWithAI = async (req, res) => {
     });
   } catch (error) {
     console.error('AI Chat Error:', error);
-    return res.status(500).json({
-      success: false,
-      message: error.message || 'Error processing your request',
-    });
+    const isQuotaError = error.status === 429 || error.code === 'insufficient_quota';
+    return sendLocalAssistantReply(
+      res,
+      req.body?.message || '',
+      isQuotaError
+        ? 'The AI quota is currently exhausted. Using the built-in booking helper.'
+        : 'The AI service is temporarily unavailable. Using the built-in booking helper.'
+    );
   }
 };

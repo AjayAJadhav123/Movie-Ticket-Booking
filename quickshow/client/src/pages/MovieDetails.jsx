@@ -122,7 +122,7 @@ export default function MovieDetails() {
   }
 
   return (
-    <div className="min-h-screen bg-white pt-16 pb-16">
+    <div className="min-h-screen bg-white pb-16">
       {/* Hero Section with Backdrop */}
       <div className="relative w-full overflow-hidden mb-12">
         {/* Backdrop */}
@@ -189,17 +189,10 @@ export default function MovieDetails() {
                         <span>{movie.release_date ? new Date(movie.release_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}</span>
                       </div>
 
-                      {movie.rating && (
+                      {(movie.vote_average || movie.rating) && (
                         <div className="flex items-center gap-2 text-amber-600">
                           <Star size={18} fill="currentColor" />
-                          <span className="font-bold">{movie.rating.toFixed(1)}/10</span>
-                        </div>
-                      )}
-
-                      {movie.vote_average && (
-                        <div className="flex items-center gap-2 text-amber-600">
-                          <Star size={18} fill="currentColor" />
-                          <span className="font-bold">{movie.vote_average.toFixed(1)}/10</span>
+                          <span className="font-bold">{(movie.vote_average ?? movie.rating).toFixed(1)}/10</span>
                         </div>
                       )}
 
@@ -207,6 +200,13 @@ export default function MovieDetails() {
                         <div className="flex items-center gap-2 text-slate-700">
                           <Globe size={18} />
                           <span>{movie.language.toUpperCase()}</span>
+                        </div>
+                      )}
+                      
+                      {movie.runtime && (
+                        <div className="flex items-center gap-2 text-slate-700">
+                          <Clock size={18} />
+                          <span>{movie.runtime} mins</span>
                         </div>
                       )}
 
@@ -224,18 +224,28 @@ export default function MovieDetails() {
                       )}
                     </div>
 
-                    {/* Trailer Button */}
-                    {movie.trailer && (
-                      <div>
+                    {/* Action Buttons */}
+                    <div className="flex flex-col sm:flex-row gap-4 mt-8">
+                      <button
+                        onClick={() => {
+                          document.getElementById('shows-section')?.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-lg font-bold transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-indigo-500/30 text-base"
+                      >
+                        <Ticket size={20} fill="currentColor" className="text-white" />
+                        Book Tickets
+                      </button>
+                      
+                      {movie.trailer && (
                         <button
                           onClick={() => setTrailerOpen(true)}
-                          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 md:px-8 py-3 md:py-4 rounded-lg font-bold transition-all duration-200 transform hover:scale-105 w-full md:w-auto justify-center md:justify-start text-sm md:text-base shadow-lg hover:shadow-xl"
+                          className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-md text-slate-900 border border-slate-200 px-8 py-4 rounded-lg font-bold transition-all duration-200 transform hover:scale-105 text-base shadow-sm"
                         >
-                          <Play size={20} fill="white" />
+                          <Play size={20} fill="currentColor" />
                           Watch Trailer
                         </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -274,8 +284,10 @@ export default function MovieDetails() {
         </div>
 
         {/* Shows Section */}
-        <div>
-          <h2 className="section-title">Book Tickets</h2>
+        <div id="shows-section" className="pt-8 scroll-mt-20">
+          <h2 className="section-title flex items-center gap-2">
+            <Ticket className="text-indigo-600" /> Book Tickets
+          </h2>
 
           {/* No Shows Message */}
           {!selectedDate && showsForDate.length === 0 && (
@@ -351,8 +363,28 @@ export default function MovieDetails() {
       />
 
       {/* Recommended Movies Section */}
-      <div className="container mx-auto px-4 mt-16">
-        <RecommendedMoviesCarousel movieId={movie._id} movieTitle={movie.title} />
+      <div className="container mx-auto px-4 mt-16 pb-12">
+        {movie.similar && movie.similar.length > 0 ? (
+          <section>
+            <h2 className="text-2xl font-bold text-slate-900 mb-6">Similar Movies</h2>
+            <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-4">
+              {movie.similar.map((similarMovie) => (
+                <div key={similarMovie.id} className="flex-shrink-0 w-44 cursor-pointer" onClick={() => navigate(`/movie/${similarMovie.id}`)}>
+                  <div className="relative h-64 bg-slate-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition">
+                    <img 
+                      src={similarMovie.poster_path ? `https://image.tmdb.org/t/p/w300${similarMovie.poster_path}` : '/movie-placeholder.svg'} 
+                      alt={similarMovie.title}
+                      className="w-full h-full object-cover hover:scale-105 transition duration-300" 
+                    />
+                  </div>
+                  <h3 className="mt-2 text-sm font-semibold text-slate-800 truncate">{similarMovie.title}</h3>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : (
+          <RecommendedMoviesCarousel movieId={movie._id} movieTitle={movie.title} />
+        )}
       </div>
     </div>
   );

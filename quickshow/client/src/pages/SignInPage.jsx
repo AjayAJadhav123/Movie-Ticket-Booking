@@ -24,7 +24,7 @@ export default function SignInPage() {
                 card: "bg-transparent border-0 shadow-none",
                 headerTitle: "hidden",
                 headerSubtitle: "hidden",
-                formButtonPrimary: "bg-indigo-600 hover:bg-indigo-700 text-slate-900 font-semibold rounded-lg py-2.5 transition-all",
+                formButtonPrimary: "bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg py-2.5 transition-all",
                 formFieldInput: "bg-slate-100 border border-slate-300 text-slate-900 rounded-lg py-2 px-4 focus:border-indigo-500 focus:outline-none transition",
                 formFieldLabel: "text-slate-700 text-sm font-medium",
                 dividerLine: "bg-slate-700",

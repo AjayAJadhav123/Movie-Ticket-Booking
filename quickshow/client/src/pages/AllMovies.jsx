@@ -1,124 +1,252 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import MovieCard from '../components/MovieCard';
 import TrailerModal from '../components/TrailerModal';
-import Loading from '../components/Loading';
-import { Search, Filter } from 'lucide-react';
+import { Search, Filter, AlertCircle, RefreshCw } from 'lucide-react';
 
 export default function AllMovies() {
-  const { latestMovies, fetchLatestMovies, loading } = useApp();
-  const { apiClient } = useApp();
+  const {
+    apiClient,
+    popularMovies,
+    trendingMovies,
+    nowPlayingMovies,
+    fetchPopularMovies,
+    fetchTrendingMovies,
+    fetchNowPlayingMovies,
+  } = useApp();
+
   const [searchParams, setSearchParams] = useSearchParams();
   const [trailerMovie, setTrailerMovie] = useState(null);
+
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedGenre, setSelectedGenre] = useState('');
-  const [filteredMovies, setFilteredMovies] = useState([]);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchError, setSearchError] = useState(null);
+
+  const [movies, setMovies] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
+  // Only true when ALL data sources (backend + context) serve the 6 hardcoded demo movies
+  const [isFallbackMode, setIsFallbackMode] = useState(false);
+
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+
+  const observer = useRef();
   const debounceTimer = useRef(null);
+  const initialLoadDone = useRef(false);
 
-  // Fetch initial movies
-  useEffect(() => {
-    fetchLatestMovies();
-  }, []);
+  // IDs of the hardcoded demo movies in movieController.js
+  const DEMO_IDS = new Set([550, 278, 238, 19404, 19995, 680]);
 
-  // Handle search with debounce
-  useEffect(() => {
-    // Clear previous timer
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
+  const isDemoOnlyList = (list) =>
+    list.length > 0 && list.every((m) => DEMO_IDS.has(Number(m.id || m.tmdbId)));
 
-    // If no search query, show latest movies
-    if (!searchQuery.trim()) {
-      setFilteredMovies(latestMovies);
-      setSearchError(null);
-      return;
-    }
+  /**
+   * Return whatever AppContext has already fetched (same data Home uses).
+   * Prefers popularMovies; falls back to trending or now-playing.
+   */
+  const getContextSeed = useCallback(() => {
+    if (popularMovies && popularMovies.length > 0) return popularMovies;
+    if (trendingMovies && trendingMovies.length > 0) return trendingMovies;
+    if (nowPlayingMovies && nowPlayingMovies.length > 0) return nowPlayingMovies;
+    return [];
+  }, [popularMovies, trendingMovies, nowPlayingMovies]);
 
-    // Set loading state
-    setSearchLoading(true);
-    setSearchError(null);
+  /**
+   * Fetch a page from the backend.
+   * When TMDB is unavailable (503), show "TMDB service unavailable" error.
+   */
+  const fetchMoviesPage = useCallback(async (pageNum, query, genre, append = false) => {
+    try {
+      if (!append) setLoading(true);
+      else setLoadingMore(true);
+      setError(null);
 
-    // Debounce search API call (300ms)
-    debounceTimer.current = setTimeout(async () => {
-      try {
-        const response = await apiClient.get('/api/movie/search', {
-          params: { query: searchQuery.trim() },
-        });
+      const endpoint = query.trim() ? '/api/movie/search' : '/api/movie/popular';
+      const params = query.trim()
+        ? { page: pageNum, query: query.trim() }
+        : { page: pageNum };
 
-        if (response.data.success) {
-          let results = response.data.data || [];
+      const response = await apiClient.get(endpoint, { params });
 
-          // Apply genre filter if selected
-          if (selectedGenre) {
-            results = results.filter((m) =>
-              m.genres?.some((g) => g.toLowerCase().includes(selectedGenre.toLowerCase())) ||
-              m.genres?.includes(selectedGenre)
-            );
-          }
-
-          setFilteredMovies(results);
-          setSearchError(null);
+      if (!response.data.success) {
+        // Handle TMDB unavailable error
+        if (response.status === 503) {
+          setError('🔴 TMDB Service Temporarily Unavailable\n\nThe movie database service is currently unreachable. Please try again in a few moments.');
         } else {
-          setSearchError(response.data.message || 'Error searching movies');
-          setFilteredMovies([]);
+          setError(response.data.message || 'Unable to fetch movies');
         }
-      } catch (error) {
-        console.error('Search error:', error);
-        setSearchError('Unable to search movies. Please try again.');
-        setFilteredMovies([]);
-      } finally {
-        setSearchLoading(false);
+        if (!append) setMovies([]);
+        return;
       }
-    }, 300);
 
-    return () => {
-      if (debounceTimer.current) {
-        clearTimeout(debounceTimer.current);
+      let results = response.data.data || [];
+      const pagination = response.data.pagination;
+      const paginationPages = pagination?.pages || 1;
+      const currentPage = pagination?.page || pageNum;
+
+      // Client-side genre filter
+      if (genre) {
+        results = results.filter((m) =>
+          m.genres?.some(
+            (g) => typeof g === 'string' && g.toLowerCase().includes(genre.toLowerCase())
+          )
+        );
       }
-    };
-  }, [searchQuery, selectedGenre, apiClient]);
+
+      setMovies((prev) => {
+        if (!append) return results;
+        const combined = [...prev, ...results];
+        return Array.from(
+          new Map(combined.map((m) => [String(m.id || m._id), m])).values()
+        );
+      });
+
+      setHasMore(currentPage < paginationPages);
+      setIsFallbackMode(false);
+    } catch (err) {
+      if (err.response?.status === 503) {
+        setError('TMDB Service Temporarily Unavailable\n\nThe movie database service is currently unreachable. Please try again in a few moments.');
+      } else if (import.meta.env.DEV) {
+        console.error('AllMovies fetch error:', err);
+        setError('Unable to fetch movies. Please check your connection and try again.');
+      }
+      if (!append) setMovies([]);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, [apiClient, getContextSeed]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Initial load ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (initialLoadDone.current) return;
+    initialLoadDone.current = true;
+
+    if (!searchQuery.trim()) {
+      const seed = getContextSeed();
+      if (seed.length > 0) {
+        // Immediately display what Home already has — no flicker
+        setMovies(seed);
+        setLoading(false);
+        setIsFallbackMode(isDemoOnlyList(seed));
+      } else {
+        // AppContext hasn't fetched yet; trigger it and do a normal backend fetch
+        fetchPopularMovies();
+        fetchTrendingMovies();
+        fetchNowPlayingMovies();
+        fetchMoviesPage(1, '', '', false);
+      }
+    } else {
+      fetchMoviesPage(1, searchQuery, selectedGenre, false);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Re-seed when AppContext data arrives (e.g., after Home triggers fetches) ─
+  useEffect(() => {
+    if (searchQuery.trim() || selectedGenre) return; // Don't override search results
+    const seed = getContextSeed();
+    if (seed.length === 0) return;
+
+    setMovies((prev) => {
+      // Only update if we currently have no movies OR only demo data
+      if (prev.length > 0 && !isDemoOnlyList(prev)) return prev;
+      return seed;
+    });
+    setIsFallbackMode(isDemoOnlyList(seed));
+    setLoading(false);
+  }, [popularMovies, trendingMovies, nowPlayingMovies]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Search / filter changes ──────────────────────────────────────────────────
+  useEffect(() => {
+    if (!initialLoadDone.current) return;
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+
+    debounceTimer.current = setTimeout(() => {
+      setPage(1);
+
+      if (!searchQuery.trim() && !selectedGenre) {
+        const seed = getContextSeed();
+        if (seed.length > 0) {
+          setMovies(seed);
+          setLoading(false);
+          setIsFallbackMode(isDemoOnlyList(seed));
+          return;
+        }
+      }
+
+      fetchMoviesPage(1, searchQuery, selectedGenre, false);
+    }, 400);
+
+    return () => clearTimeout(debounceTimer.current);
+  }, [searchQuery, selectedGenre]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Pagination ───────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (page > 1) {
+      fetchMoviesPage(page, searchQuery, selectedGenre, true);
+    }
+  }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Infinite scroll ──────────────────────────────────────────────────────────
+  const lastMovieElementRef = useCallback(
+    (node) => {
+      if (loading || loadingMore) return;
+      if (observer.current) observer.current.disconnect();
+      observer.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          setPage((prev) => prev + 1);
+        }
+      });
+      if (node) observer.current.observe(node);
+    },
+    [loading, loadingMore, hasMore]
+  );
 
   const handleSearchChange = (value) => {
     setSearchQuery(value);
-    setSearchParams({ search: value });
+    setSearchParams(value ? { search: value } : {});
   };
 
   const handleClearFilters = () => {
     setSearchQuery('');
     setSelectedGenre('');
     setSearchParams({});
-    setFilteredMovies(latestMovies);
-    setSearchError(null);
   };
 
   const genres = [
-    'Action',
-    'Comedy',
-    'Drama',
-    'Horror',
-    'Thriller',
-    'Animation',
-    'Romance',
-    'Science Fiction',
-    'Fantasy',
+    'Action', 'Comedy', 'Drama', 'Horror', 'Thriller',
+    'Animation', 'Romance', 'Science Fiction', 'Fantasy',
   ];
 
-  if (loading && latestMovies.length === 0 && !searchQuery) {
-    return <Loading />;
-  }
-
   return (
-    <div className="min-h-screen pt-20 pb-16 bg-white">
+    <div className="min-h-screen pt-8 pb-16 bg-white">
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="mb-8 md:mb-12">
-          <h1 className="section-title">Latest & Now Playing Movies</h1>
-          <p className="text-slate-600 text-base md:text-lg">Browse the latest releases and currently playing films</p>
+          <h1 className="section-title">Movies Catalogue</h1>
+          <p className="text-slate-600 text-base md:text-lg">
+            Browse popular and trending films from around the world
+          </p>
         </div>
+
+        {/* Demo Mode Banner — only when ALL sources are demo-only */}
+        {isFallbackMode && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
+            <div className="mt-0.5">
+              <AlertCircle className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-amber-900">Demo Mode</p>
+              <p className="text-sm text-amber-700 mt-1">
+                Showing demo movies. TMDB service is temporarily unavailable. The system will
+                automatically switch to live data when the service is accessible.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Search Bar */}
         <div className="mb-8">
@@ -131,17 +259,7 @@ export default function AllMovies() {
               onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full pl-12 pr-4 py-3 md:py-4 bg-slate-50 text-slate-900 placeholder-slate-500 rounded-lg border border-slate-300 focus:border-indigo-500 focus:outline-none focus:bg-white transition text-sm md:text-base"
             />
-            {searchLoading && (
-              <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                <div className="animate-spin h-5 w-5 text-indigo-600">
-                  <div className="h-5 w-5 border-2 border-indigo-600 border-t-transparent rounded-full"></div>
-                </div>
-              </div>
-            )}
           </div>
-          {searchError && (
-            <p className="text-red-600 text-sm mt-2">{searchError}</p>
-          )}
         </div>
 
         {/* Filters */}
@@ -155,27 +273,28 @@ export default function AllMovies() {
           </button>
 
           <div className={`${showFilters ? 'block' : 'hidden'} md:block mt-4 md:mt-0`}>
-            <div className="card rounded-xl p-4 md:p-6">
-              <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-4 hidden md:block">Genres</h3>
+            <div className="card rounded-xl p-4 md:p-6 shadow-sm border border-slate-100">
+              <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-4 hidden md:block">
+                Genres
+              </h3>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setSelectedGenre('')}
                   className={`px-3 md:px-4 py-2 rounded-lg font-semibold transition-all text-xs md:text-sm ${
                     selectedGenre === ''
-                      ? 'bg-indigo-600 text-white shadow-lg'
+                      ? 'bg-indigo-600 text-white shadow-md'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
                   All Genres
                 </button>
-
                 {genres.map((genre) => (
                   <button
                     key={genre}
                     onClick={() => setSelectedGenre(genre)}
                     className={`px-3 md:px-4 py-2 rounded-lg font-semibold transition-all text-xs md:text-sm ${
                       selectedGenre === genre
-                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
+                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/30'
                         : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                     }`}
                   >
@@ -188,53 +307,85 @@ export default function AllMovies() {
         </div>
 
         {/* Results */}
-        {searchLoading ? (
-          <div className="text-center py-16 md:py-24">
-            <div className="inline-flex items-center gap-2">
-              <div className="animate-spin h-5 w-5 text-indigo-600">
-                <div className="h-5 w-5 border-2 border-indigo-600 border-t-transparent rounded-full"></div>
-              </div>
-              <p className="text-slate-600">Searching movies...</p>
-            </div>
+        {error && !loading ? (
+          <div className="text-center py-16">
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <div className="whitespace-pre-line text-slate-800 font-semibold text-lg mb-4 max-w-2xl mx-auto">{error}</div>
+            <button
+              onClick={() => fetchMoviesPage(1, searchQuery, selectedGenre, false)}
+              className="px-6 py-2 bg-indigo-600 text-white rounded-lg flex items-center gap-2 mx-auto hover:bg-indigo-700 transition"
+            >
+              <RefreshCw size={18} /> Retry
+            </button>
           </div>
-        ) : filteredMovies.length === 0 ? (
+        ) : loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-pulse">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div key={i} className="bg-slate-200 rounded-xl h-[400px]" />
+            ))}
+          </div>
+        ) : movies.length === 0 ? (
           <div className="text-center py-16 md:py-24">
             <p className="text-slate-600 text-base md:text-lg mb-4">
-              {searchQuery
-                ? 'No movies found. Try searching with a different movie title.'
-                : 'No movies available at the moment'}
+              {searchQuery || selectedGenre
+                ? 'No movies found matching your criteria.'
+                : 'No movies available at the moment.'}
             </p>
             {(searchQuery || selectedGenre) && (
               <button
                 onClick={handleClearFilters}
                 className="text-indigo-600 hover:text-indigo-700 transition font-semibold"
               >
-                Clear filters
+                Clear all filters
               </button>
             )}
           </div>
         ) : (
           <div>
-            <p className="text-slate-600 text-sm md:text-base mb-6">
-              Showing <span className="text-slate-900 font-semibold">{filteredMovies.length}</span> {filteredMovies.length === 1 ? 'movie' : 'movies'}
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredMovies.map((movie) => {
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-5">
+              {movies.map((movie, index) => {
                 const movieId = movie._id || movie.id;
                 if (!movieId) return null;
+
+                if (movies.length === index + 1) {
+                  return (
+                    <div ref={lastMovieElementRef} key={`${movieId}-${index}`}>
+                      <MovieCard movie={movie} onTrailerClick={() => setTrailerMovie(movie)} />
+                    </div>
+                  );
+                }
+
                 return (
                   <MovieCard
-                    key={movieId}
+                    key={`${movieId}-${index}`}
                     movie={movie}
                     onTrailerClick={() => setTrailerMovie(movie)}
                   />
                 );
               })}
             </div>
+
+            {/* Infinite Scroll Loader */}
+            {loadingMore && (
+              <div className="text-center py-8">
+                <div className="inline-flex items-center gap-3 bg-white px-6 py-3 rounded-full shadow-sm border border-slate-100">
+                  <div className="animate-spin h-5 w-5 text-indigo-600">
+                    <div className="h-5 w-5 border-2 border-indigo-600 border-t-transparent rounded-full" />
+                  </div>
+                  <p className="text-slate-700 font-medium text-sm">Loading more movies...</p>
+                </div>
+              </div>
+            )}
+
+            {/* End of list */}
+            {!hasMore && movies.length > 0 && (
+              <div className="text-center py-10 mt-6 border-t border-slate-100">
+                <p className="text-slate-500 font-medium">You've reached the end of the catalogue.</p>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Trailer Modal */}
         <TrailerModal
           movie={trailerMovie}
           isOpen={!!trailerMovie}
