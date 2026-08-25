@@ -82,8 +82,8 @@ function ProtectedAdminRoute({ children }) {
         return;
       }
 
-      const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-      console.log('[ADMIN ROUTE DEBUG] Checking admin with API:', API_BASE);
+      const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
+      console.log('[ADMIN ROUTE DEBUG] Checking admin with API:', API_BASE || '(relative)');
       
       try {
         const res = await fetch(`${API_BASE}/api/user/check-admin`, {

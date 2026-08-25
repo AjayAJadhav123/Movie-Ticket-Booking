@@ -22,7 +22,7 @@ export default function AdminLogin() {
         setIsExchanging(true);
         try {
           const token = await getToken();
-          const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+          const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
           const res = await fetch(`${API_BASE}/api/admin/auth/exchange`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
