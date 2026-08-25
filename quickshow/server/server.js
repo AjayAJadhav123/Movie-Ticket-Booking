@@ -190,18 +190,23 @@ app.get('/health', (req, res) => {
   });
 });
 
-const clerkJwtKey = process.env.CLERK_JWT_KEY ? process.env.CLERK_JWT_KEY.replace(/\\n/g, '\n') : undefined;
+// authorizedParties: the list of frontend origins allowed to generate tokens.
+// Hardcode the production URL so auth never breaks if FRONTEND_URL is missing on Render.
+// jwtKey is intentionally omitted — we let Clerk verify online via CLERK_SECRET_KEY
+// (PEM formatting in env vars is error-prone and causes 'unexpected-error').
+const AUTHORIZED_PARTIES = [
+  'https://movie-ticket-booking-tan.vercel.app', // production (hardcoded)
+  process.env.FRONTEND_URL,                        // production (from env, if set)
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5175',
+  'http://localhost:3000',
+].filter(Boolean);
 
-app.use(clerkMiddleware({ 
-  authorizedParties: [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:5175',
-    'http://localhost:3000',
-    process.env.FRONTEND_URL
-  ].filter(Boolean),
-  jwtKey: clerkJwtKey,
-  publishableKey: process.env.CLERK_PUBLISHABLE_KEY 
+app.use(clerkMiddleware({
+  authorizedParties: AUTHORIZED_PARTIES,
+  secretKey: process.env.CLERK_SECRET_KEY,
+  publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
 }));
 
 app.use('/api/user', userRoutes);

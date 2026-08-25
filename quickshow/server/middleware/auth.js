@@ -73,6 +73,11 @@ export const requireAuthMiddleware = async (req, res, next) => {
     const userId = req.auth?.userId;
     
     if (!userId) {
+      // In production, log the Clerk failure reason so it's visible in Render logs
+      const resHeaders = res.getHeaders();
+      const authStatus = resHeaders['x-clerk-auth-status'] || 'unknown';
+      const authReason = resHeaders['x-clerk-auth-reason'] || 'unknown';
+      console.warn(`[AUTH] Clerk rejected request — status: ${authStatus}, reason: ${authReason}, path: ${req.path}`);
       return res.status(401).json({
         success: false,
         message: 'Unauthorized - Authentication required',
