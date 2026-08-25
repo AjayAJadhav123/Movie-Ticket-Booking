@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { useAuth } from '@clerk/clerk-react';
+import { useAuth, useUser } from '@clerk/clerk-react';
 
 
 const AppContext = createContext();
@@ -8,6 +8,7 @@ const AppContext = createContext();
 // Wrapper component to use useAuth hook
 function AppProviderInner({ children }) {
   const { getToken, isLoaded, isSignedIn } = useAuth();
+  const { user: clerkUser } = useUser();
   const [movies, setMovies] = useState([]);
   const [latestMovies, setLatestMovies] = useState([]);
   const [trendingMovies, setTrendingMovies] = useState([]);
@@ -24,7 +25,11 @@ function AppProviderInner({ children }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+  // In production (Vercel), VITE_BACKEND_URL is not set — relative URLs are used
+  // so the vercel.json proxy can forward /api/* to the Render backend.
+  // In local dev, vite.config.js proxies /api to localhost:5000 — also relative.
+  // Only set VITE_BACKEND_URL if you need absolute URLs (e.g. for direct fetch outside proxy).
+  const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
 
   // Create axios client once (stable reference)
   const apiClientRef = useRef(null);
@@ -85,6 +90,45 @@ function AppProviderInner({ children }) {
       apiClient.interceptors.request.eject(requestInterceptorId);
     };
   }, [isLoaded, apiClient]);
+
+  // ── User sync ──────────────────────────────────────────────────────────────
+  // Whenever a Clerk session becomes active, upsert the user in MongoDB.
+  // This handles local dev (where Clerk webhooks can't reach localhost) and
+  // any edge cases where the webhook was missed in production.
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn || !clerkUser) return;
+
+    const syncUserToMongoDB = async () => {
+      try {
+        const primaryEmail =
+          clerkUser.primaryEmailAddress?.emailAddress ||
+          clerkUser.emailAddresses?.[0]?.emailAddress ||
+          '';
+
+        const fullName =
+          clerkUser.fullName ||
+          `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() ||
+          'User';
+
+        const imageUrl = clerkUser.imageUrl || clerkUser.profileImageUrl || null;
+
+        // Use apiClient (not raw axios) so the auth interceptor auto-attaches
+        // the Clerk Bearer token — no need to call getToken() manually here.
+        await apiClient.post('/api/user/sync', {
+          name: fullName,
+          email: primaryEmail,
+          image: imageUrl,
+        });
+        console.log('[AppContext] User synced to MongoDB');
+      } catch (err) {
+        // Non-fatal – the backend auto-creates on next authenticated request anyway
+        console.warn('[AppContext] User sync failed (non-fatal):', err.message);
+      }
+    };
+
+    syncUserToMongoDB();
+  }, [isLoaded, isSignedIn, clerkUser, apiClient]);
+  // ──────────────────────────────────────────────────────────────────────────
 
   const fetchMovies = useCallback(async (filters = {}, append = false) => {
     try {
@@ -378,25 +422,14 @@ function AppProviderInner({ children }) {
   const createStripeSession = useCallback(async (showId, seats) => {
     try {
       setLoading(true);
-      
-      // Get fresh token from ref (which is always up-to-date)
-      const token = await getTokenRef.current();
-      if (!token) {
-        throw new Error('Failed to get authentication token');
-      }
 
-      // Make the request with explicit Authorization header
-      const response = await axios.post(
-        `${API_BASE}/api/booking/create-stripe-session`,
-        { showId, seats },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-        }
-      );
-      
+      // Use apiClient so the auth interceptor auto-attaches the Bearer token
+      // and the correct base URL (relative on Vercel, proxied to Render) is used.
+      const response = await apiClient.post('/api/booking/create-stripe-session', {
+        showId,
+        seats,
+      });
+
       if (response.data.success) {
         setError(null);
         return response.data.data;
@@ -413,7 +446,7 @@ function AppProviderInner({ children }) {
     } finally {
       setLoading(false);
     }
-  }, [API_BASE]);
+  }, [apiClient]);
 
   const value = {
     movies,

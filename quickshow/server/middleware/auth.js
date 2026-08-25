@@ -80,6 +80,23 @@ export const requireAuthMiddleware = async (req, res, next) => {
     }
     
     req.userId = userId;
+
+    // Decode the Clerk JWT and attach claims so controllers can read
+    // name / email / image without an extra Clerk API call.
+    // This powers the local-dev auto-upsert flow (no webhook needed).
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const tokenStr = authHeader.split(' ')[1];
+        const payloadStr = Buffer.from(tokenStr.split('.')[1], 'base64url').toString();
+        req.decodedToken = JSON.parse(payloadStr);
+      } catch (_) {
+        // Non-fatal: controllers fall back to sensible defaults
+        req.decodedToken = {};
+      }
+    } else {
+      req.decodedToken = {};
+    }
+
     next();
   } catch (error) {
     console.error('[AUTH] Middleware error:', error.message);

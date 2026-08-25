@@ -17,7 +17,9 @@ export const handleClerkWebhook = async (req, res) => {
     });
   }
 
-  const payload = req.body;
+  // svix.verify() expects the raw request body string (not the parsed object).
+  // server.js saves it as req.rawBody via the express.json verify callback.
+  const payload = req.rawBody || JSON.stringify(req.body);
   const headers = req.headers;
 
   let wh;
@@ -100,13 +102,31 @@ export const getUser = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ clerkId: userId });
+    // Try to find the user first (fast path)
+    let user = await User.findOne({ clerkId: userId });
 
+    // If the user isn't in MongoDB yet (e.g. local dev where Clerk webhooks
+    // can't reach localhost), create them now from whatever JWT claims we have.
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found',
-      });
+      const decoded = req.decodedToken || {};
+      const name = decoded.name || decoded.given_name || 'User';
+      const email = decoded.email || `${userId}@clerk.local`;
+      const image = decoded.picture || decoded.image_url || null;
+
+      user = await User.findOneAndUpdate(
+        { clerkId: userId },
+        {
+          $setOnInsert: {
+            clerkId: userId,
+            name,
+            email,
+            image,
+            isAdmin: false,
+          },
+        },
+        { upsert: true, new: true }
+      );
+      console.log(`[USER SYNC] Auto-created MongoDB user for Clerk ID: ${userId}`);
     }
 
     return res.status(200).json({
@@ -118,6 +138,61 @@ export const getUser = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error fetching user',
+    });
+  }
+};
+
+// Explicit sync endpoint — call this from the frontend right after sign-in/sign-up.
+// Does a full upsert so name/email/image are always up-to-date.
+export const syncUser = async (req, res) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    // Pull identity data from the decoded JWT when available,
+    // then fall back to the request body (client can pass { name, email, image }).
+    const decoded = req.decodedToken || {};
+    const body = req.body || {};
+
+    const name =
+      body.name ||
+      decoded.name ||
+      decoded.given_name ||
+      decoded.first_name ||
+      'User';
+    const email =
+      body.email ||
+      decoded.email ||
+      `${userId}@clerk.local`;
+    const image =
+      body.image ||
+      decoded.picture ||
+      decoded.image_url ||
+      null;
+
+    const user = await User.findOneAndUpdate(
+      { clerkId: userId },
+      {
+        $set: { name, email, image },
+        $setOnInsert: { clerkId: userId, isAdmin: false },
+      },
+      { upsert: true, new: true }
+    );
+
+    console.log(`[USER SYNC] Upserted MongoDB user: ${userId} (${email})`);
+
+    return res.status(200).json({
+      success: true,
+      message: 'User synced successfully',
+      data: user,
+    });
+  } catch (error) {
+    console.error('[USER SYNC] Error syncing user:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error syncing user',
     });
   }
 };

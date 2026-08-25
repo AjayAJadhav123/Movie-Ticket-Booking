@@ -138,7 +138,8 @@ app.use(
     origin: function (origin, callback) {
       // Production origins that are allowed
       const allowedOrigins = [
-        'https://movie-ticket-booking-tan.vercel.app', // Production frontend ONLY
+        'https://movie-ticket-booking-tan.vercel.app', // Production frontend (hardcoded fallback)
+        process.env.FRONTEND_URL,                       // Set this in Render dashboard
         // Development origins (only in development mode)
         ...(process.env.NODE_ENV !== 'production' ? [
           'http://localhost:3000',
@@ -146,19 +147,22 @@ app.use(
           'http://localhost:5174',
           'http://localhost:5175',
         ] : [])
-      ];
+      ].filter(Boolean);
 
-      // Allow requests with no origin (mobile apps, server-to-server) in development only
-      if (!origin && process.env.NODE_ENV !== 'production') {
+      // Allow server-to-server requests with no Origin header:
+      // - Vercel's edge proxy forwarding /api/* to Render
+      // - Clerk webhook deliveries
+      // - Render health checks
+      if (!origin) {
         return callback(null, true);
       }
 
       // Check if origin is in allowed list
-      if (origin && allowedOrigins.includes(origin)) {
+      if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
-      // Reject unauthorized origins
+      // Reject unauthorized browser origins
       return callback(new Error('CORS policy violation'));
     },
     credentials: true,
