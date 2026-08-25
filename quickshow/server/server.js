@@ -99,7 +99,7 @@ app.use(helmet({
         "https://api.stripe.com",
         "wss://",
         "ws://localhost:*",
-        "https://movie-ticket-booking-09ga.onrender.com",
+        "https://movie-ticket-booking-o9ga.onrender.com",
         "https://movie-ticket-booking-tan.vercel.app",
         process.env.BACKEND_URL || "http://localhost:5000",
         process.env.FRONTEND_URL || "http://localhost:5173",
