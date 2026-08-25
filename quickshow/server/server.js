@@ -291,8 +291,8 @@ io.on('connection', (socket) => {
   });
 });
 
-httpServer.listen(PORT, () => {
-  console.log(`✅ QuickShow server running on port ${PORT}`);
+httpServer.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ QuickShow server running on port ${PORT} (0.0.0.0)`);
   console.log(`🚀 Environment: ${process.env.NODE_ENV || 'development'}`);
 
   // Configuration status warnings

@@ -8,15 +8,13 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 10000
+    # PORT is intentionally omitted — Render injects it dynamically.
+    # The server reads process.env.PORT which Render sets automatically.
     healthCheckPath: /health
     healthCheckInterval: 30
     maxInstances: 1
     minInstances: 1
     autoDeploy: true
-    repo: https://github.com/your-username/your-repo
-    branch: main
     
     # Environment variables that must be set in Render dashboard:
     # MONGODB_URI - MongoDB Atlas connection string
