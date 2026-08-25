@@ -53,6 +53,10 @@ function ProtectedAdminRoute({ children }) {
 
     const adminToken = localStorage.getItem('adminToken');
     
+    console.log('[ADMIN ROUTE DEBUG] adminToken:', adminToken ? 'Present' : 'None');
+    console.log('[ADMIN ROUTE DEBUG] isLoaded:', isLoaded);
+    console.log('[ADMIN ROUTE DEBUG] user:', user ? 'Present' : 'None');
+    
     // If not using adminToken and Clerk is still loading, wait
     if (!adminToken && !isLoaded) return;
 
@@ -64,25 +68,33 @@ function ProtectedAdminRoute({ children }) {
       // If no admin token, fallback to Clerk token if logged in
       if (!tokenToVerify) {
         if (!user) {
+          console.log('[ADMIN ROUTE DEBUG] No token and no user - unauthenticated');
           setStatus('unauthenticated');
           return;
         }
+        console.log('[ADMIN ROUTE DEBUG] Getting Clerk token...');
         tokenToVerify = await getToken();
       }
 
       if (!tokenToVerify) {
+        console.log('[ADMIN ROUTE DEBUG] No token available - unauthenticated');
         setStatus('unauthenticated');
         return;
       }
 
       const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      console.log('[ADMIN ROUTE DEBUG] Checking admin with API:', API_BASE);
       
       try {
         const res = await fetch(`${API_BASE}/api/user/check-admin`, {
           headers: { Authorization: `Bearer ${tokenToVerify}` },
         });
 
+        console.log('[ADMIN ROUTE DEBUG] Response status:', res.status);
+
         if (!res.ok) {
+          const errorText = await res.text();
+          console.error('[ADMIN ROUTE DEBUG] Response not OK:', errorText);
           localStorage.removeItem('adminToken'); // Clear invalid token
           await signOut();
           toast.error('Admin access required.');
@@ -91,10 +103,13 @@ function ProtectedAdminRoute({ children }) {
         }
 
         const data = await res.json();
+        console.log('[ADMIN ROUTE DEBUG] Response data:', data);
 
         if (data.isAdmin) {
+          console.log('[ADMIN ROUTE DEBUG] Admin verified ✅');
           setStatus('admin');
         } else {
+          console.log('[ADMIN ROUTE DEBUG] Not admin ❌');
           localStorage.removeItem('adminToken');
           await signOut();
           toast.error('Admin access required.');
@@ -121,11 +136,8 @@ function ProtectedAdminRoute({ children }) {
     );
   }
 
-  if (status === 'unauthenticated') {
-    return <Navigate to="/admin" replace />;
-  }
-
-  if (status === 'denied_redirect') {
+  if (status === 'unauthenticated' || status === 'denied_redirect') {
+    console.log('[ADMIN ROUTE DEBUG] Redirecting to /admin');
     return <Navigate to="/admin" replace />;
   }
 
