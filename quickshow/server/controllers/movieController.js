@@ -359,20 +359,16 @@ export const getNowPlayingMovies = async (req, res) => {
     if (!TMDB_API_KEY) {
       return res.status(503).json({
         success: false,
-        message: 'TMDB API key not configured',
+        message: 'Movie service temporarily unavailable',
         data: [],
         pagination: { total: 0, page: 1, pages: 0 },
-        source: 'error',
       });
     }
 
-    console.log(`📡 TMDB /movie/now_playing request: page=${page}`);
     const response = await fetchFromTMDB('/movie/now_playing', {
       api_key: TMDB_API_KEY,
       page,
     }, 3000);
-
-    console.log(`✅ TMDB /movie/now_playing response: results=${response.data.results?.length}`);
 
     return res.status(200).json({
       success: true,
@@ -381,13 +377,12 @@ export const getNowPlayingMovies = async (req, res) => {
       source: 'tmdb',
     });
   } catch (error) {
-    console.error(`❌ TMDB /movie/now_playing failed:`, error.message);
+    console.error('getNowPlayingMovies error:', error.message);
     return res.status(503).json({
       success: false,
-      message: 'TMDB service temporarily unavailable. Please try again in a few moments.',
+      message: 'Movie service temporarily unavailable',
       data: [],
       pagination: { total: 0, page: 1, pages: 0 },
-      source: 'error',
     });
   }
 };
@@ -482,22 +477,16 @@ export const getPopularMovies = async (req, res) => {
     if (!TMDB_API_KEY) {
       return res.status(503).json({
         success: false,
-        message: 'TMDB API key not configured',
+        message: 'Movie service temporarily unavailable',
         data: [],
         pagination: { total: 0, page: 1, pages: 0 },
-        source: 'error',
       });
     }
 
-    console.log(`📡 TMDB /movie/popular request: page=${page}, timeout=3000ms`);
-    const start = Date.now();
     const response = await fetchFromTMDB('/movie/popular', {
       api_key: TMDB_API_KEY,
       page,
     }, 3000);
-    const elapsed = Date.now() - start;
-
-    console.log(`✅ TMDB /movie/popular response: status=${response.status}, time=${elapsed}ms, results=${response.data.results?.length || 0}, total_pages=${response.data.total_pages}`);
 
     return res.status(200).json({
       success: true,
@@ -506,19 +495,13 @@ export const getPopularMovies = async (req, res) => {
       source: 'tmdb',
     });
   } catch (error) {
-    console.error(`❌ TMDB /movie/popular failed: code=${error.code}, message=${error.message}`);
+    console.error('getPopularMovies error:', error.message);
     
-    // Return 503 Service Unavailable instead of silently serving demo movies
     return res.status(503).json({
       success: false,
-      message: 'TMDB service temporarily unavailable. Please try again in a few moments.',
+      message: 'Movie service temporarily unavailable',
       data: [],
       pagination: { total: 0, page: 1, pages: 0 },
-      source: 'error',
-      error: {
-        code: error.code,
-        message: error.message,
-      },
     });
   }
 };
@@ -529,17 +512,16 @@ export const getLatestMovies = async (req, res) => {
     const TMDB_API_KEY = getTMDBKey();
     
     if (!TMDB_API_KEY) {
+      console.error('TMDB API key not configured');
       return res.status(503).json({
         success: false,
-        message: 'TMDB API key not configured',
+        message: 'Movie service temporarily unavailable',
         data: [],
         pagination: { total: 0, page: 1, pages: 0 },
-        source: 'error',
       });
     }
 
     // Try now_playing first; if it times out fall back to popular (faster)
-    console.log(`📡 TMDB /movie/now_playing request (for latest): page=${page}`);
     let response = null;
     try {
       response = await fetchFromTMDB('/movie/now_playing', {
@@ -547,22 +529,20 @@ export const getLatestMovies = async (req, res) => {
         region: 'IN',
         page,
       }, 3000);
-      console.log(`✅ TMDB /movie/now_playing response: results=${response.data.results?.length}`);
     } catch (nowPlayingErr) {
-      console.warn(`⏱️ /movie/now_playing timed out, trying /movie/popular as fallback:`, nowPlayingErr.message);
+      console.warn('TMDB now_playing failed, trying popular fallback');
       try {
         response = await fetchFromTMDB('/movie/popular', {
           api_key: TMDB_API_KEY,
           page,
         }, 3000);
-        console.log(`✅ TMDB /movie/popular response: results=${response.data.results?.length}`);
       } catch (popularErr) {
-        console.error(`❌ /movie/popular also failed:`, popularErr.message);
-        throw popularErr; // Re-throw to be caught by outer catch
+        console.error('TMDB popular fallback failed');
+        throw popularErr;
       }
     }
     
-    if (response) {
+    if (response && response.data && response.data.results) {
       const validMovies = response.data.results
         .filter((m) => m.release_date && m.poster_path)
         .map(toCatalogueMovie);
@@ -575,16 +555,14 @@ export const getLatestMovies = async (req, res) => {
       });
     }
     
-    // Should not reach here, but just in case
-    throw new Error('No response from TMDB');
+    throw new Error('No valid response from TMDB');
   } catch (error) {
-    console.error(`❌ TMDB latest movies request failed:`, error.message);
-    return res.status(503).json({
+    console.error('getLatestMovies error:', error.message);
+    return res.status(500).json({
       success: false,
-      message: 'TMDB service temporarily unavailable. Please try again in a few moments.',
+      message: 'Movie service temporarily unavailable',
       data: [],
       pagination: { total: 0, page: 1, pages: 0 },
-      source: 'error',
     });
   }
 };
@@ -632,7 +610,6 @@ export const searchMovies = async (req, res) => {
     const TMDB_API_KEY = getTMDBKey();
 
     // Search in database first (with 2s timeout to avoid hanging when DB is offline)
-    // Only fetch DB results on page 1 to avoid duplicating them on subsequent pages
     let dbResults = [];
     if (pageNum === 1 && isDatabaseAvailable()) {
       try {
@@ -640,7 +617,7 @@ export const searchMovies = async (req, res) => {
           title: { $regex: searchTerm, $options: 'i' },
         }).limit(10).maxTimeMS(2000);
       } catch (dbErr) {
-        console.warn('Database search unavailable:', dbErr.message);
+        console.warn('Database search unavailable');
       }
     }
 
@@ -654,7 +631,7 @@ export const searchMovies = async (req, res) => {
       });
     }
 
-    // Search TMDB with a hard 3-second deadline (fast fail when unreachable)
+    // Search TMDB with timeout
     let tmdbResults = [];
     let pagination = { total: 0, page: pageNum, pages: 1 };
     
@@ -686,7 +663,7 @@ export const searchMovies = async (req, res) => {
             );
         }
       } catch (tmdbError) {
-        console.warn('TMDB search unavailable:', tmdbError.message);
+        console.warn('TMDB search unavailable');
       }
     }
 
@@ -704,10 +681,10 @@ export const searchMovies = async (req, res) => {
       source: tmdbResults.length > 0 ? 'tmdb' : 'database',
     });
   } catch (error) {
-    console.error('Error searching movies:', error);
+    console.error('searchMovies error:', error.message);
     return res.status(500).json({
       success: false,
-      message: 'Error searching movies',
+      message: 'Search service temporarily unavailable',
     });
   }
 };

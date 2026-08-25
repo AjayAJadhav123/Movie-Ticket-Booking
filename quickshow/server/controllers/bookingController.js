@@ -732,6 +732,14 @@ export const createCashfreeOrder = async (req, res) => {
 
       const orderId = `order_${booking._id.toString()}_${Date.now()}`;
 
+      // Ensure URLs are fully qualified with http/https protocol
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+      
+      // Validate URLs have protocol
+      const returnUrl = frontendUrl.startsWith('http') ? `${frontendUrl}/my-bookings?order_id=${orderId}` : `https://${frontendUrl}/my-bookings?order_id=${orderId}`;
+      const notifyUrl = backendUrl.startsWith('http') ? `${backendUrl}/api/booking/cashfree-webhook` : `https://${backendUrl}/api/booking/cashfree-webhook`;
+
       const request = {
         order_id: orderId,
         order_amount: finalTotalAmount,
@@ -743,8 +751,8 @@ export const createCashfreeOrder = async (req, res) => {
           customer_name: user.name || 'Customer',
         },
         order_meta: {
-          return_url: `${process.env.FRONTEND_URL}/my-bookings?order_id=${orderId}`,
-          notify_url: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/booking/cashfree-webhook`,
+          return_url: returnUrl,
+          notify_url: notifyUrl,
         },
         order_note: `QuickShow - ${show.movieId?.title} - Seats: ${seats.join(',')}`,
       };

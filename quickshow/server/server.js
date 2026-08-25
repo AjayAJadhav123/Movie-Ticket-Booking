@@ -60,14 +60,58 @@ const PORT = process.env.PORT || 5000;
 connectDB();
 initializeEmailService();
 
-// ✅ SECURITY: Add Helmet for security headers
+// ✅ SECURITY: Add Helmet for security headers with proper CSP for external services
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      frameSrc: ["'self'"],
+      scriptSrc: [
+        "'self'", 
+        "'unsafe-inline'",
+        "https://sdk.cashfree.com",
+        "https://js.stripe.com",
+        "https://*.clerk.accounts.dev",
+        "https://accounts.clerk.com",
+      ],
+      styleSrc: [
+        "'self'", 
+        "'unsafe-inline'",
+        "https://fonts.googleapis.com",
+      ],
+      fontSrc: [
+        "'self'",
+        "https://fonts.gstatic.com",
+      ],
+      imgSrc: [
+        "'self'", 
+        "data:", 
+        "https:",
+        "https://image.tmdb.org",
+        "https://img.clerk.com",
+      ],
+      connectSrc: [
+        "'self'",
+        "https://api.themoviedb.org",
+        "https://*.clerk.accounts.dev",
+        "https://accounts.clerk.com",
+        "https://api.cashfree.com",
+        "https://sandbox.cashfree.com",
+        "https://api.stripe.com",
+        "wss://",
+        "ws://localhost:*",
+        "https://movie-ticket-booking-09ga.onrender.com",
+        "https://movie-ticket-booking-tan.vercel.app",
+        process.env.BACKEND_URL || "http://localhost:5000",
+        process.env.FRONTEND_URL || "http://localhost:5173",
+      ],
+      frameSrc: [
+        "'self'",
+        "https://*.clerk.accounts.dev",
+        "https://accounts.clerk.com",
+        "https://js.stripe.com",
+        "https://sdk.cashfree.com",
+      ],
+      frameAncestors: ["'self'"],
     },
   },
   hsts: {
@@ -75,6 +119,8 @@ app.use(helmet({
     includeSubDomains: true,
     preload: true,
   },
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
 }));
 
 // ✅ SECURITY: Add request size limit to prevent DoS
@@ -90,22 +136,46 @@ app.use(
 app.use(
   cors({
     origin: function (origin, callback) {
+      // Production origins that are allowed
       const allowedOrigins = [
-        process.env.FRONTEND_URL || 'http://localhost:5173',
-        'http://localhost:3000',
-        'http://localhost:5173',
+        'https://movie-ticket-booking-tan.vercel.app', // Production frontend ONLY
+        // Development origins (only in development mode)
+        ...(process.env.NODE_ENV !== 'production' ? [
+          'http://localhost:3000',
+          'http://localhost:5173',
+          'http://localhost:5174',
+          'http://localhost:5175',
+        ] : [])
       ];
-      
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        // ✅ FIXED: Reject instead of allowing all
-        callback(new Error('CORS policy violation'));
+
+      // Allow requests with no origin (mobile apps, server-to-server) in development only
+      if (!origin && process.env.NODE_ENV !== 'production') {
+        return callback(null, true);
       }
+
+      // Check if origin is in allowed list
+      if (origin && allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // Reject unauthorized origins
+      return callback(new Error('CORS policy violation'));
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: [
+      'Content-Type', 
+      'Authorization', 
+      'X-Requested-With',
+      'Accept',
+      'Origin',
+      'Cache-Control',
+      'X-File-Name',
+    ],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    maxAge: 86400, // 24 hours
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   })
 );
 
@@ -113,9 +183,6 @@ app.get('/health', (req, res) => {
   res.json({ 
     success: true, 
     message: 'Server is running',
-    mongodb: process.env.MONGODB_URI ? 'configured' : 'not configured',
-    clerk: process.env.CLERK_SECRET_KEY ? 'configured' : 'not configured',
-    cashfree_app_id: process.env.CASHFREE_APP_ID ? process.env.CASHFREE_APP_ID.substring(0, 5) + '...' : 'not configured',
   });
 });
 
