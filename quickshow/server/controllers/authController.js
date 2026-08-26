@@ -21,7 +21,7 @@ const generateToken = (user) => {
       tokenVersion: user.tokenVersion || 0,
     },
     secret,
-    { expiresIn: '7d' } // Standard 7 day session
+    { expiresIn: '24h' } // Standard 24 hour session
   );
 };
 
@@ -70,7 +70,7 @@ export const register = async (req, res) => {
     if (user) {
       // If user exists but is not verified, we can resend OTP and update password
       if (!user.isVerified) {
-        const salt = await bcrypt.genSalt(10);
+        const salt = await bcrypt.genSalt(12);
         const hashedPassword = await bcrypt.hash(password, salt);
         const otp = generateOTP();
         
@@ -93,7 +93,7 @@ export const register = async (req, res) => {
     }
 
     // Hash password
-    const salt = await bcrypt.genSalt(10);
+    const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(password, salt);
     const otp = generateOTP();
 
@@ -222,6 +222,13 @@ export const login = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
+    if (user.lockUntil && user.lockUntil > Date.now()) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Account temporarily locked due to too many failed login attempts. Please try again later.' 
+      });
+    }
+
     // Check password
     if (!user.password) {
       return res.status(401).json({ success: false, message: 'Please login using the method you signed up with (e.g., Google)' });
@@ -238,7 +245,19 @@ export const login = async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      user.loginAttempts = (user.loginAttempts || 0) + 1;
+      if (user.loginAttempts >= 5) {
+        user.lockUntil = Date.now() + 15 * 60 * 1000; // Lock for 15 minutes
+      }
+      await user.save();
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    // Successful login, reset attempts
+    if (user.loginAttempts > 0 || user.lockUntil) {
+      user.loginAttempts = 0;
+      user.lockUntil = undefined;
+      await user.save();
     }
 
     const token = generateToken(user);
@@ -350,7 +369,7 @@ export const resetPassword = async (req, res) => {
     }
 
     // Hash new password
-    const salt = await bcrypt.genSalt(10);
+    const salt = await bcrypt.genSalt(12);
     user.password = await bcrypt.hash(password, salt);
     
     // Revoke all existing sessions by incrementing token version

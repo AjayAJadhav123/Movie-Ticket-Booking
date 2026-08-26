@@ -139,7 +139,7 @@ export default function SeatLayout() {
         if (window.Cashfree && paymentSessionId) {
           try {
             const cashfree = window.Cashfree({
-              mode: "production",
+              mode: import.meta.env.PROD ? "production" : "sandbox",
             });
             
             const checkoutOptions = {

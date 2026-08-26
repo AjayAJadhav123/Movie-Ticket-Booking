@@ -216,15 +216,21 @@ app.use(
 
 // 404 handler for debugging API routes
 app.use((req, res, next) => {
-  if (req.path.startsWith('/api')) {
+  if (req.path.startsWith('/api') && process.env.NODE_ENV !== 'production') {
     console.log(`404: ${req.method} ${req.path}`);
   }
-  res.status(404).json({
+  
+  const response = {
     success: false,
     message: 'Route not found',
-    path: req.path,
-    method: req.method,
-  });
+  };
+  
+  if (process.env.NODE_ENV !== 'production') {
+    response.path = req.path;
+    response.method = req.method;
+  }
+  
+  res.status(404).json(response);
 });
 
 app.use((err, req, res, next) => {

@@ -731,8 +731,8 @@ export const createCashfreeOrder = async (req, res) => {
       const orderId = `order_${booking._id.toString()}_${Date.now()}`;
 
       // Ensure URLs are fully qualified with https (Cashfree requirement)
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-      const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+      const frontendUrl = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? 'https://movie-ticket-booking-tan.vercel.app' : 'http://localhost:5173');
+      const backendUrl = process.env.BACKEND_URL || (process.env.NODE_ENV === 'production' ? 'https://movie-ticket-booking-o9ga.onrender.com' : 'http://localhost:5000');
       
       // Force https for Cashfree validation
       const returnUrl = `${frontendUrl}/my-bookings?order_id=${orderId}`.replace('http://', 'https://');

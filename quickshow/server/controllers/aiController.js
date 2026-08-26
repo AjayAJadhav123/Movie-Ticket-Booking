@@ -307,6 +307,13 @@ export const chatWithAI = async (req, res) => {
       });
     }
 
+    if (message.length > 2000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Message too long. Please keep messages under 2000 characters.',
+      });
+    }
+
     if (!process.env.OPENAI_API_KEY) {
       return sendLocalAssistantReply(res, message, 'AI service is not configured. Using the built-in booking helper.');
     }
