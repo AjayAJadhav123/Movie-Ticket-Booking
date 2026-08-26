@@ -80,14 +80,24 @@ export const register = async (req, res) => {
         user.verificationOtpExpire = Date.now() + 10 * 60 * 1000; // 10 mins
         await user.save();
 
-        const emailService = await import('../services/emailService.js');
-        await emailService.sendEmail(
-          user.email,
-          'Verify your QuickShow account',
-          getOtpEmailTemplate(otp, user.name)
-        );
+        try {
+          const emailService = await import('../services/emailService.js');
+          const emailPromise = emailService.sendEmail(
+            user.email,
+            'Verify your QuickShow account',
+            getOtpEmailTemplate(otp, user.name)
+          ).catch(err => console.error('Background email error:', err.message));
+          
+          // Wait up to 3 seconds for email to send, then proceed anyway
+          await Promise.race([
+            emailPromise,
+            new Promise(resolve => setTimeout(resolve, 3000))
+          ]);
+        } catch (emailErr) {
+          console.error('Error sending OTP email (safe failure):', emailErr.message);
+        }
 
-        return res.status(200).json({ success: true, message: 'OTP sent to email. Please verify.' });
+        return res.status(200).json({ success: true, message: 'Account updated. Please verify your email with the OTP sent.' });
       }
       return res.status(400).json({ success: false, message: 'User already exists and is verified. Please log in.' });
     }
@@ -109,14 +119,19 @@ export const register = async (req, res) => {
 
     try {
       const emailService = await import('../services/emailService.js');
-      await emailService.sendEmail(
+      const emailPromise = emailService.sendEmail(
         user.email,
         'Verify your QuickShow account',
         getOtpEmailTemplate(otp, user.name)
-      );
+      ).catch(err => console.error('Background email error:', err.message));
+      
+      // Wait up to 3 seconds for email to send, then proceed anyway
+      await Promise.race([
+        emailPromise,
+        new Promise(resolve => setTimeout(resolve, 3000))
+      ]);
     } catch (emailErr) {
-      console.error('Error sending OTP email:', emailErr);
-      // We still return success but maybe warn in console
+      console.error('Error sending OTP email (safe failure):', emailErr.message);
     }
 
     res.status(201).json({
