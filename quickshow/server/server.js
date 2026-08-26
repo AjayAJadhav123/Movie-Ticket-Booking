@@ -139,6 +139,7 @@ app.use(
       // Production origins that are allowed
       const allowedOrigins = [
         'https://movie-ticket-booking-tan.vercel.app', // Production frontend (hardcoded fallback)
+        'https://movie-ticket-booking-qwfg.vercel.app', // Additional Vercel frontend
         process.env.FRONTEND_URL,                       // Set this in Render dashboard
         // Development origins (only in development mode)
         ...(process.env.NODE_ENV !== 'production' ? [
