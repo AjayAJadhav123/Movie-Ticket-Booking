@@ -29,6 +29,8 @@ import {
 } from './inngest/functions.js';
 
 const app = express();
+// Trust proxy is required for express-rate-limit to work correctly behind Render/Vercel proxies
+app.set('trust proxy', 1);
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
@@ -183,6 +185,10 @@ app.use(
     optionsSuccessStatus: 204,
   })
 );
+
+app.get('/', (req, res) => {
+  res.send('QuickShow API is running');
+});
 
 app.get('/health', (req, res) => {
   res.json({ 
