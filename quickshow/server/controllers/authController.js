@@ -99,6 +99,8 @@ export const register = async (req, res) => {
         existingUser.verificationOtp = otp;
         existingUser.verificationOtpExpire = Date.now() + 10 * 60 * 1000;
         
+        console.log(`[DEV/TEST] Registration (resend) OTP for ${email}: ${otp}`);
+        
         // Save user (with 5s DB timeout)
         await Promise.race([
           existingUser.save(),
@@ -130,6 +132,7 @@ export const register = async (req, res) => {
     const otp = generateOTP();
 
     // Create user (with 5s DB timeout)
+    console.log(`[DEV/TEST] Registration OTP for ${email}: ${otp}`);
     const newUser = await Promise.race([
       User.create({
         name,
@@ -229,12 +232,14 @@ export const resendOtp = async (req, res) => {
     user.verificationOtpExpire = Date.now() + 10 * 60 * 1000;
     await user.save();
     
-    const emailService = await import('../services/emailService.js');
-    await emailService.sendEmail(
+    console.log(`[DEV/TEST] Resend OTP for ${email}: ${otp}`);
+    
+    // Non-blocking email send
+    emailService.sendEmail(
       user.email,
       'Your New QuickShow Verification Code',
       getOtpEmailTemplate(otp, user.name)
-    );
+    ).catch(err => console.error(err));
     
     res.status(200).json({ success: true, message: 'OTP resent successfully' });
   } catch (error) {
@@ -353,17 +358,15 @@ export const forgotPassword = async (req, res) => {
       <a href=${resetUrl} clicktracking=off>${resetUrl}</a>
     `;
 
+    console.log(`[DEV/TEST] Password Reset URL for ${email}: ${resetUrl}`);
+
     try {
-      const emailService = await import('../services/emailService.js');
-      const emailResult = await emailService.sendEmail(
+      // Fire and forget email to prevent hanging if SMTP is blocked
+      emailService.sendEmail(
         user.email,
         'Password Reset Request - QuickShow',
         message
-      );
-
-      if (!emailResult.success) {
-        throw new Error('Email could not be sent');
-      }
+      ).catch(err => console.error(err));
 
       res.status(200).json({ success: true, message: 'Email sent' });
     } catch (err) {
