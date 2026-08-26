@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
-// Email service will be imported here later
+import emailService from '../services/emailService.js';
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -57,38 +57,61 @@ const getOtpEmailTemplate = (otp, name) => {
 // @desc    Register user
 // @access  Public
 export const register = async (req, res) => {
+  let isResponded = false;
+
+  // Global fallback: absolutely ensure the request doesn't hang indefinitely (15s max)
+  const globalTimeout = setTimeout(() => {
+    if (!isResponded) {
+      isResponded = true;
+      return res.status(504).json({ success: false, message: 'Server timeout. Please try again later.' });
+    }
+  }, 15000);
+
+  const safeRespond = (status, data) => {
+    if (!isResponded) {
+      isResponded = true;
+      clearTimeout(globalTimeout);
+      return res.status(status).json(data);
+    }
+  };
+
   try {
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
-      return res.status(400).json({ success: false, message: 'Please provide name, email, and password' });
+      return safeRespond(400, { success: false, message: 'Please provide name, email, and password' });
     }
 
-    // Check if user exists
-    let user = await User.findOne({ email: email.toLowerCase() });
+    // Check if user exists (with 5s DB timeout)
+    const existingUser = await Promise.race([
+      User.findOne({ email: email.toLowerCase() }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('MongoDB Timeout')), 5000))
+    ]);
     
-    if (user) {
-      // If user exists but is not verified, we can resend OTP and update password
-      if (!user.isVerified) {
+    if (existingUser) {
+      if (!existingUser.isVerified) {
         const salt = await bcrypt.genSalt(12);
         const hashedPassword = await bcrypt.hash(password, salt);
         const otp = generateOTP();
         
-        user.password = hashedPassword;
-        user.name = name;
-        user.verificationOtp = otp;
-        user.verificationOtpExpire = Date.now() + 10 * 60 * 1000; // 10 mins
-        await user.save();
+        existingUser.password = hashedPassword;
+        existingUser.name = name;
+        existingUser.verificationOtp = otp;
+        existingUser.verificationOtpExpire = Date.now() + 10 * 60 * 1000;
+        
+        // Save user (with 5s DB timeout)
+        await Promise.race([
+          existingUser.save(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('MongoDB Timeout')), 5000))
+        ]);
 
         try {
-          const emailService = await import('../services/emailService.js');
           const emailPromise = emailService.sendEmail(
-            user.email,
+            existingUser.email,
             'Verify your QuickShow account',
-            getOtpEmailTemplate(otp, user.name)
+            getOtpEmailTemplate(otp, existingUser.name)
           ).catch(err => console.error('Background email error:', err.message));
           
-          // Wait up to 3 seconds for email to send, then proceed anyway
           await Promise.race([
             emailPromise,
             new Promise(resolve => setTimeout(resolve, 3000))
@@ -97,35 +120,35 @@ export const register = async (req, res) => {
           console.error('Error sending OTP email (safe failure):', emailErr.message);
         }
 
-        return res.status(200).json({ success: true, message: 'Account updated. Please verify your email with the OTP sent.' });
+        return safeRespond(200, { success: true, message: 'Account updated. Please verify your email with the OTP sent.' });
       }
-      return res.status(400).json({ success: false, message: 'User already exists and is verified. Please log in.' });
+      return safeRespond(400, { success: false, message: 'User already exists and is verified. Please log in.' });
     }
 
-    // Hash password
     const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(password, salt);
     const otp = generateOTP();
 
-    // Create user
-    user = await User.create({
-      name,
-      email: email.toLowerCase(),
-      password: hashedPassword,
-      isVerified: false,
-      verificationOtp: otp,
-      verificationOtpExpire: Date.now() + 10 * 60 * 1000,
-    });
+    // Create user (with 5s DB timeout)
+    const newUser = await Promise.race([
+      User.create({
+        name,
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        isVerified: false,
+        verificationOtp: otp,
+        verificationOtpExpire: Date.now() + 10 * 60 * 1000,
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('MongoDB Timeout')), 5000))
+    ]);
 
     try {
-      const emailService = await import('../services/emailService.js');
       const emailPromise = emailService.sendEmail(
-        user.email,
+        newUser.email,
         'Verify your QuickShow account',
-        getOtpEmailTemplate(otp, user.name)
+        getOtpEmailTemplate(otp, newUser.name)
       ).catch(err => console.error('Background email error:', err.message));
       
-      // Wait up to 3 seconds for email to send, then proceed anyway
       await Promise.race([
         emailPromise,
         new Promise(resolve => setTimeout(resolve, 3000))
@@ -134,13 +157,13 @@ export const register = async (req, res) => {
       console.error('Error sending OTP email (safe failure):', emailErr.message);
     }
 
-    res.status(201).json({
-      success: true,
-      message: 'Account created. Please verify your email with the OTP sent.',
-    });
+    return safeRespond(201, { success: true, message: 'Account created. Please verify your email with the OTP sent.' });
   } catch (error) {
+    if (error.message === 'MongoDB Timeout') {
+      return safeRespond(504, { success: false, message: 'Database operation timed out. Please try again.' });
+    }
     console.error('Register error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    return safeRespond(500, { success: false, message: 'Server error' });
   }
 };
 
