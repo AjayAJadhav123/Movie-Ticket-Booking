@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useUser } from '@clerk/clerk-react';
+import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import Loading from '../components/Loading';
 import { Download, Printer, ArrowLeft, AlertCircle } from 'lucide-react';
@@ -10,7 +10,7 @@ import { toast } from 'react-toastify';
 export default function BookingTicket() {
   const { bookingId } = useParams();
   const navigate = useNavigate();
-  const { isSignedIn } = useUser();
+  const { isSignedIn } = useAuth();
   const { apiClient } = useApp();
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -112,9 +112,9 @@ export default function BookingTicket() {
 
   if (!isSignedIn) {
     return (
-      <div className="min-h-screen pt-20 pb-16 bg-white flex items-center justify-center px-4">
+      <div className="min-h-screen pt-20 pb-16 bg-[#141414] flex items-center justify-center px-4">
         <div className="text-center card p-8">
-          <p className="text-lg text-slate-700 mb-4">Please sign in to view your booking ticket.</p>
+          <p className="text-lg text-slate-300 mb-4">Please sign in to view your booking ticket.</p>
           <button
             onClick={() => navigate('/sign-in')}
             className="btn-primary"
@@ -132,11 +132,11 @@ export default function BookingTicket() {
 
   if (error) {
     return (
-      <div className="min-h-screen pt-20 pb-16 bg-white px-4">
+      <div className="min-h-screen pt-20 pb-16 bg-[#141414] px-4">
         <div className="container mx-auto">
           <button
             onClick={() => navigate('/my-bookings')}
-            className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 mb-6 font-semibold transition"
+            className="flex items-center gap-2 text-primary hover:text-red-400 mb-6 font-semibold transition"
           >
             <ArrowLeft size={20} />
             Back to Bookings
@@ -156,9 +156,9 @@ export default function BookingTicket() {
 
   if (!booking) {
     return (
-      <div className="min-h-screen pt-20 pb-16 bg-white flex items-center justify-center px-4">
+      <div className="min-h-screen pt-20 pb-16 bg-[#141414] flex items-center justify-center px-4">
         <div className="text-center">
-          <p className="text-lg text-slate-700">Booking not found.</p>
+          <p className="text-lg text-slate-300">Booking not found.</p>
         </div>
       </div>
     );
@@ -167,13 +167,13 @@ export default function BookingTicket() {
   const getStatusColor = (status) => {
     switch (status) {
       case 'confirmed':
-        return { bg: 'bg-white', border: 'border-green-300', text: 'text-green-300', badge: 'bg-green-100 text-green-700' };
+        return { bg: 'bg-[#141414]', border: 'border-green-300', text: 'text-green-300', badge: 'bg-green-100 text-green-700' };
       case 'pending':
-        return { bg: 'bg-white', border: 'border-amber-300', text: 'text-yellow-300', badge: 'bg-amber-100 text-amber-700' };
+        return { bg: 'bg-[#141414]', border: 'border-amber-300', text: 'text-yellow-300', badge: 'bg-amber-100 text-amber-700' };
       case 'cancelled':
         return { bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-700', badge: 'bg-red-100 text-red-700' };
       default:
-        return { bg: 'bg-white', border: 'border-slate-300', text: 'text-slate-700', badge: 'bg-slate-200 text-slate-700' };
+        return { bg: 'bg-[#141414]', border: 'border-slate-700', text: 'text-slate-300', badge: 'bg-slate-700 text-slate-300' };
     }
   };
 
@@ -198,11 +198,11 @@ export default function BookingTicket() {
   });
 
   return (
-    <div className="min-h-screen pt-8 pb-16 bg-white">
+    <div className="min-h-screen pt-8 pb-16 bg-[#141414]">
       <div className="container mx-auto px-4 py-8">
         <button
           onClick={() => navigate('/my-bookings')}
-          className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 mb-6 font-semibold transition"
+          className="flex items-center gap-2 text-primary hover:text-red-400 mb-6 font-semibold transition"
         >
           <ArrowLeft size={20} />
           Back to Bookings
@@ -244,7 +244,7 @@ export default function BookingTicket() {
           <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white p-4 md:p-8">
             <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-4">
               <div>
-                <h1 className="text-2xl md:text-4xl font-bold">QuickShow</h1>
+                <img src="/logo.png" alt="QuickShow" className="h-8 md:h-12 object-contain" />
                 <p className="text-indigo-100 mt-1 text-sm md:text-base">Movie Ticket Confirmation</p>
               </div>
               <div className="text-right">
@@ -259,7 +259,7 @@ export default function BookingTicket() {
           <div className="p-4 md:p-8">
             {/* Movie Title */}
             <div className="mb-6 md:mb-8">
-              <h2 className="text-2xl md:text-3xl font-bold text-slate-900">{booking.movieTitle}</h2>
+              <h2 className="text-2xl md:text-3xl font-bold text-white">{booking.movieTitle}</h2>
             </div>
 
             {/* Grid Layout */}
@@ -279,34 +279,34 @@ export default function BookingTicket() {
                   {/* Date, Time, Theatre, Screen */}
                   <div className="grid grid-cols-2 gap-4 md:gap-6">
                     <div>
-                      <p className="text-slate-600 font-semibold mb-1 text-sm md:text-base">THEATRE</p>
-                      <p className="text-lg md:text-2xl font-bold text-slate-900">{booking.showId?.theatre || 'Theatre TBD'}</p>
+                      <p className="text-slate-400 font-semibold mb-1 text-sm md:text-base">THEATRE</p>
+                      <p className="text-lg md:text-2xl font-bold text-white">{booking.showId?.theatre || 'Theatre TBD'}</p>
                     </div>
                     <div>
-                      <p className="text-slate-600 font-semibold mb-1 text-sm md:text-base">SCREEN</p>
-                      <p className="text-lg md:text-2xl font-bold text-slate-900">{booking.showId?.screen || 'Screen TBD'}</p>
+                      <p className="text-slate-400 font-semibold mb-1 text-sm md:text-base">SCREEN</p>
+                      <p className="text-lg md:text-2xl font-bold text-white">{booking.showId?.screen || 'Screen TBD'}</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 md:gap-6">
                     <div>
-                      <p className="text-slate-600 font-semibold mb-1 text-sm md:text-base">SHOW DATE</p>
-                      <p className="text-lg md:text-2xl font-bold text-slate-900">{formattedDate}</p>
+                      <p className="text-slate-400 font-semibold mb-1 text-sm md:text-base">SHOW DATE</p>
+                      <p className="text-lg md:text-2xl font-bold text-white">{formattedDate}</p>
                     </div>
                     <div>
-                      <p className="text-slate-600 font-semibold mb-1 text-sm md:text-base">SHOW TIME</p>
-                      <p className="text-lg md:text-2xl font-bold text-slate-900">{booking.showTime}</p>
+                      <p className="text-slate-400 font-semibold mb-1 text-sm md:text-base">SHOW TIME</p>
+                      <p className="text-lg md:text-2xl font-bold text-white">{booking.showTime}</p>
                     </div>
                   </div>
 
                   {/* Seats */}
                   <div>
-                    <p className="text-slate-600 font-semibold mb-2 text-sm md:text-base">YOUR SEATS</p>
+                    <p className="text-slate-400 font-semibold mb-2 text-sm md:text-base">YOUR SEATS</p>
                     <div className="flex flex-wrap gap-2">
                       {booking.seats.map((seat) => (
                         <span
                           key={seat}
-                          className="bg-indigo-600 text-white px-3 md:px-4 py-2 rounded-lg font-bold text-sm md:text-lg"
+                          className="bg-primary text-white px-3 md:px-4 py-2 rounded-lg font-bold text-sm md:text-lg"
                         >
                           {seat}
                         </span>
@@ -315,14 +315,14 @@ export default function BookingTicket() {
                   </div>
 
                   {/* Price Details */}
-                  <div className="bg-slate-50 rounded-lg p-3 md:p-4 border border-slate-300">
+                  <div className="bg-[#0a0a0a] rounded-lg p-3 md:p-4 border border-slate-700">
                     <div className="flex justify-between mb-2 text-sm md:text-base">
-                      <span className="text-slate-700">Tickets ({booking.seats.length})</span>
-                      <span className="font-semibold text-slate-900">₹{booking.amount.toFixed(2)}</span>
+                      <span className="text-slate-300">Tickets ({booking.seats.length})</span>
+                      <span className="font-semibold text-white">₹{booking.amount.toFixed(2)}</span>
                     </div>
-                    <div className="border-t border-slate-300 pt-2 mt-2 flex justify-between font-bold md:text-lg text-base">
-                      <span className="text-slate-700">Total</span>
-                      <span className="text-indigo-600">₹{booking.amount.toFixed(2)}</span>
+                    <div className="border-t border-slate-700 pt-2 mt-2 flex justify-between font-bold md:text-lg text-base">
+                      <span className="text-slate-300">Total</span>
+                      <span className="text-primary">₹{booking.amount.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -330,15 +330,15 @@ export default function BookingTicket() {
             </div>
 
             {/* QR Code and Booking Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-6 md:mb-8 pt-4 md:pt-8 border-t border-slate-300">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-6 md:mb-8 pt-4 md:pt-8 border-t border-slate-700">
               {/* QR Code */}
               <div className="flex flex-col items-center">
-                <p className="text-slate-600 font-semibold mb-3 text-sm md:text-base">Ticket Verification</p>
+                <p className="text-slate-400 font-semibold mb-3 text-sm md:text-base">Ticket Verification</p>
                 {qrCode && (
                   <img
                     src={qrCode}
                     alt="Booking QR Code"
-                    className="w-40 h-40 md:w-48 md:h-48 border-2 border-slate-300 p-2 rounded-lg bg-white"
+                    className="w-40 h-40 md:w-48 md:h-48 border-2 border-slate-700 p-2 rounded-lg bg-[#141414]"
                   />
                 )}
                 <p className="text-xs md:text-sm text-slate-500 mt-3 text-center">Scan to verify</p>
@@ -348,24 +348,24 @@ export default function BookingTicket() {
               <div className="flex flex-col justify-center">
                 <div className="space-y-3 md:space-y-4">
                   <div>
-                    <p className="text-slate-600 font-semibold mb-1 text-sm md:text-base">Booking ID</p>
-                    <p className="text-xs md:text-sm font-mono bg-slate-100 p-2 md:p-3 rounded text-slate-700 break-all">
+                    <p className="text-slate-400 font-semibold mb-1 text-sm md:text-base">Booking ID</p>
+                    <p className="text-xs md:text-sm font-mono bg-slate-800 p-2 md:p-3 rounded text-slate-300 break-all">
                       {booking._id}
                     </p>
                   </div>
 
                   {booking.paymentId && (
                     <div>
-                      <p className="text-slate-600 font-semibold mb-1 text-sm md:text-base">Payment ID</p>
-                      <p className="text-xs md:text-sm font-mono bg-slate-100 p-2 md:p-3 rounded text-slate-700 break-all">
+                      <p className="text-slate-400 font-semibold mb-1 text-sm md:text-base">Payment ID</p>
+                      <p className="text-xs md:text-sm font-mono bg-slate-800 p-2 md:p-3 rounded text-slate-300 break-all">
                         {booking.paymentId}
                       </p>
                     </div>
                   )}
 
                   <div>
-                    <p className="text-slate-600 font-semibold mb-1 text-sm md:text-base">Booking Date</p>
-                    <p className="text-xs md:text-sm text-slate-700">{formattedBookingDate}</p>
+                    <p className="text-slate-400 font-semibold mb-1 text-sm md:text-base">Booking Date</p>
+                    <p className="text-xs md:text-sm text-slate-300">{formattedBookingDate}</p>
                   </div>
                 </div>
               </div>
@@ -397,8 +397,8 @@ export default function BookingTicket() {
             )}
 
             {/* Bottom Info */}
-            <div className="text-center pt-4 md:pt-6 border-t border-slate-300 mt-4 md:mt-6">
-              <p className="text-slate-700 mb-1 text-sm md:text-base">Thank you for booking with QuickShow!</p>
+            <div className="text-center pt-4 md:pt-6 border-t border-slate-700 mt-4 md:mt-6">
+              <p className="text-slate-300 mb-1 text-sm md:text-base">Thank you for booking with QuickShow!</p>
               <p className="text-xs md:text-sm text-slate-500">Enjoy your movie experience!</p>
             </div>
           </div>

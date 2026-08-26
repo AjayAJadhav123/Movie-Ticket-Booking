@@ -45,7 +45,7 @@ export default function ViewBookings() {
       case 'cancelled':
         return 'bg-red-100 text-red-800 border-red-200';
       default:
-        return 'bg-slate-100 text-slate-800 border-slate-200';
+        return 'bg-slate-800 text-slate-200 border-slate-800/50';
     }
   };
 
@@ -58,16 +58,16 @@ export default function ViewBookings() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#0f172a] p-6 rounded-xl shadow-sm border border-slate-800/50">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Ticket className="text-indigo-600" /> All Bookings
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <Ticket className="text-red-500" /> All Bookings
           </h1>
           <p className="text-sm text-slate-500 mt-1">Monitor and manage all customer bookings</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col md:flex-row gap-4 items-center justify-between">
+      <div className="bg-[#0f172a] rounded-xl shadow-sm border border-slate-800/50 p-5 flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="relative w-full md:max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input
@@ -75,7 +75,7 @@ export default function ViewBookings() {
             placeholder="Search by movie or user ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-800/50 focus:outline-none focus:border-red-500/50 focus:ring-2 focus:ring-red-500/20 transition"
           />
         </div>
         
@@ -86,8 +86,8 @@ export default function ViewBookings() {
               onClick={() => { setStatusFilter(status); setPage(1); }}
               className={`px-4 py-2 rounded-xl font-semibold transition-colors text-sm whitespace-nowrap flex items-center gap-2 ${
                 statusFilter === status
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  ? 'bg-red-600 text-white shadow-md shadow-indigo-200'
+                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
               }`}
             >
               {status === '' && <Filter size={14} />}
@@ -98,18 +98,18 @@ export default function ViewBookings() {
       </div>
 
       {loading && bookings.length === 0 ? (
-        <div className="text-center py-12 text-indigo-600">Loading bookings...</div>
+        <div className="text-center py-12 text-red-500">Loading bookings...</div>
       ) : filteredBookings.length === 0 ? (
-        <div className="bg-white p-12 text-center rounded-2xl shadow-sm border border-slate-200">
+        <div className="bg-[#0f172a] p-12 text-center rounded-xl shadow-sm border border-slate-800/50">
           <Ticket size={48} className="mx-auto text-slate-300 mb-4" />
-          <p className="text-slate-600 text-lg font-medium">No bookings found</p>
+          <p className="text-slate-400 text-lg font-medium">No bookings found</p>
           <p className="text-slate-500 text-sm mt-1">Try adjusting your search or filters.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-[#0f172a] rounded-xl shadow-sm border border-slate-800/50 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200 uppercase tracking-wider text-xs">
+              <thead className="bg-[#09090b] text-slate-500 font-semibold border-b border-slate-800/50 uppercase tracking-wider text-xs">
                 <tr>
                   <th className="px-6 py-4">Booking ID & User</th>
                   <th className="px-6 py-4">Movie</th>
@@ -120,20 +120,20 @@ export default function ViewBookings() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredBookings.map((booking) => (
-                  <tr key={booking._id} className="hover:bg-slate-50 transition-colors">
+                  <tr key={booking._id} className="hover:bg-[#09090b] transition-colors">
                     <td className="px-6 py-4">
-                      <div className="font-mono text-xs text-indigo-600 mb-1">
+                      <div className="font-mono text-xs text-red-500 mb-1">
                         #{booking._id.slice(-6).toUpperCase()}
                       </div>
-                      <div className="text-slate-600 text-xs truncate max-w-[150px]" title={booking.userId}>
+                      <div className="text-slate-400 text-xs truncate max-w-[150px]" title={booking.userId}>
                         {booking.userId}
                       </div>
                     </td>
-                    <td className="px-6 py-4 font-semibold text-slate-900 line-clamp-2 max-w-[200px]">
+                    <td className="px-6 py-4 font-semibold text-white line-clamp-2 max-w-[200px]">
                       {booking.movieTitle || booking.showId?.movieId?.title || 'Unknown'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-1.5 text-slate-900 font-medium">
+                      <div className="flex items-center gap-1.5 text-white font-medium">
                         <Calendar size={14} className="text-slate-400" />
                         {new Date(booking.showDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                       </div>
@@ -143,10 +143,10 @@ export default function ViewBookings() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded inline-block mb-1">
+                      <div className="text-xs font-semibold text-slate-300 bg-slate-800 px-2 py-1 rounded inline-block mb-1">
                         {booking.seats.join(', ')} ({booking.seats.length} seats)
                       </div>
-                      <div className="text-slate-900 font-bold">₹{booking.amount?.toFixed(2) || '0.00'}</div>
+                      <div className="text-white font-bold">₹{booking.amount?.toFixed(2) || '0.00'}</div>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span
@@ -165,22 +165,22 @@ export default function ViewBookings() {
           
           {/* Pagination */}
           {pagination.pages > 1 && (
-            <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-t border-slate-200">
-              <span className="text-sm text-slate-600 font-medium">
+            <div className="flex items-center justify-between px-6 py-4 bg-[#09090b] border-t border-slate-800/50">
+              <span className="text-sm text-slate-400 font-medium">
                 Page {pagination.page} of {pagination.pages}
               </span>
               <div className="flex gap-2">
                 <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold disabled:opacity-50 hover:bg-slate-100 transition"
+                  className="px-4 py-2 bg-[#0f172a] border border-slate-800/50 rounded-lg text-sm font-semibold disabled:opacity-50 hover:bg-slate-800 transition"
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
                   disabled={page === pagination.pages}
-                  className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold disabled:opacity-50 hover:bg-slate-100 transition"
+                  className="px-4 py-2 bg-[#0f172a] border border-slate-800/50 rounded-lg text-sm font-semibold disabled:opacity-50 hover:bg-slate-800 transition"
                 >
                   Next
                 </button>

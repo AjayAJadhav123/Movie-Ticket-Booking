@@ -164,9 +164,9 @@ export default function ManageCinemas() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+      <div className="flex justify-between items-center bg-[#0f172a] p-6 rounded-xl shadow-sm border border-slate-800/50">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Manage Cinemas</h1>
+          <h1 className="text-2xl font-bold text-white">Manage Cinemas</h1>
           <p className="text-sm text-slate-500 mt-1">Add and configure cinemas</p>
         </div>
         <button onClick={openAddModal} className="btn-primary flex items-center gap-2">
@@ -176,7 +176,7 @@ export default function ManageCinemas() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+      <div className="bg-[#0f172a] p-4 rounded-xl shadow-sm border border-slate-800/50">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <input
             type="text"
@@ -205,7 +205,7 @@ export default function ManageCinemas() {
       {loading ? (
         <Loading />
       ) : cinemas.length === 0 ? (
-        <div className="bg-white p-12 text-center rounded-2xl shadow-sm border border-slate-200">
+        <div className="bg-[#0f172a] p-12 text-center rounded-xl shadow-sm border border-slate-800/50">
           <p className="text-slate-500 mb-4">No cinemas found.</p>
           <button
             onClick={() => {
@@ -213,7 +213,7 @@ export default function ManageCinemas() {
               resetForm();
               setShowModal(true);
             }}
-            className="text-indigo-600 font-semibold hover:underline"
+            className="text-red-500 font-semibold hover:underline"
           >
             Add your first cinema
           </button>
@@ -221,9 +221,9 @@ export default function ManageCinemas() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {cinemas.map((cinema) => (
-            <div key={cinema._id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+            <div key={cinema._id} className="bg-[#0f172a] p-6 rounded-xl shadow-sm border border-slate-800/50 hover:shadow-md transition-shadow">
               <div className="flex justify-between items-start mb-4">
-                <h3 className="text-lg font-bold text-slate-900">{cinema.name}</h3>
+                <h3 className="text-lg font-bold text-white">{cinema.name}</h3>
                 <span
                   className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
                     cinema.status === 'active'
@@ -236,7 +236,7 @@ export default function ManageCinemas() {
                   {cinema.status}
                 </span>
               </div>
-              <div className="space-y-2 text-sm text-slate-600 mb-4">
+              <div className="space-y-2 text-sm text-slate-400 mb-4">
                 <div className="flex items-center gap-2">
                   <MapPin size={16} />
                   <span>{cinema.address}, {cinema.city}</span>
@@ -250,8 +250,8 @@ export default function ManageCinemas() {
                   <span>{cinema.contact.email}</span>
                 </div>
               </div>
-              <div className="pt-4 border-t border-slate-100 flex justify-end gap-2">
-                <button onClick={() => openEditModal(cinema)} className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg">
+              <div className="pt-4 border-t border-slate-800/50 flex justify-end gap-2">
+                <button onClick={() => openEditModal(cinema)} className="p-2 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg">
                   <Edit2 size={18} />
                 </button>
                 <button onClick={() => handleDelete(cinema._id, false)} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg">
@@ -269,7 +269,7 @@ export default function ManageCinemas() {
       {/* Add/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-6 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-[#0f172a] p-6 rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-6">{editMode ? 'Edit Cinema' : 'Add New Cinema'}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -299,7 +299,7 @@ export default function ManageCinemas() {
                 <div className="grid grid-cols-2 gap-2">
                   {facilityOptions.map((facility) => (
                     <label key={facility} className="flex items-center gap-2 cursor-pointer text-sm">
-                      <input type="checkbox" checked={formData.facilities.includes(facility)} onChange={() => toggleFacility(facility)} className="rounded text-indigo-600 focus:ring-indigo-500" />
+                      <input type="checkbox" checked={formData.facilities.includes(facility)} onChange={() => toggleFacility(facility)} className="rounded text-red-500 focus:ring-red-500/20" />
                       {facility}
                     </label>
                   ))}

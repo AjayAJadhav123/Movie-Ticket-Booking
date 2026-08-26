@@ -304,14 +304,14 @@ export default function AddShow() {
         <React.Fragment key={step}>
           <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 text-sm font-semibold
             ${step <= currentStep 
-              ? 'bg-indigo-600 border-indigo-600 text-white' 
-              : 'border-slate-300 text-slate-400'
+              ? 'bg-red-600 border-indigo-600 text-white' 
+              : 'border-slate-700 text-slate-400'
             }`}>
             {step}
           </div>
           {step < totalSteps && (
             <div className={`w-12 h-0.5 mx-2 
-              ${step < currentStep ? 'bg-indigo-600' : 'bg-slate-300'}
+              ${step < currentStep ? 'bg-red-600' : 'bg-slate-300'}
             `} />
           )}
         </React.Fragment>
@@ -322,8 +322,8 @@ export default function AddShow() {
   const renderStep1 = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Select Movie</h2>
-        <p className="text-slate-600">Search and select a movie from your database</p>
+        <h2 className="text-2xl font-bold text-white mb-2">Select Movie</h2>
+        <p className="text-slate-400">Search and select a movie from your database</p>
       </div>
 
       <div className="relative">
@@ -333,14 +333,14 @@ export default function AddShow() {
           placeholder="Search imported movies by title..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-12 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600"
+          className="w-full pl-12 pr-4 py-3 border border-slate-700 rounded-lg focus:outline-none focus:border-indigo-600"
         />
       </div>
 
       {searchingTMDB && (
         <div className="text-center py-8">
           <div className="animate-spin h-8 w-8 border-2 border-indigo-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-slate-600">Searching...</p>
+          <p className="text-slate-400">Searching...</p>
         </div>
       )}
 
@@ -353,7 +353,7 @@ export default function AddShow() {
               className="card card-hover text-left p-4 transition-all hover:shadow-lg"
             >
               <div className="flex items-start space-x-4">
-                <div className="w-16 h-24 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0">
+                <div className="w-16 h-24 bg-slate-800 rounded-lg overflow-hidden flex-shrink-0">
                   {movie.poster_path ? (
                     <img
                       src={`https://image.tmdb.org/t/p/w200${movie.poster_path}`}
@@ -367,8 +367,8 @@ export default function AddShow() {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-slate-900 mb-1 line-clamp-2">{movie.title}</h3>
-                  <div className="text-sm text-slate-600 space-y-1">
+                  <h3 className="font-semibold text-white mb-1 line-clamp-2">{movie.title}</h3>
+                  <div className="text-sm text-slate-400 space-y-1">
                     {movie.release_date && (
                       <p>{new Date(movie.release_date).getFullYear()}</p>
                     )}
@@ -382,14 +382,14 @@ export default function AddShow() {
 
       {searchQuery && !searchingTMDB && tmdbResults.length === 0 && (
         <div className="text-center py-8">
-          <p className="text-slate-600">No movies found for "{searchQuery}"</p>
+          <p className="text-slate-400">No movies found for "{searchQuery}"</p>
         </div>
       )}
 
       {!searchQuery && (
         <div className="text-center py-12">
           <Search className="mx-auto h-12 w-12 text-slate-400 mb-4" />
-          <p className="text-slate-600">Start typing to search your local catalog</p>
+          <p className="text-slate-400">Start typing to search your local catalog</p>
         </div>
       )}
     </div>
@@ -398,14 +398,14 @@ export default function AddShow() {
   const renderStep2 = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Cinema & Screen Details</h2>
-        <p className="text-slate-600">Select the cinema and screen for the show</p>
+        <h2 className="text-2xl font-bold text-white mb-2">Cinema & Screen Details</h2>
+        <p className="text-slate-400">Select the cinema and screen for the show</p>
       </div>
 
       {selectedMovie && (
         <div className="card p-4 mb-6">
           <div className="flex items-center space-x-4">
-            <div className="w-12 h-18 bg-slate-100 rounded overflow-hidden">
+            <div className="w-12 h-18 bg-slate-800 rounded overflow-hidden">
               {selectedMovie.poster && (
                 <img
                   src={`https://image.tmdb.org/t/p/w200${selectedMovie.poster}`}
@@ -415,7 +415,7 @@ export default function AddShow() {
               )}
             </div>
             <div>
-              <h3 className="font-semibold text-slate-900">{selectedMovie.title}</h3>
+              <h3 className="font-semibold text-white">{selectedMovie.title}</h3>
             </div>
           </div>
         </div>
@@ -423,14 +423,14 @@ export default function AddShow() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-slate-700 font-semibold mb-2">
+          <label className="block text-slate-300 font-semibold mb-2">
             <MapPin size={16} className="inline mr-2" />
             Cinema Location
           </label>
           <select
             value={selectedCinemaId}
             onChange={handleCinemaChange}
-            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600"
+            className="w-full px-4 py-3 border border-slate-700 rounded-lg focus:outline-none focus:border-indigo-600"
           >
             <option value="">Select a Cinema</option>
             {cinemas.map(cinema => (
@@ -440,12 +440,12 @@ export default function AddShow() {
         </div>
 
         <div>
-          <label className="block text-slate-700 font-semibold mb-2">Screen</label>
+          <label className="block text-slate-300 font-semibold mb-2">Screen</label>
           <select
             value={selectedScreenId}
             onChange={handleScreenChange}
             disabled={!selectedCinemaId || screens.length === 0}
-            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600 disabled:bg-slate-100"
+            className="w-full px-4 py-3 border border-slate-700 rounded-lg focus:outline-none focus:border-indigo-600 disabled:bg-slate-800"
           >
             <option value="">{selectedCinemaId ? 'Select a Screen' : 'Select Cinema first'}</option>
             {screens.map(screen => (
@@ -462,12 +462,12 @@ export default function AddShow() {
   const renderStep3 = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Select Date</h2>
-        <p className="text-slate-600">Choose the date for the shows</p>
+        <h2 className="text-2xl font-bold text-white mb-2">Select Date</h2>
+        <p className="text-slate-400">Choose the date for the shows</p>
       </div>
 
       <div className="max-w-md mx-auto">
-        <label className="block text-slate-700 font-semibold mb-2">
+        <label className="block text-slate-300 font-semibold mb-2">
           <Calendar size={16} className="inline mr-2" />
           Show Date
         </label>
@@ -476,7 +476,7 @@ export default function AddShow() {
           value={selectedDate}
           min={new Date().toISOString().split('T')[0]}
           onChange={(e) => setSelectedDate(e.target.value)}
-          className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600"
+          className="w-full px-4 py-3 border border-slate-700 rounded-lg focus:outline-none focus:border-indigo-600"
         />
       </div>
     </div>
@@ -485,15 +485,15 @@ export default function AddShow() {
   const renderStep4 = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Configure Showtimes</h2>
-        <p className="text-slate-600">Add multiple showtimes for this movie</p>
+        <h2 className="text-2xl font-bold text-white mb-2">Configure Showtimes</h2>
+        <p className="text-slate-400">Add multiple showtimes for this movie</p>
       </div>
 
       <div className="space-y-4">
         {showtimes.map((showtime, index) => (
           <div key={index} className="card p-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-slate-900">Showtime #{index + 1}</h3>
+              <h3 className="font-semibold text-white">Showtime #{index + 1}</h3>
               {showtimes.length > 1 && (
                 <button
                   onClick={() => removeShowtime(index)}
@@ -506,7 +506,7 @@ export default function AddShow() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-slate-700 font-medium mb-2">
+                <label className="block text-slate-300 font-medium mb-2">
                   <Clock size={16} className="inline mr-2" />
                   Start Time
                 </label>
@@ -519,22 +519,22 @@ export default function AddShow() {
                       endTime: calculateEndTime(e.target.value)
                     });
                   }}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600"
+                  className="w-full px-3 py-2 border border-slate-700 rounded-lg focus:outline-none focus:border-indigo-600"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-700 font-medium mb-2">End Time</label>
+                <label className="block text-slate-300 font-medium mb-2">End Time</label>
                 <input
                   type="time"
                   value={showtime.endTime}
                   onChange={(e) => updateShowtime(index, { endTime: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600"
+                  className="w-full px-3 py-2 border border-slate-700 rounded-lg focus:outline-none focus:border-indigo-600"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-700 font-medium mb-2">
+                <label className="block text-slate-300 font-medium mb-2">
                   <DollarSign size={16} className="inline mr-2" />
                   Price (₹)
                 </label>
@@ -545,7 +545,7 @@ export default function AddShow() {
                   placeholder="200"
                   value={showtime.price}
                   onChange={(e) => updateShowtime(index, { price: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-600"
+                  className="w-full px-3 py-2 border border-slate-700 rounded-lg focus:outline-none focus:border-indigo-600"
                 />
               </div>
             </div>
@@ -554,7 +554,7 @@ export default function AddShow() {
 
         <button
           onClick={addShowtime}
-          className="w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-600 hover:border-indigo-600 hover:text-indigo-600 transition-colors flex items-center justify-center gap-2"
+          className="w-full py-3 border-2 border-dashed border-slate-700 rounded-lg text-slate-400 hover:border-indigo-600 hover:text-red-500 transition-colors flex items-center justify-center gap-2"
         >
           <Plus size={20} />
           Add Showtime
@@ -566,24 +566,24 @@ export default function AddShow() {
   const renderStep5 = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Review & Create</h2>
-        <p className="text-slate-600">Review all details before scheduling</p>
+        <h2 className="text-2xl font-bold text-white mb-2">Review & Create</h2>
+        <p className="text-slate-400">Review all details before scheduling</p>
       </div>
 
       <div className="card p-6 mb-6 pointer-events-none">
-        <h3 className="font-semibold text-slate-900 mb-4">Screen Layout Details</h3>
+        <h3 className="font-semibold text-white mb-4">Screen Layout Details</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div>
             <p className="text-sm text-slate-500">Total Available Seats</p>
-            <p className="font-bold text-indigo-600 text-lg">{seatConfig.totalSeats}</p>
+            <p className="font-bold text-red-500 text-lg">{seatConfig.totalSeats}</p>
           </div>
           <div>
             <p className="text-sm text-slate-500">Rows</p>
-            <p className="font-bold text-slate-900 text-lg">{seatConfig.rows}</p>
+            <p className="font-bold text-white text-lg">{seatConfig.rows}</p>
           </div>
           <div>
             <p className="text-sm text-slate-500">Seats per Row</p>
-            <p className="font-bold text-slate-900 text-lg">{seatConfig.seatsPerRow}</p>
+            <p className="font-bold text-white text-lg">{seatConfig.seatsPerRow}</p>
           </div>
         </div>
         
@@ -600,11 +600,11 @@ export default function AddShow() {
       </div>
 
       <div className="card p-6">
-        <h3 className="font-semibold text-slate-900 mb-4">Show Preview</h3>
+        <h3 className="font-semibold text-white mb-4">Show Preview</h3>
         
         <div className="space-y-4">
           <div className="flex items-center space-x-4">
-            <div className="w-16 h-24 bg-slate-100 rounded overflow-hidden">
+            <div className="w-16 h-24 bg-slate-800 rounded overflow-hidden">
               {selectedMovie?.poster && (
                 <img
                   src={`https://image.tmdb.org/t/p/w200${selectedMovie.poster}`}
@@ -614,18 +614,18 @@ export default function AddShow() {
               )}
             </div>
             <div>
-              <h4 className="font-semibold text-slate-900">{selectedMovie?.title}</h4>
-              <p className="text-slate-600">{cinemaData.cinemaName}</p>
-              <p className="text-slate-600">{cinemaData.screenNumber} ({cinemaData.screenType})</p>
-              <p className="text-slate-600">{new Date(selectedDate).toLocaleDateString()}</p>
+              <h4 className="font-semibold text-white">{selectedMovie?.title}</h4>
+              <p className="text-slate-400">{cinemaData.cinemaName}</p>
+              <p className="text-slate-400">{cinemaData.screenNumber} ({cinemaData.screenType})</p>
+              <p className="text-slate-400">{new Date(selectedDate).toLocaleDateString()}</p>
             </div>
           </div>
 
           <div>
-            <h5 className="font-medium text-slate-900 mb-2">Showtimes:</h5>
+            <h5 className="font-medium text-white mb-2">Showtimes:</h5>
             <div className="space-y-2">
               {showtimes.map((showtime, index) => (
-                <div key={index} className="flex justify-between items-center p-2 bg-slate-50 rounded">
+                <div key={index} className="flex justify-between items-center p-2 bg-[#09090b] rounded">
                   <span>{showtime.startTime} - {showtime.endTime}</span>
                   <span className="font-semibold">₹{showtime.price}</span>
                 </div>
@@ -639,16 +639,16 @@ export default function AddShow() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-20">
-      <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+      <div className="flex justify-between items-center bg-[#0f172a] p-6 rounded-xl shadow-sm border border-slate-800/50">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Schedule New Show</h1>
+          <h1 className="text-2xl font-bold text-white">Schedule New Show</h1>
           <p className="text-sm text-slate-500 mt-1">Configure movie, cinema, and timings</p>
         </div>
       </div>
 
       {renderStepIndicator()}
 
-      <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-8 min-h-[400px]">
+      <div className="bg-[#0f172a] p-8 rounded-xl shadow-sm border border-slate-800/50 mb-8 min-h-[400px]">
         {currentStep === 1 && renderStep1()}
         {currentStep === 2 && renderStep2()}
         {currentStep === 3 && renderStep3()}
@@ -656,7 +656,7 @@ export default function AddShow() {
         {currentStep === 5 && renderStep5()}
       </div>
 
-      <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+      <div className="flex justify-between items-center bg-[#0f172a] p-6 rounded-xl shadow-sm border border-slate-800/50">
         <button
           onClick={prevStep}
           disabled={currentStep === 1}

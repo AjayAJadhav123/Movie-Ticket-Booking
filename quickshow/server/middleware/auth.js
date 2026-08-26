@@ -1,113 +1,56 @@
-import { clerkClient, verifyToken } from '@clerk/express';
-import { jwtDecode } from 'jwt-decode';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
 export const requireAuthMiddleware = async (req, res, next) => {
   try {
-    // Get authHeader at the beginning so it's available throughout
     const authHeader = req.headers.authorization;
     
-    // ✅ SECURITY: Only log debug info in development
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('\n--- [AUTH DIAGNOSTICS] ---');
-      console.log('Origin:', req.headers.origin || 'No origin');
-      console.log('Authorization header:', authHeader ? 'Present' : 'Missing');
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        try {
-          const tokenStr = authHeader.split(' ')[1];
-          const payloadStr = Buffer.from(tokenStr.split('.')[1], 'base64').toString();
-          const payload = JSON.parse(payloadStr);
-          console.log('[JWT PAYLOAD DEBUG] iss:', payload.iss);
-          console.log('[JWT PAYLOAD DEBUG] azp:', payload.azp);
-          console.log('[JWT PAYLOAD DEBUG] aud:', payload.aud);
-          console.log('[JWT PAYLOAD DEBUG] exp:', payload.exp);
-          console.log('[JWT PAYLOAD DEBUG] alg:', JSON.parse(Buffer.from(tokenStr.split('.')[0], 'base64').toString()).alg);
-        } catch (e) {
-          console.log('[JWT PAYLOAD DEBUG] Error decoding token:', e.message);
-        }
-      }
-      
-      console.log('req.auth exists:', !!req.auth);
-      if (req.auth) {
-        console.log('req.auth keys:', Object.keys(req.auth));
-        console.log('req.auth.userId:', req.auth.userId);
-      }
-      const resHeaders = res.getHeaders();
-      console.log('[CLERK DEBUG] Response Headers:', Object.keys(resHeaders).filter(k => k.startsWith('x-clerk')).reduce((acc, k) => { acc[k] = resHeaders[k]; return acc; }, {}));
-      
-      const authStatus = resHeaders['x-clerk-auth-status'] || (req.auth?.userId ? 'signed-in' : 'signed-out');
-      const authReason = resHeaders['x-clerk-auth-reason'] || 'none';
-      const authMessage = resHeaders['x-clerk-auth-message'] || 'none';
-      console.log('[CLERK DEBUG] authStatus:', authStatus);
-      console.log('[CLERK DEBUG] authReason:', authReason);
-      console.log('[CLERK DEBUG] authMessage:', authMessage);
-      console.log('--------------------------\n');
-    }
-
-    // 1. Try to verify as Custom Admin JWT first
-    const secret = process.env.JWT_SECRET;
-    if (!secret && process.env.NODE_ENV === 'production') {
-      console.error('CRITICAL: JWT_SECRET not configured in production!');
-      return res.status(500).json({
-        success: false,
-        message: 'Server configuration error',
-      });
-    }
-    
-    if (secret && authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1];
-      try {
-        const decoded = jwt.verify(token, secret);
-        if (decoded && decoded.isAdmin) {
-          req.userId = decoded.clerkId;
-          req.isAdminToken = true;
-          return next();
-        }
-      } catch (err) {
-        // Not a valid custom admin token, fall through to Clerk check
-      }
-    }
-
-    // 2. Existing Clerk check
-    const userId = req.auth?.userId;
-    
-    if (!userId) {
-      // In production, log the Clerk failure reason so it's visible in Render logs
-      const resHeaders = res.getHeaders();
-      const authStatus = resHeaders['x-clerk-auth-status'] || 'unknown';
-      const authReason = resHeaders['x-clerk-auth-reason'] || 'unknown';
-      console.warn(`[AUTH] Clerk rejected request — status: ${authStatus}, reason: ${authReason}, path: ${req.path}`);
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
         message: 'Unauthorized - Authentication required',
       });
     }
-    
-    req.userId = userId;
 
-    // Decode the Clerk JWT and attach claims so controllers can read
-    // name / email / image without an extra Clerk API call.
-    // This powers the local-dev auto-upsert flow (no webhook needed).
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      try {
-        const tokenStr = authHeader.split(' ')[1];
-        const payloadStr = Buffer.from(tokenStr.split('.')[1], 'base64url').toString();
-        req.decodedToken = JSON.parse(payloadStr);
-      } catch (_) {
-        // Non-fatal: controllers fall back to sensible defaults
-        req.decodedToken = {};
-      }
-    } else {
-      req.decodedToken = {};
+    const token = authHeader.split(' ')[1];
+    const secret = process.env.JWT_SECRET;
+    
+    if (!secret) {
+      console.error('CRITICAL: JWT_SECRET not configured');
+      return res.status(500).json({ success: false, message: 'Server configuration error' });
     }
+
+    const decoded = jwt.verify(token, secret);
+    
+    // Check if user still exists
+    const userId = decoded.id || decoded.userId || decoded._id;
+    const user = await User.findById(userId).lean();
+    
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'User no longer exists' });
+    }
+
+    // Verify token version (if user was forced to log out)
+    if ((user.tokenVersion || 0) !== (decoded.tokenVersion || 0)) {
+      return res.status(401).json({ success: false, message: 'Token expired or revoked' });
+    }
+
+    req.userId = user._id.toString(); // Standardize to MongoDB ObjectId string
+    req.isAdminToken = user.isAdmin === true || user.admin === true || decoded.isAdmin === true || decoded.admin === true;
+    
+    // Attach user payload
+    req.decodedToken = {
+      name: user.name,
+      email: user.email,
+      image: user.image
+    };
 
     next();
   } catch (error) {
     console.error('[AUTH] Middleware error:', error.message);
     return res.status(401).json({
       success: false,
-      message: 'Unauthorized - Authentication required',
+      message: 'Unauthorized - Invalid or expired token',
     });
   }
 };
@@ -123,24 +66,15 @@ export const requireAdminMiddleware = async (req, res, next) => {
       });
     }
 
-    // Strict validation against MongoDB authoritative source if it's a Clerk token
-    // If it's our custom Admin token, it was already verified in requireAuthMiddleware
-    if (req.isAdminToken) {
-      req.user = { clerkId: userId, isAdmin: true };
-      return next();
-    }
-
-    const user = await User.findOne({ clerkId: userId }).lean();
-    
-    if (!user || user.isAdmin !== true) {
+    // req.isAdminToken is set in requireAuthMiddleware
+    if (!req.isAdminToken) {
       return res.status(403).json({
         success: false,
         message: 'Forbidden - Admin access required',
       });
     }
 
-    // Set a lightweight req.user for compatibility
-    req.user = { clerkId: userId, isAdmin: true };
+    req.user = { id: userId, isAdmin: true };
     next();
   } catch (error) {
     console.error('Admin middleware error:', error);
@@ -153,18 +87,26 @@ export const requireAdminMiddleware = async (req, res, next) => {
 
 export const optionalAuth = async (req, res, next) => {
   try {
-    let auth = null;
-    
-    if (typeof req.auth === 'function') {
-      auth = await req.auth();
-    } else if (typeof req.auth === 'object' && req.auth) {
-      auth = req.auth;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      const secret = process.env.JWT_SECRET;
+      
+      if (secret) {
+        const decoded = jwt.verify(token, secret);
+        const user = await User.findById(decoded.id).lean();
+        
+        if (user && (user.tokenVersion || 0) === (decoded.tokenVersion || 0)) {
+          req.userId = user._id.toString();
+        }
+      }
     }
-    
-    req.userId = auth?.userId || null;
-    next();
   } catch (error) {
+    // Ignore error for optional auth
     req.userId = null;
-    next();
   }
+  
+  if (req.userId === undefined) req.userId = null;
+  next();
 };
+

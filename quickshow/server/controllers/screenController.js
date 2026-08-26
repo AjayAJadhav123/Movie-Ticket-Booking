@@ -28,8 +28,7 @@ export const getScreensByCinema = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch screens',
-      error: error.message,
-    });
+      });
   }
 };
 
@@ -56,8 +55,7 @@ export const getScreenById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch screen',
-      error: error.message,
-    });
+      });
   }
 };
 
@@ -145,8 +143,7 @@ export const createScreen = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to create screen',
-      error: error.message,
-    });
+      });
   }
 };
 
@@ -221,8 +218,7 @@ export const updateScreen = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to update screen',
-      error: error.message,
-    });
+      });
   }
 };
 
@@ -279,8 +275,7 @@ export const deleteScreen = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to delete screen',
-      error: error.message,
-    });
+      });
   }
 };
 
@@ -312,8 +307,7 @@ export const getScreenLayout = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch screen layout',
-      error: error.message,
-    });
+      });
   }
 };
 
@@ -355,7 +349,6 @@ export const updateSeatLayout = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to update seat layout',
-      error: error.message,
-    });
+      });
   }
 };

@@ -7,9 +7,10 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#6366f1',
+        primary: '#e50914', // Cinebook red
         secondary: '#ec4899',
-        dark: '#1f2937',
+        dark: '#0a0a0a', // Deep dark background
+        card: '#141414', // Slightly lighter dark for cards
       },
     },
   },

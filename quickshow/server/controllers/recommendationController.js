@@ -21,7 +21,8 @@ function calculateSimilarity(movie1, movie2) {
   // Genre similarity (weight: 0.4)
   if (movie1.genres && movie2.genres) {
     const commonGenres = movie1.genres.filter((g) => movie2.genres.includes(g));
-    const genreSimilarity = commonGenres.length / Math.max(movie1.genres.length, movie2.genres.length);
+    const maxLen = Math.max(movie1.genres.length, movie2.genres.length);
+    const genreSimilarity = maxLen > 0 ? commonGenres.length / maxLen : 0;
     similarity += genreSimilarity * 0.4;
     maxScore += 0.4;
   }
@@ -49,7 +50,8 @@ function calculateSimilarity(movie1, movie2) {
     const words1 = new Set(movie1.overview.toLowerCase().split(/\s+/));
     const words2 = new Set(movie2.overview.toLowerCase().split(/\s+/));
     const commonWords = [...words1].filter((w) => words2.has(w));
-    const overviewSimilarity = commonWords.length / Math.max(words1.size, words2.size);
+    const maxWords = Math.max(words1.size, words2.size);
+    const overviewSimilarity = maxWords > 0 ? commonWords.length / maxWords : 0;
     similarity += overviewSimilarity * 0.2;
     maxScore += 0.2;
   }
@@ -111,8 +113,7 @@ export const getMovieRecommendations = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error getting recommendations',
-      error: error.message,
-    });
+      });
   }
 };
 
@@ -126,7 +127,7 @@ export const getUserRecommendations = async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit) || 10, 20);
 
     // Get user data
-    const user = await User.findOne({ clerkId: userId }).lean();
+    const user = await User.findById(userId).lean();
     if (!user) {
       // Return trending movies for non-existent user
       return getTrendingRecommendations(res, limit);
@@ -217,8 +218,7 @@ export const getUserRecommendations = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error getting recommendations',
-      error: error.message,
-    });
+      });
   }
 };
 
@@ -250,7 +250,6 @@ async function getTrendingRecommendations(res, limit) {
     return res.status(500).json({
       success: false,
       message: 'Error getting trending movies',
-      error: error.message,
-    });
+      });
   }
 }

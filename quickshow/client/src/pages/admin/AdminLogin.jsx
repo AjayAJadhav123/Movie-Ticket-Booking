@@ -1,224 +1,145 @@
-import { SignIn, useUser, useAuth, useClerk } from '@clerk/clerk-react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { Film, ShieldCheck } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Film, ShieldCheck, Mail, Lock } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'react-toastify';
+import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
+
+const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
 
 export default function AdminLogin() {
-  const { isLoaded, isSignedIn } = useUser();
-  const { getToken } = useAuth();
-  const { signOut } = useClerk();
+  const { login, isLoaded, adminToken } = useAuth();
   const navigate = useNavigate();
-  const [mounted, setMounted] = useState(false);
-  const [isExchanging, setIsExchanging] = useState(false);
+  
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!email || !password) return;
 
-  useEffect(() => {
-    const exchangeToken = async () => {
-      if (isSignedIn) {
-        setIsExchanging(true);
-        try {
-          const token = await getToken();
-          const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
-          const res = await fetch(`${API_BASE}/api/admin/auth/exchange`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          
-          const data = await res.json();
-          
-          if (data.success && data.adminToken) {
-            localStorage.setItem('adminToken', data.adminToken);
-            toast.success('Admin login successful!');
-            await signOut(); // Destroy Clerk session to isolate public session
-            window.location.href = '/admin/dashboard'; // Force full reload to reset all states
-          } else {
-            toast.error(data.message || 'Not authorized as admin');
-            await signOut();
-            navigate('/sign-in', { replace: true });
-          }
-        } catch (error) {
-          console.error('Token exchange failed:', error);
-          toast.error('Authentication error occurred');
-          await signOut();
-          navigate('/sign-in', { replace: true });
-        } finally {
-          setIsExchanging(false);
+    setLoading(true);
+    try {
+      const response = await axios.post(`${API_BASE}/api/auth/login`, {
+        email,
+        password
+      });
+
+      if (response.data.success) {
+        if (!response.data.user.isAdmin) {
+          toast.error('Access denied. Administrator privileges required.');
+          return;
         }
+
+        login(response.data.token, response.data.user, true);
+        toast.success('Authentication successful');
+        window.location.href = '/admin/dashboard'; // Full reload to ensure state resets
       }
-    };
+    } catch (err) {
+      console.error('Admin login error:', err);
+      toast.error(err.response?.data?.message || 'Authentication failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    exchangeToken();
-  }, [isSignedIn, getToken, signOut, navigate]);
+  if (adminToken) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
 
-  // Loading / exchanging state
-  if (!isLoaded || isExchanging) {
+  if (!isLoaded) {
     return (
-      <div className="min-h-screen bg-[#f5f5f7] flex items-center justify-center p-4">
-        <div className="text-center">
-          <div className="w-10 h-10 border-2 border-slate-300 border-t-slate-900 rounded-full animate-spin mx-auto mb-4" />
-          {isExchanging && (
-            <p className="text-sm text-slate-500 font-medium">Verifying admin credentials...</p>
-          )}
-        </div>
+      <div className="min-h-screen bg-[#09090b] flex flex-col items-center justify-center p-4">
+        <div className="w-10 h-10 border-2 border-slate-800/50 border-t-primary rounded-full animate-spin mb-4" />
+        <p className="text-sm text-slate-500 font-medium tracking-wide">INITIALIZING WORKSPACE</p>
       </div>
     );
   }
 
-  // If already have an admin token, redirect to dashboard
-  if (localStorage.getItem('adminToken') && !isSignedIn) {
-    return <Navigate to="/admin/dashboard" replace />;
-  }
-
   return (
-    <div className="min-h-screen bg-[#f5f5f7] flex items-center justify-center p-4 relative overflow-hidden">
-
-      {/* Ambient glow — purely decorative, pointer-events-none */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-        <div
-          className="absolute rounded-full"
-          style={{
-            width: '600px',
-            height: '600px',
-            top: '-80px',
-            right: '-120px',
-            background: 'radial-gradient(circle, rgba(99,102,241,0.18) 0%, rgba(139,92,246,0.10) 40%, transparent 70%)',
-            filter: 'blur(40px)',
-          }}
-        />
-        <div
-          className="absolute rounded-full"
-          style={{
-            width: '400px',
-            height: '400px',
-            bottom: '-60px',
-            left: '-80px',
-            background: 'radial-gradient(circle, rgba(99,102,241,0.10) 0%, transparent 70%)',
-            filter: 'blur(40px)',
-          }}
-        />
+    <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-[#09090b]">
+      {/* Cinematic Background */}
+      <div 
+        className="absolute inset-0 z-0 bg-[url('https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-30" 
+      />
+      <div className="absolute inset-0 z-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/90 to-transparent" />
+      
+      {/* Ambient Red Glow */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-red-600/10 rounded-full blur-[100px]" />
       </div>
 
-      {/* Card */}
-      <div
-        className={`relative w-full max-w-[420px] transition-all duration-700 ${
-          mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-        }`}
-      >
-        {/* White card */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_8px_40px_-8px_rgba(0,0,0,0.10)] overflow-hidden">
+      <div className="relative z-10 w-full max-w-[420px]">
+        {/* Premium Glass Panel */}
+        <div className="bg-[#0f172a]/80 backdrop-blur-xl rounded-xl border border-white/5 shadow-2xl overflow-hidden">
           
-          {/* Card header */}
-          <div className="pt-8 pb-6 px-8 text-center border-b border-slate-100">
-
-            {/* Logo */}
-            <div className="flex items-center justify-center gap-2 mb-5">
-              <div className="w-9 h-9 bg-slate-900 rounded-xl flex items-center justify-center shadow-sm">
-                <Film className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-slate-900 tracking-tight">
-                Quick<span className="text-indigo-600">Show</span>
-              </span>
+          <div className="pt-10 pb-8 px-8 text-center">
+            <div className="flex justify-center mb-6">
+              <img src="/logo.png" alt="QuickShow Admin" className="h-14 md:h-16 object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]" />
             </div>
-
-            <h1 className="text-2xl font-bold text-slate-900 mb-1.5 tracking-tight">
-              Welcome back
-            </h1>
-            <p className="text-sm text-slate-500 leading-snug">
-              Sign in to access the QuickShow Admin Panel
-            </p>
-
-            {/* Admin access badge */}
-            <div className="mt-4 inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-700 px-3 py-1 rounded-full text-xs font-semibold">
-              <ShieldCheck size={12} />
-              Admin access only
+            
+            <div className="inline-flex items-center gap-2 bg-red-500/10 border border-red-500/20 text-red-500 px-3 py-1.5 rounded-md text-xs font-bold tracking-widest uppercase mb-4">
+              <ShieldCheck size={14} />
+              Admin Portal
             </div>
+            
+            <p className="text-sm text-slate-400">Enter your credentials to access the secure administrative workspace.</p>
           </div>
 
-          {/* Clerk SignIn widget */}
-          <div className="px-2 pb-2">
-            <SignIn
-              routing="hash"
-              fallbackRedirectUrl="/admin/dashboard"
-              appearance={{
-                layout: {
-                  socialButtonsPlacement: 'bottom',
-                  socialButtonsVariant: 'blockButton',
-                },
-                elements: {
-                  rootBox: 'w-full',
-                  card: 'shadow-none border-0 rounded-none bg-transparent p-6',
-                  headerTitle: 'hidden',
-                  headerSubtitle: 'hidden',
-                  logoBox: 'hidden',
+          <div className="px-8 pb-10">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Administrator Email</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <Mail className="h-4 w-4 text-slate-500" />
+                  </div>
+                  <input 
+                    type="email" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 bg-[#09090b] border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-slate-600"
+                    placeholder="admin@quickshow.com"
+                    required
+                  />
+                </div>
+              </div>
 
-                  // Form fields
-                  formFieldLabel:
-                    'text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1',
-                  formFieldInput:
-                    'rounded-lg border border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400 text-sm px-3 py-2.5 focus:outline-none focus:border-slate-400 focus:bg-white transition-colors',
-                  formFieldInputShowPasswordButton:
-                    'text-slate-400 hover:text-slate-700',
-
-                  // Primary button — dark/black per reference
-                  formButtonPrimary:
-                    'w-full bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-white font-semibold text-sm rounded-lg py-2.5 transition-colors shadow-sm',
-
-                  // Footer links
-                  footerActionLink:
-                    'text-indigo-600 hover:text-indigo-700 font-semibold text-sm',
-                  footerAction: 'text-slate-500 text-sm',
-
-                  // Divider
-                  dividerRow: 'my-2',
-                  dividerLine: 'bg-slate-200',
-                  dividerText: 'text-slate-400 text-xs font-medium',
-
-                  // Social buttons (Google etc.)
-                  socialButtonsBlockButton:
-                    'border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium rounded-lg py-2.5 transition-colors text-sm',
-                  socialButtonsBlockButtonText: 'font-semibold text-slate-700',
-                  socialButtonsProviderIcon: 'w-4 h-4',
-
-                  // Forgot password
-                  formFieldAction:
-                    'text-xs text-slate-400 hover:text-slate-700 transition-colors',
-
-                  // Identity preview
-                  identityPreviewEditButtonIcon: 'text-slate-600',
-                  identityPreviewText: 'text-slate-900',
-
-                  // Alert/error
-                  alert: 'rounded-lg border-red-100 bg-red-50 text-red-700 text-sm',
-                  alertText: 'text-sm',
-
-                  // OTP/verification inputs
-                  otpCodeFieldInput:
-                    'border border-slate-200 rounded-lg text-slate-900 focus:border-slate-400',
-                },
-                variables: {
-                  colorPrimary: '#0f172a',
-                  colorText: '#0f172a',
-                  colorTextSecondary: '#64748b',
-                  colorBackground: 'transparent',
-                  colorInputBackground: '#f8fafc',
-                  colorInputText: '#0f172a',
-                  borderRadius: '0.5rem',
-                  fontFamily: 'Inter, -apple-system, sans-serif',
-                  fontSize: '14px',
-                },
-              }}
-            />
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Master Password</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <Lock className="h-4 w-4 text-slate-500" />
+                  </div>
+                  <input 
+                    type="password" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 bg-[#09090b] border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-slate-600"
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <button 
+                type="submit" 
+                disabled={loading}
+                className="w-full mt-4 bg-red-600 hover:bg-red-700 text-white font-bold text-sm uppercase tracking-wide rounded-lg py-3.5 transition-all shadow-[0_0_15px_rgba(229,9,20,0.3)] hover:shadow-[0_0_25px_rgba(229,9,20,0.5)] disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center"
+              >
+                {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Authorize Access'}
+              </button>
+            </form>
           </div>
         </div>
 
-        {/* Below-card footer */}
-        <p className="text-center text-xs text-slate-400 mt-5">
-          &copy; {new Date().getFullYear()} QuickShow &middot; Restricted admin portal
-        </p>
+        <div className="text-center mt-6">
+          <p className="text-[11px] text-slate-600 uppercase tracking-widest font-semibold">
+            &copy; {new Date().getFullYear()} QuickShow Secure Systems
+          </p>
+        </div>
       </div>
     </div>
   );

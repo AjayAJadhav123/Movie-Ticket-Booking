@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { useAuth } from '@clerk/clerk-react';
+import { useAuth } from '../context/AuthContext';
 import io from 'socket.io-client';
 
 /**
@@ -7,7 +7,7 @@ import io from 'socket.io-client';
  * Manages connection lifecycle and event handling for real-time seat availability
  */
 export const useSocketIO = (showId) => {
-  const { getToken } = useAuth();
+  const { token } = useAuth();
   const socketRef = useRef(null);
   const [lockedSeats, setLockedSeats] = useState(new Set());
   const [occupiedSeats, setOccupiedSeats] = useState(new Set());
@@ -22,7 +22,10 @@ export const useSocketIO = (showId) => {
     // Get auth token and establish connection
     const setupSocket = async () => {
       try {
-        const token = await getToken();
+        if (!token) {
+          console.warn('Socket.IO connection failed: No token available');
+          return;
+        }
         
         // ✅ SECURITY: Pass auth token to Socket.IO
         const socket = io(SOCKET_URL, {
@@ -113,7 +116,7 @@ export const useSocketIO = (showId) => {
         socketRef.current.disconnect();
       }
     };
-  }, [showId, getToken]);
+  }, [showId, token]);
 
   // Function to manually join a show room (useful if reconnecting)
   const joinShow = useCallback((id) => {

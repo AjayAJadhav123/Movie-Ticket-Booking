@@ -1,181 +1,69 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Heart, Play, Star, Calendar, Clock } from 'lucide-react';
-import { useUser } from '@clerk/clerk-react';
+import { Star } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
-import { toast } from 'react-toastify';
 import { useMovieImage } from '../hooks/useMovieImage';
+import { getPlaceholderImage } from '../utils/imageUtils';
 
-export default function MovieCard({ movie, onTrailerClick }) {
-  const { isSignedIn } = useUser();
+export default function MovieCard({ movie }) {
+  const { isSignedIn } = useAuth();
   const navigate = useNavigate();
-  const { favorites, addFavorite, removeFavorite } = useApp();
 
   // Ensure we have a valid movie ID for navigation
-  const movieId = movie._id || movie.id || `movie_${Date.now()}`;
+  const movieId = movie._id || movie.id;
+  if (!movieId) return null;
 
-  const [isFavorited, setIsFavorited] = useState(
-    favorites.some((fav) => fav._id === movieId)
-  );
-  const [isProcessing, setIsProcessing] = useState(false);
+  const title = movie.title || 'Unknown Title';
+  
+  // Rating format
+  const rating = movie.vote_average ? movie.vote_average.toFixed(1) : 'NR';
+  
+  // Language format
+  const language = movie.language || (movie.original_language === 'hi' ? 'Hindi' : movie.original_language === 'en' ? 'English' : 'Multiple');
+  
+  // Certificate format
+  const certificate = movie.certificate || 'UA';
 
-  // Update local favorite state when global favorites change
-  useEffect(() => {
-    setIsFavorited(favorites.some((fav) => fav._id === movieId));
-  }, [favorites, movieId]);
-
-  // Use the image hook for robust image handling
-  const { imageUrl, onLoad, onError } = useMovieImage(movie, 'poster');
-
-  // Normalize rating — API uses both `rating` and `vote_average`
-  const rating = movie.rating ?? movie.vote_average ?? null;
-
-  // Normalize runtime — API uses both `runtime` and `duration`
-  const runtime = movie.runtime ?? movie.duration ?? null;
-
-  const handleFavoriteToggle = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    // Prevent duplicate requests
-    if (isProcessing) {
-      return;
-    }
-
-    if (!isSignedIn) {
-      toast.info('Please sign in to add favorites');
-      navigate('/sign-in');
-      return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      if (isFavorited) {
-        const success = await removeFavorite(movieId);
-        if (success) {
-          toast.success('Removed from favorites');
-        } else {
-          toast.error('Failed to remove favorite');
-        }
-      } else {
-        const success = await addFavorite(movieId);
-        if (success) {
-          toast.success('Added to favorites');
-        } else {
-          toast.error('Failed to add favorite');
-        }
-      }
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // Prevent rendering if movieId is invalid
-  if (!movieId || movieId.includes('undefined')) {
-    return null;
-  }
+  // Get image URL
+  const imageUrl = movie.poster_path 
+    ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+    : getPlaceholderImage('poster');
 
   return (
-    <Link to={`/movie/${movieId}`} className="group block h-full">
-      <div className="card card-hover h-full flex flex-col overflow-hidden">
-        {/* Poster */}
-        <div className="relative overflow-hidden bg-slate-100" style={{ aspectRatio: '2/3' }}>
-          <img
-            src={imageUrl}
-            alt={movie.title}
-            onLoad={onLoad}
-            onError={onError}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
+    <Link 
+      to={`/movie/${movieId}`} 
+      className="group flex flex-col gap-2 rounded-xl overflow-hidden transition-all duration-300"
+    >
+      {/* Poster Container */}
+      <div className="relative w-full overflow-hidden rounded-xl bg-[#1a1a1a]" style={{ aspectRatio: '2/3' }}>
+        <img
+          src={imageUrl}
+          alt={title}
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          onError={(e) => {
+            e.target.src = getPlaceholderImage('poster');
+          }}
+        />
+        
+        {/* Dark gradient overlay for bottom text */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-100 transition-opacity" />
 
-          {/* Gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-          {/* Trailer play button */}
-          {movie.trailer && onTrailerClick && (
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onTrailerClick(movie);
-              }}
-              className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-              aria-label="Watch trailer"
-            >
-              <div className="p-3.5 bg-white rounded-full shadow-xl hover:bg-indigo-50 transition">
-                <Play size={22} className="text-indigo-600" fill="currentColor" />
-              </div>
-            </button>
-          )}
-
-          {/* Favorite Button */}
-          <button
-            onClick={handleFavoriteToggle}
-            disabled={isProcessing}
-            className={`absolute top-2.5 right-2.5 p-1.5 rounded-lg bg-white/90 backdrop-blur-sm border border-white/50 hover:bg-white transition shadow-sm ${
-              isProcessing ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
-            aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-          >
-            <Heart
-              size={16}
-              className={isFavorited ? 'fill-red-500 text-red-500' : 'text-slate-500'}
-            />
-          </button>
-
-          {/* Rating Badge */}
-          {rating && (
-            <div className="absolute top-2.5 left-2.5 flex items-center gap-1 px-1.5 py-0.5 bg-white/90 backdrop-blur-sm rounded-md shadow-sm">
-              <Star size={11} className="text-amber-500 fill-amber-500" />
-              <span className="text-xs font-semibold text-slate-800">{rating.toFixed(1)}</span>
-            </div>
-          )}
+        {/* Rating overlay (Bottom Left) */}
+        <div className="absolute bottom-2 left-2 flex items-center gap-1 text-white text-xs font-semibold drop-shadow-md z-10">
+          <Star size={12} className="text-primary fill-primary" />
+          <span>{rating}/10</span>
         </div>
+      </div>
 
-        {/* Content */}
-        <div className="p-3.5 flex-1 flex flex-col">
-          <h3 className="font-semibold text-sm text-slate-900 line-clamp-2 mb-1.5 group-hover:text-indigo-600 transition-colors leading-snug">
-            {movie.title}
-          </h3>
-
-          {/* Metadata row */}
-          <div className="flex items-center gap-3 mb-2.5">
-            {movie.release_date && (
-              <div className="flex items-center gap-1 text-xs text-slate-400">
-                <Calendar size={11} />
-                <span>{new Date(movie.release_date).getFullYear()}</span>
-              </div>
-            )}
-            {runtime && (
-              <div className="flex items-center gap-1 text-xs text-slate-400">
-                <Clock size={11} />
-                <span>{runtime} min</span>
-              </div>
-            )}
-          </div>
-
-          {/* Genre chips */}
-          {movie.genres && movie.genres.length > 0 && (
-            <div className="flex gap-1.5 flex-wrap mb-3">
-              {movie.genres.slice(0, 2).map((genre) => (
-                <span
-                  key={genre}
-                  className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-medium"
-                >
-                  {genre}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* CTA Button */}
-          <div className="mt-auto">
-            <div className="w-full btn-primary text-xs py-2 rounded-lg">
-              Book Tickets
-            </div>
-          </div>
-        </div>
+      {/* Meta Content */}
+      <div className="px-1 py-1">
+        <h3 className="font-bold text-white text-base leading-tight mb-1 truncate group-hover:text-primary transition-colors">
+          {title}
+        </h3>
+        <p className="text-xs text-slate-400 font-medium">
+          {certificate} &bull; {language}
+        </p>
       </div>
     </Link>
   );

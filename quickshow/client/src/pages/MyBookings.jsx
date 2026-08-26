@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { useUser } from '@clerk/clerk-react';
+import { useAuth } from '../context/AuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Loading from '../components/Loading';
 import { Calendar, Clock, Ticket, FileCheck, Eye, AlertCircle, Download } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 export default function MyBookings() {
-  const { isSignedIn } = useUser();
+  const { isSignedIn } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { bookings, fetchUserBookings, loading, apiClient } = useApp();
@@ -84,10 +84,10 @@ export default function MyBookings() {
 
   if (!isSignedIn) {
     return (
-      <div className="min-h-screen pt-20 pb-16 bg-white flex items-center justify-center">
+      <div className="min-h-screen pt-20 pb-16 bg-[#141414] flex items-center justify-center">
         <div className="text-center">
-          <Ticket size={48} className="mx-auto text-slate-600 mb-4" />
-          <p className="text-lg text-slate-600 mb-4">Please sign in to view your bookings.</p>
+          <Ticket size={48} className="mx-auto text-slate-400 mb-4" />
+          <p className="text-lg text-slate-400 mb-4">Please sign in to view your bookings.</p>
           <button
             onClick={() => navigate('/sign-in')}
             className="btn-primary"
@@ -114,7 +114,7 @@ export default function MyBookings() {
       case 'failed':
         return 'bg-red-100 text-red-700 border border-red-300';
       default:
-        return 'bg-slate-200 text-slate-700 border border-slate-300';
+        return 'bg-slate-700 text-slate-300 border border-slate-700';
     }
   };
 
@@ -130,12 +130,12 @@ export default function MyBookings() {
   };
 
   return (
-    <div className="min-h-screen pt-8 pb-16 bg-white">
+    <div className="min-h-screen pt-8 pb-16 bg-[#141414]">
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
           <h1 className="section-title">My Bookings</h1>
-          <p className="text-slate-600 text-base md:text-lg">View and manage your movie ticket bookings</p>
+          <p className="text-slate-400 text-base md:text-lg">View and manage your movie ticket bookings</p>
         </div>
 
         {/* Filter Tabs */}
@@ -152,8 +152,8 @@ export default function MyBookings() {
                 onClick={() => setFilterStatus(tab.value)}
                 className={`px-4 py-2 rounded-lg font-medium transition-all text-sm ${
                   filterStatus === tab.value
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
                 }`}
               >
                 {tab.label}
@@ -165,8 +165,8 @@ export default function MyBookings() {
         {/* Bookings */}
         {displayBookings.length === 0 ? (
           <div className="text-center py-16 md:py-24 card card-hover">
-            <FileCheck size={56} className="mx-auto text-slate-600 mb-4" />
-            <p className="text-slate-600 text-lg md:text-xl mb-4">No bookings yet.</p>
+            <FileCheck size={56} className="mx-auto text-slate-400 mb-4" />
+            <p className="text-slate-400 text-lg md:text-xl mb-4">No bookings yet.</p>
             <p className="text-slate-500 mb-8">Book your first movie ticket to get started!</p>
             <button
               onClick={() => navigate('/movies')}
@@ -207,14 +207,14 @@ export default function MyBookings() {
                       </div>
                     )}
                     <div>
-                      <h3 className="text-lg md:text-xl font-bold text-slate-900 mb-4">{booking.movieTitle}</h3>
+                      <h3 className="text-lg md:text-xl font-bold text-white mb-4">{booking.movieTitle}</h3>
                       <div className="space-y-3">
-                        <div className="flex items-center gap-2 text-slate-700">
-                          <Calendar size={16} className="text-indigo-600" />
+                        <div className="flex items-center gap-2 text-slate-300">
+                          <Calendar size={16} className="text-primary" />
                           <span className="text-sm md:text-base">{new Date(booking.showDate).toLocaleDateString()}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-slate-700">
-                          <Clock size={16} className="text-indigo-600" />
+                        <div className="flex items-center gap-2 text-slate-300">
+                          <Clock size={16} className="text-primary" />
                           <span className="text-sm md:text-base">{booking.showTime}</span>
                         </div>
                       </div>
@@ -223,26 +223,26 @@ export default function MyBookings() {
 
                   {/* Seats */}
                   <div className="lg:col-span-1">
-                    <p className="text-slate-600 mb-2 font-semibold text-xs uppercase tracking-wide">Seats</p>
+                    <p className="text-slate-400 mb-2 font-semibold text-xs uppercase tracking-wide">Seats</p>
                     <div className="flex flex-wrap gap-2 mb-4">
                       {booking.seats.map((seat) => (
                         <span
                           key={seat}
-                          className="bg-indigo-100 text-indigo-600 px-2 py-1 rounded font-semibold text-xs border border-indigo-300"
+                          className="bg-indigo-100 text-primary px-2 py-1 rounded font-semibold text-xs border border-indigo-300"
                         >
                           {seat}
                         </span>
                       ))}
                     </div>
-                    <p className="text-slate-600 mb-2 font-semibold text-xs uppercase tracking-wide">Amount</p>
-                    <p className="text-2xl font-bold text-indigo-600">
+                    <p className="text-slate-400 mb-2 font-semibold text-xs uppercase tracking-wide">Amount</p>
+                    <p className="text-2xl font-bold text-primary">
                       ₹{booking.amount.toFixed(2)}
                     </p>
                   </div>
 
                   {/* Status */}
                   <div className="lg:col-span-1">
-                    <p className="text-slate-600 mb-2 font-semibold text-xs uppercase tracking-wide">Status</p>
+                    <p className="text-slate-400 mb-2 font-semibold text-xs uppercase tracking-wide">Status</p>
                     <span className={`inline-block px-3 py-2 rounded-lg font-semibold text-xs ${getStatusColor(booking.status)}`}>
                       {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
                     </span>
@@ -252,17 +252,39 @@ export default function MyBookings() {
                   <div className="lg:col-span-1 flex flex-col gap-2">
                     <button
                       onClick={() => navigate(`/booking/${booking._id}`)}
-                      className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all hover:shadow-lg hover:shadow-indigo-500/30 font-semibold text-sm"
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-primary hover:bg-red-700 text-white rounded-lg transition-all hover:shadow-lg hover:shadow-indigo-500/30 font-semibold text-sm"
                     >
                       <Eye size={16} />
                       View Ticket
                     </button>
                     <button
                       onClick={() => {
-                        // TODO: Implement download ticket functionality
-                        toast.info('Download feature coming soon!');
+                        const ticketContent = `
+=========================================
+          QUICKSHOW TICKET
+=========================================
+Movie: ${booking.movieTitle}
+Date: ${new Date(booking.showDate).toLocaleDateString()}
+Time: ${booking.showTime}
+Seats: ${booking.seats.join(', ')}
+Amount Paid: Rs. ${booking.amount.toFixed(2)}
+Status: ${booking.status.toUpperCase()}
+Booking ID: ${booking._id}
+=========================================
+Thank you for booking with QuickShow!
+`.trim();
+                        const blob = new Blob([ticketContent], { type: 'text/plain' });
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `Ticket_${booking.movieTitle.replace(/\\s+/g, '_')}_${booking._id.substring(0, 8)}.txt`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                        toast.success('Ticket downloaded successfully!');
                       }}
-                      className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg transition-all font-semibold text-sm"
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-300 text-slate-300 rounded-lg transition-all font-semibold text-sm"
                     >
                       <Download size={16} />
                       Download

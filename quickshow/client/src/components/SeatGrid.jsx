@@ -85,7 +85,7 @@ export default function SeatGrid({ show, onSeatsChange, socketLockedSeats = new 
   return (
     <div className="card p-4 md:p-6 w-full overflow-x-auto">
       <div className="mb-6 md:mb-8">
-        <h3 className="text-center text-slate-600 mb-3 md:mb-4 font-semibold text-sm md:text-base uppercase tracking-wide">Screen</h3>
+        <h3 className="text-center text-slate-400 mb-3 md:mb-4 font-semibold text-sm md:text-base uppercase tracking-wide">Screen</h3>
         <div className="h-1 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 rounded shadow-[0_10px_20px_rgba(99,102,241,0.2)]"></div>
       </div>
 
@@ -120,7 +120,7 @@ export default function SeatGrid({ show, onSeatsChange, socketLockedSeats = new 
                             : status === 'locked'
                             ? 'bg-yellow-400 text-yellow-800 cursor-not-allowed animate-pulse'
                             : status === 'selected'
-                            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 transform -translate-y-0.5'
+                            ? 'bg-primary text-white shadow-md shadow-indigo-200 transform -translate-y-0.5'
                             : 'bg-green-100 text-green-700 border border-green-200 hover:bg-green-200 hover:border-green-300'
                         }
                       `}
@@ -140,42 +140,42 @@ export default function SeatGrid({ show, onSeatsChange, socketLockedSeats = new 
         </div>
       </div>
 
-      <div className="flex justify-center gap-4 md:gap-6 text-xs md:text-sm flex-wrap px-2 pt-6 border-t border-slate-100">
+      <div className="flex justify-center gap-4 md:gap-6 text-xs md:text-sm flex-wrap px-2 pt-6 border-t border-slate-800">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-green-100 border border-green-200 rounded-t-sm"></div>
-          <span className="text-slate-600">Available</span>
+          <span className="text-slate-400">Available</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-indigo-600 rounded-t-sm"></div>
-          <span className="text-slate-600">Selected</span>
+          <div className="w-4 h-4 bg-primary rounded-t-sm"></div>
+          <span className="text-slate-400">Selected</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-yellow-400 rounded-t-sm animate-pulse"></div>
-          <span className="text-slate-600">Locked</span>
+          <span className="text-slate-400">Locked</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-slate-300 opacity-60 rounded-t-sm"></div>
-          <span className="text-slate-600">Occupied</span>
+          <span className="text-slate-400">Occupied</span>
         </div>
       </div>
 
       {selectedSeats.length > 0 && (
-        <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-slate-200">
-          <p className="font-semibold mb-2 text-sm md:text-base text-slate-900">Selected Seats:</p>
+        <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-slate-800">
+          <p className="font-semibold mb-2 text-sm md:text-base text-white">Selected Seats:</p>
           <div className="flex gap-2 flex-wrap">
             {selectedSeats.map((seat) => (
               <span
                 key={seat}
-                className="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg font-semibold text-sm border border-indigo-200 shadow-sm"
+                className="bg-primary/10 text-red-400 px-3 py-1.5 rounded-lg font-semibold text-sm border border-indigo-200 shadow-sm"
               >
                 {seat}
               </span>
             ))}
           </div>
-          <div className="mt-4 pt-4 border-t border-slate-100">
+          <div className="mt-4 pt-4 border-t border-slate-800">
             <div className="flex justify-between items-center">
-              <span className="font-semibold text-slate-600">Subtotal:</span>
-              <span className="text-xl md:text-2xl font-bold text-slate-900">
+              <span className="font-semibold text-slate-400">Subtotal:</span>
+              <span className="text-xl md:text-2xl font-bold text-white">
                 ₹{(show?.price * selectedSeats.length).toFixed(2)}
               </span>
             </div>

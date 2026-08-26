@@ -51,8 +51,7 @@ export const getAllCinemas = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch cinemas',
-      error: error.message,
-    });
+      });
   }
 };
 
@@ -85,8 +84,7 @@ export const getCinemaById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch cinema',
-      error: error.message,
-    });
+      });
   }
 };
 
@@ -106,8 +104,7 @@ export const getCities = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch cities',
-      error: error.message,
-    });
+      });
   }
 };
 
@@ -168,8 +165,7 @@ export const createCinema = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to create cinema',
-      error: error.message,
-    });
+      });
   }
 };
 
@@ -235,8 +231,7 @@ export const updateCinema = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to update cinema',
-      error: error.message,
-    });
+      });
   }
 };
 
@@ -294,8 +289,7 @@ export const deleteCinema = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to delete cinema',
-      error: error.message,
-    });
+      });
   }
 };
 
@@ -344,7 +338,6 @@ export const getCinemaStats = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch cinema statistics',
-      error: error.message,
-    });
+      });
   }
 };

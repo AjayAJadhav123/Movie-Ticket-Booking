@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { useUser } from '@clerk/clerk-react';
+import { useAuth } from '../context/AuthContext';
 import MovieCard from '../components/MovieCard';
 import TrailerModal from '../components/TrailerModal';
 import Loading from '../components/Loading';
 import { Heart } from 'lucide-react';
 
 export default function Favorites() {
-  const { isSignedIn } = useUser();
+  const { isSignedIn } = useAuth();
   const navigate = useNavigate();
   const { favorites, fetchFavorites, loading } = useApp();
   const [trailerMovie, setTrailerMovie] = useState(null);
@@ -21,9 +21,9 @@ export default function Favorites() {
 
   if (!isSignedIn) {
     return (
-      <div className="min-h-screen pt-20 pb-16 bg-white flex items-center justify-center">
+      <div className="min-h-screen pt-20 pb-16 bg-[#141414] flex items-center justify-center">
         <div className="text-center">
-          <p className="text-lg text-slate-600 mb-4">Please sign in to view your favorites.</p>
+          <p className="text-lg text-slate-400 mb-4">Please sign in to view your favorites.</p>
           <button
             onClick={() => navigate('/sign-in')}
             className="btn-primary"
@@ -40,22 +40,22 @@ export default function Favorites() {
   }
 
   return (
-    <div className="min-h-screen pt-8 pb-16 bg-white">
+    <div className="min-h-screen pt-8 pb-16 bg-[#141414]">
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="mb-8 md:mb-12">
           <div className="flex items-center gap-3 mb-2">
-            <Heart size={32} className="text-indigo-600" />
+            <Heart size={32} className="text-primary" />
             <h1 className="section-title mb-0">My Favorites</h1>
           </div>
-          <p className="text-slate-600 text-base md:text-lg">Movies you've added to your wishlist</p>
+          <p className="text-slate-400 text-base md:text-lg">Movies you've added to your wishlist</p>
         </div>
 
         {/* Content */}
         {favorites.length === 0 ? (
           <div className="card card-hover p-8 md:p-12 text-center">
-            <Heart size={56} className="mx-auto text-slate-600 mb-4" />
-            <p className="text-slate-600 text-lg md:text-xl mb-4">No favorites yet.</p>
+            <Heart size={56} className="mx-auto text-slate-400 mb-4" />
+            <p className="text-slate-400 text-lg md:text-xl mb-4">No favorites yet.</p>
             <p className="text-slate-500 mb-8">Add movies to your favorites to see them here!</p>
             <button
               onClick={() => navigate('/movies')}
@@ -66,8 +66,8 @@ export default function Favorites() {
           </div>
         ) : (
           <div>
-            <p className="text-slate-600 text-sm md:text-base mb-6">
-              <span className="text-slate-900 font-semibold">{favorites.length}</span> movie{favorites.length !== 1 ? 's' : ''} saved
+            <p className="text-slate-400 text-sm md:text-base mb-6">
+              <span className="text-white font-semibold">{favorites.length}</span> movie{favorites.length !== 1 ? 's' : ''} saved
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {favorites.map((movie) => (

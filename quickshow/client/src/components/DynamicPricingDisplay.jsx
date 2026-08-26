@@ -56,7 +56,7 @@ export default function DynamicPricingDisplay({ showId }) {
       case 'LOW':
         return 'text-green-600 bg-green-50 border-green-200';
       default:
-        return 'text-slate-600 bg-slate-50 border-slate-200';
+        return 'text-slate-400 bg-[#0a0a0a] border-slate-800';
     }
   };
 
@@ -88,7 +88,7 @@ export default function DynamicPricingDisplay({ showId }) {
           <p className="text-sm font-medium mb-1">Dynamic Pricing Active</p>
           <div className="flex items-center gap-2">
             <span className="text-lg font-bold">₹{pricing.recommendedPrice}</span>
-            <span className="text-xs font-semibold px-2 py-1 bg-white/70 rounded">
+            <span className="text-xs font-semibold px-2 py-1 bg-[#141414]/70 rounded">
               {percentageIncrease > 0 ? '+' : ''}{percentageIncrease}%
             </span>
           </div>

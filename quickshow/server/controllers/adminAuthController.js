@@ -30,10 +30,12 @@ export const exchangeClerkTokenForAdmin = async (req, res) => {
     
     const adminToken = jwt.sign(
       { 
+        id: user._id,
         clerkId: clerkUserId, 
         isAdmin: true,
         email: user.email,
-        name: user.name
+        name: user.name,
+        tokenVersion: user.tokenVersion || 0
       }, 
       secret,
       { expiresIn: '24h' }

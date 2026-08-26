@@ -23,23 +23,23 @@ import { format } from 'date-fns';
 // ── Stat Card Component ────────────────────────────────────────────────────────
 function StatCard({ label, value, icon: Icon, colorClass, secondaryLabel, secondaryValue, prefix = '' }) {
   return (
-    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] flex flex-col justify-between h-full">
+    <div className="bg-[#0f172a] p-5 rounded-xl border border-slate-800/50 shadow-sm flex flex-col justify-between h-full">
       <div className="flex items-start gap-4">
-        <div className={`p-3.5 rounded-2xl ${colorClass} shrink-0`}>
+        <div className={`p-3.5 rounded-xl ${colorClass} shrink-0`}>
           <Icon size={22} strokeWidth={2.5} />
         </div>
         <div className="flex-1 mt-0.5">
           <p className="text-[13px] font-medium text-slate-500 mb-1">{label}</p>
-          <p className="text-3xl font-bold text-slate-900 tracking-tight truncate">
+          <p className="text-[26px] font-bold text-slate-100 tracking-tight truncate leading-tight">
             {prefix}{value}
           </p>
         </div>
       </div>
       
       {secondaryLabel && (
-        <div className="mt-5 pt-4 border-t border-slate-50">
+        <div className="mt-4 pt-3 border-t border-slate-800/50">
            <p className="text-[12px] font-medium text-slate-400 mb-0.5">{secondaryLabel}</p>
-           <p className="text-[14px] font-semibold text-slate-700">{prefix}{secondaryValue}</p>
+           <p className="text-[14px] font-semibold text-slate-300">{prefix}{secondaryValue}</p>
         </div>
       )}
     </div>
@@ -102,16 +102,16 @@ export default function AdminDashboard() {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4 animate-pulse">
-          <div className="w-48 h-8 bg-slate-200 rounded"></div>
+          <div className="w-48 h-8 bg-slate-700 rounded"></div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm h-40 animate-pulse">
+            <div key={i} className="bg-[#0f172a] p-5 rounded-xl border border-slate-800/50 h-32 animate-pulse">
               <div className="flex gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-slate-100"></div>
+                <div className="w-12 h-12 rounded-xl bg-slate-800/50"></div>
                 <div className="space-y-2 flex-1">
-                  <div className="w-24 h-4 bg-slate-100 rounded"></div>
-                  <div className="w-16 h-8 bg-slate-100 rounded"></div>
+                  <div className="w-24 h-4 bg-slate-800/50 rounded"></div>
+                  <div className="w-16 h-8 bg-slate-800/50 rounded"></div>
                 </div>
               </div>
             </div>
@@ -126,7 +126,7 @@ export default function AdminDashboard() {
       {/* Header Area */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Admin Dashboard</h1>
+          <h1 className="text-3xl font-bold text-white tracking-tight">Admin Dashboard</h1>
           {lastRefresh && (
             <p className="text-[13px] text-slate-500 mt-1.5 flex items-center gap-1.5 font-medium">
               <Clock size={14} />
@@ -137,7 +137,7 @@ export default function AdminDashboard() {
         <button
           onClick={fetchDashboardData}
           disabled={loading}
-          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-[14px] font-semibold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed shadow-[0_4px_14px_rgba(79,70,229,0.25)]"
+          className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-[13px] font-semibold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed shadow-sm"
         >
           <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
           Refresh Data
@@ -159,7 +159,7 @@ export default function AdminDashboard() {
             value={counts.totalRevenue?.toLocaleString('en-IN')} 
             prefix="₹" 
             icon={IndianRupee} 
-            colorClass="bg-indigo-50 text-indigo-600"
+            colorClass="bg-red-500/10 text-red-500"
             secondaryLabel="Today's Revenue"
             secondaryValue={counts.todayRevenue?.toLocaleString('en-IN')}
           />
@@ -226,13 +226,13 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         
         {/* Recent Bookings List */}
-        <div className="xl:col-span-2 bg-white border border-slate-100 rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] overflow-hidden flex flex-col">
-          <div className="p-6 flex items-center justify-between shrink-0">
-            <h2 className="text-[16px] font-bold text-slate-900 flex items-center gap-2">
-              <Activity size={18} className="text-indigo-600" />
+        <div className="xl:col-span-2 bg-[#0f172a] border border-slate-800/50 rounded-xl shadow-sm overflow-hidden flex flex-col">
+          <div className="p-5 flex items-center justify-between shrink-0 border-b border-slate-800/50">
+            <h2 className="text-[15px] font-semibold text-slate-100 flex items-center gap-2">
+              <Activity size={16} className="text-red-500" />
               Recent Bookings
             </h2>
-            <Link to="/admin/bookings" className="text-[13px] font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+            <Link to="/admin/bookings" className="text-[13px] font-medium text-slate-400 hover:text-slate-200 flex items-center gap-1">
               View All <ArrowRight size={14} />
             </Link>
           </div>
@@ -240,15 +240,15 @@ export default function AdminDashboard() {
           <div className="flex-1 overflow-x-auto">
             {recentBookings.length === 0 ? (
               <div className="p-16 flex flex-col items-center justify-center text-center">
-                 <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4">
+                 <div className="w-16 h-16 bg-[#09090b] rounded-xl flex items-center justify-center mb-4">
                    <Ticket size={28} className="text-slate-300" />
                  </div>
-                 <p className="text-slate-900 font-semibold mb-1">No bookings found</p>
+                 <p className="text-white font-semibold mb-1">No bookings found</p>
                  <p className="text-sm text-slate-500">Recent bookings will appear here.</p>
               </div>
             ) : (
-              <table className="w-full text-[13px] text-left">
-                <thead className="text-slate-400 uppercase text-[11px] font-bold tracking-widest border-y border-slate-100 bg-slate-50/50">
+              <table className="w-full text-[13px] text-left border-collapse">
+                <thead className="text-slate-400 uppercase text-[11px] font-semibold tracking-wider border-b border-slate-800/50 bg-slate-800/20">
                   <tr>
                     <th className="px-6 py-4 font-bold">Movie</th>
                     <th className="px-6 py-4 font-bold">Cinema</th>
@@ -259,30 +259,30 @@ export default function AdminDashboard() {
                     <th className="px-6 py-4 font-bold">Date</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-800/50">
                   {recentBookings.map((booking) => (
-                    <tr key={booking._id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="px-6 py-4 font-semibold text-slate-900 truncate max-w-[180px]">
+                    <tr key={booking._id} className="hover:bg-slate-800/30 transition-colors">
+                      <td className="px-6 py-3.5 font-medium text-slate-200 truncate max-w-[180px]">
                         <div className="flex items-center gap-3">
-                           <div className="w-8 h-10 bg-slate-100 rounded shrink-0 overflow-hidden">
+                           <div className="w-8 h-10 bg-slate-800 rounded shrink-0 overflow-hidden">
                              {/* Placeholder for movie thumbnail if available */}
-                             <div className="w-full h-full flex items-center justify-center bg-indigo-50 text-indigo-300">
+                             <div className="w-full h-full flex items-center justify-center bg-red-500/10 text-indigo-300">
                                <Film size={14} />
                              </div>
                            </div>
                            <span className="truncate">{booking.movieTitle}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 font-medium text-slate-700 whitespace-nowrap">
+                      <td className="px-6 py-4 font-medium text-slate-300 whitespace-nowrap">
                         {booking.theatre || '—'}
                       </td>
                       <td className="px-6 py-4 text-slate-500 whitespace-nowrap">
                         {booking.screen || '—'}
                       </td>
-                      <td className="px-6 py-4 text-slate-600 font-medium">
+                      <td className="px-6 py-3.5 text-slate-400">
                         {booking.seats?.length || 0}
                       </td>
-                      <td className="px-6 py-4 font-semibold text-slate-900 whitespace-nowrap">
+                      <td className="px-6 py-3.5 font-medium text-slate-200 whitespace-nowrap">
                         ₹{booking.amount}
                       </td>
                       <td className="px-6 py-4">
@@ -305,8 +305,8 @@ export default function AdminDashboard() {
           </div>
           
           {recentBookings.length > 0 && (
-            <div className="p-4 border-t border-slate-100 text-center">
-              <Link to="/admin/bookings" className="text-[13px] font-semibold text-indigo-600 hover:text-indigo-700 transition-colors">
+            <div className="p-4 border-t border-slate-800/50 text-center">
+              <Link to="/admin/bookings" className="text-[13px] font-semibold text-red-500 hover:text-red-400 transition-colors">
                 View All Bookings
               </Link>
             </div>
@@ -314,10 +314,10 @@ export default function AdminDashboard() {
         </div>
 
         {/* Popular Shows/Movies Column */}
-        <div className="bg-white border border-slate-100 rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] flex flex-col overflow-hidden">
-          <div className="p-6 border-b border-slate-100 flex items-center gap-2 shrink-0">
-            <Star size={18} className="text-indigo-600" />
-            <h2 className="text-[16px] font-bold text-slate-900">
+        <div className="bg-[#0f172a] border border-slate-800/50 rounded-xl shadow-sm flex flex-col overflow-hidden">
+          <div className="p-5 border-b border-slate-800/50 flex items-center gap-2 shrink-0">
+            <Star size={16} className="text-amber-500" />
+            <h2 className="text-[15px] font-semibold text-slate-100">
               Top Performing Shows
             </h2>
           </div>
@@ -325,11 +325,11 @@ export default function AdminDashboard() {
           <div className="p-6 flex-1 flex flex-col">
             {popularShows.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
-                <div className="w-32 h-24 mb-6 bg-slate-50 rounded-xl flex flex-col items-center justify-center border border-slate-100">
+                <div className="w-32 h-24 mb-6 bg-[#09090b] rounded-xl flex flex-col items-center justify-center border border-slate-800/50">
                    <BarChart2 size={32} className="text-indigo-200 mb-2" />
                    <div className="w-16 h-1.5 bg-indigo-100 rounded-full"></div>
                 </div>
-                <h3 className="text-slate-900 font-bold mb-1.5">No show data available yet.</h3>
+                <h3 className="text-white font-bold mb-1.5">No show data available yet.</h3>
                 <p className="text-[13px] text-slate-500 max-w-[200px] leading-relaxed">
                   Show performance analytics will appear here once shows are created.
                 </p>
@@ -338,11 +338,11 @@ export default function AdminDashboard() {
               <div className="space-y-6">
                 {popularShows.map((show, idx) => (
                   <div key={idx} className="flex items-start gap-4">
-                    <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-slate-700 font-bold text-[13px] border border-slate-100 shrink-0">
+                    <div className="w-8 h-8 rounded-xl bg-[#09090b] flex items-center justify-center text-slate-300 font-bold text-[13px] border border-slate-800/50 shrink-0">
                       {idx + 1}
                     </div>
                     <div className="flex-1 min-w-0 pt-0.5">
-                      <p className="text-[14px] font-bold text-slate-900 truncate" title={show.movieTitle}>
+                      <p className="text-[14px] font-bold text-white truncate" title={show.movieTitle}>
                         {show.movieTitle}
                       </p>
                       <div className="flex items-center gap-2 text-[12px] text-slate-500 mt-1 font-medium">
@@ -352,7 +352,7 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                     <div className="text-right shrink-0 pt-0.5">
-                      <p className="text-[14px] font-bold text-slate-900">₹{show.totalRevenue?.toLocaleString('en-IN')}</p>
+                      <p className="text-[14px] font-bold text-white">₹{show.totalRevenue?.toLocaleString('en-IN')}</p>
                       <p className="text-[12px] text-slate-400 font-medium mt-1">{show.totalBookings} bookings</p>
                     </div>
                   </div>
@@ -361,8 +361,8 @@ export default function AdminDashboard() {
             )}
           </div>
           
-          <div className="p-5 border-t border-slate-100">
-             <Link to="/admin/analytics" className="w-full flex items-center justify-center py-2.5 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 font-semibold text-[13px] hover:bg-indigo-100 transition-colors">
+          <div className="p-4 border-t border-slate-800/50">
+             <Link to="/admin/analytics" className="w-full flex items-center justify-center py-2 rounded-lg border border-slate-700 bg-slate-800/30 text-slate-300 font-medium text-[13px] hover:bg-slate-800 transition-colors">
                 View Full Analytics
              </Link>
           </div>

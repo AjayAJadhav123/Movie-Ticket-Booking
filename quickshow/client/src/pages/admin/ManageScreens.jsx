@@ -206,10 +206,10 @@ export default function ManageScreens() {
 
   if (cinemas.length === 0) {
     return (
-      <div className="min-h-screen pt-20 pb-16 bg-slate-50">
+      <div className="min-h-screen pt-20 pb-16 bg-[#09090b]">
         <div className="container mx-auto px-4 py-8">
           <div className="card p-12 text-center">
-            <p className="text-slate-600 text-lg mb-4">No cinemas available. Please add a cinema first.</p>
+            <p className="text-slate-400 text-lg mb-4">No cinemas available. Please add a cinema first.</p>
             <a href="/admin/cinemas" className="btn-primary inline-block">
               Manage Cinemas
             </a>
@@ -221,9 +221,9 @@ export default function ManageScreens() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+      <div className="flex justify-between items-center bg-[#0f172a] p-6 rounded-xl shadow-sm border border-slate-800/50">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Manage Screens</h1>
+          <h1 className="text-2xl font-bold text-white">Manage Screens</h1>
           <p className="text-sm text-slate-500 mt-1">Configure screens for cinemas</p>
         </div>
         <button onClick={openAddModal} className="btn-primary flex items-center gap-2">
@@ -232,7 +232,7 @@ export default function ManageScreens() {
         </button>
       </div>
 
-      <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-4 items-center">
+      <div className="bg-[#0f172a] p-5 rounded-xl shadow-sm border border-slate-800/50 flex flex-col sm:flex-row gap-4 items-center">
         <label className="block text-sm font-medium">Select Cinema</label>
         <select
           value={selectedCinema}
@@ -253,7 +253,7 @@ export default function ManageScreens() {
       ) : screens.length === 0 ? (
         <div className="card p-12 text-center">
           <Monitor size={48} className="mx-auto text-slate-400 mb-4" />
-          <p className="text-slate-600 text-lg">No screens found for this cinema</p>
+          <p className="text-slate-400 text-lg">No screens found for this cinema</p>
         </div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -262,7 +262,7 @@ export default function ManageScreens() {
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-2">
                   <Monitor size={20} className="text-blue-600" />
-                  <h3 className="text-xl font-bold text-slate-900">{screen.name}</h3>
+                  <h3 className="text-xl font-bold text-white">{screen.name}</h3>
                 </div>
                 <span
                   className={`px-2 py-1 rounded text-xs font-semibold ${
@@ -277,20 +277,20 @@ export default function ManageScreens() {
                 </span>
               </div>
 
-              <div className="space-y-2 text-sm text-slate-600 mb-4">
+              <div className="space-y-2 text-sm text-slate-400 mb-4">
                 <div className="flex justify-between">
                   <span>Type:</span>
-                  <span className="font-semibold text-slate-900">{screen.screenType}</span>
+                  <span className="font-semibold text-white">{screen.screenType}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Layout:</span>
-                  <span className="font-semibold text-slate-900">
+                  <span className="font-semibold text-white">
                     {screen.rows} × {screen.seatsPerRow}
                   </span>
                 </div>
               </div>
 
-              <div className="flex gap-2 mt-4 pt-4 border-t border-slate-100">
+              <div className="flex gap-2 mt-4 pt-4 border-t border-slate-800/50">
                 <button
                   onClick={() => openEditModal(screen)}
                   className="flex-1 btn-outline text-xs py-2"
@@ -312,7 +312,7 @@ export default function ManageScreens() {
       {/* Add/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-6 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-[#0f172a] p-6 rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-6">{editMode ? 'Edit Screen' : 'Add New Screen'}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -356,7 +356,7 @@ export default function ManageScreens() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1 text-slate-500">
-                  Total Capacity: <span className="font-bold text-indigo-600">{formData.rows * formData.seatsPerRow} seats max</span>
+                  Total Capacity: <span className="font-bold text-red-500">{formData.rows * formData.seatsPerRow} seats max</span>
                 </label>
               </div>
               
@@ -380,7 +380,7 @@ export default function ManageScreens() {
                 <div className="grid grid-cols-2 gap-2">
                   {facilityOptions.map((facility) => (
                     <label key={facility} className="flex items-center gap-2 cursor-pointer text-sm">
-                      <input type="checkbox" checked={formData.facilities.includes(facility)} onChange={() => toggleFacility(facility)} className="rounded text-indigo-600 focus:ring-indigo-500" />
+                      <input type="checkbox" checked={formData.facilities.includes(facility)} onChange={() => toggleFacility(facility)} className="rounded text-red-500 focus:ring-red-500/20" />
                       {facility}
                     </label>
                   ))}

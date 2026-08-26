@@ -146,7 +146,7 @@ export const sendEmail = async (to, subject, html, options = {}) => {
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('Error sending email:', error.message);
-    return { success: false, error: error.message };
+    return { success: false, };
   }
 };
 

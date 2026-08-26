@@ -58,7 +58,7 @@ export default function AllMovies() {
    * Fetch a page from the backend.
    * When TMDB is unavailable (503), show "TMDB service unavailable" error.
    */
-  const fetchMoviesPage = useCallback(async (pageNum, query, genre, append = false) => {
+  const fetchMoviesPage = useCallback(async (pageNum, query, append = false) => {
     try {
       if (!append) setLoading(true);
       else setLoadingMore(true);
@@ -87,15 +87,6 @@ export default function AllMovies() {
       const paginationPages = pagination?.pages || 1;
       const currentPage = pagination?.page || pageNum;
 
-      // Client-side genre filter
-      if (genre) {
-        results = results.filter((m) =>
-          m.genres?.some(
-            (g) => typeof g === 'string' && g.toLowerCase().includes(genre.toLowerCase())
-          )
-        );
-      }
-
       setMovies((prev) => {
         if (!append) return results;
         const combined = [...prev, ...results];
@@ -118,7 +109,7 @@ export default function AllMovies() {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [apiClient, getContextSeed]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [apiClient, getContextSeed]);  
 
   // ── Initial load ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -137,16 +128,16 @@ export default function AllMovies() {
         fetchPopularMovies();
         fetchTrendingMovies();
         fetchNowPlayingMovies();
-        fetchMoviesPage(1, '', '', false);
+        fetchMoviesPage(1, '', false);
       }
     } else {
-      fetchMoviesPage(1, searchQuery, selectedGenre, false);
+      fetchMoviesPage(1, searchQuery, false);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);  
 
   // ── Re-seed when AppContext data arrives (e.g., after Home triggers fetches) ─
   useEffect(() => {
-    if (searchQuery.trim() || selectedGenre) return; // Don't override search results
+    if (searchQuery.trim()) return; // Don't override search results
     const seed = getContextSeed();
     if (seed.length === 0) return;
 
@@ -157,7 +148,7 @@ export default function AllMovies() {
     });
     setIsFallbackMode(isDemoOnlyList(seed));
     setLoading(false);
-  }, [popularMovies, trendingMovies, nowPlayingMovies]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [popularMovies, trendingMovies, nowPlayingMovies]);  
 
   // ── Search / filter changes ──────────────────────────────────────────────────
   useEffect(() => {
@@ -167,7 +158,7 @@ export default function AllMovies() {
     debounceTimer.current = setTimeout(() => {
       setPage(1);
 
-      if (!searchQuery.trim() && !selectedGenre) {
+      if (!searchQuery.trim()) {
         const seed = getContextSeed();
         if (seed.length > 0) {
           setMovies(seed);
@@ -177,18 +168,18 @@ export default function AllMovies() {
         }
       }
 
-      fetchMoviesPage(1, searchQuery, selectedGenre, false);
+      fetchMoviesPage(1, searchQuery, false);
     }, 400);
 
     return () => clearTimeout(debounceTimer.current);
-  }, [searchQuery, selectedGenre]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchQuery]);  
 
   // ── Pagination ───────────────────────────────────────────────────────────────
   useEffect(() => {
     if (page > 1) {
-      fetchMoviesPage(page, searchQuery, selectedGenre, true);
+      fetchMoviesPage(page, searchQuery, true);
     }
-  }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [page]);  
 
   // ── Infinite scroll ──────────────────────────────────────────────────────────
   const lastMovieElementRef = useCallback(
@@ -221,13 +212,74 @@ export default function AllMovies() {
     'Animation', 'Romance', 'Science Fiction', 'Fantasy',
   ];
 
+  // Standard TMDB genre mapping
+  const TMDB_GENRE_MAP = {
+    28: 'Action',
+    12: 'Adventure',
+    16: 'Animation',
+    35: 'Comedy',
+    80: 'Crime',
+    99: 'Documentary',
+    18: 'Drama',
+    10751: 'Family',
+    14: 'Fantasy',
+    36: 'History',
+    27: 'Horror',
+    10402: 'Music',
+    9648: 'Mystery',
+    10749: 'Romance',
+    878: 'Science Fiction',
+    10770: 'TV Movie',
+    53: 'Thriller',
+    10752: 'War',
+    37: 'Western'
+  };
+
+  const getNormalizedGenres = (movie) => {
+    const extractedGenres = new Set();
+    
+    // 1. Check 'genre' string
+    if (typeof movie.genre === 'string') {
+      extractedGenres.add(movie.genre.toLowerCase());
+    }
+
+    // 2. Check 'genres' array (strings or objects)
+    if (Array.isArray(movie.genres)) {
+      movie.genres.forEach(g => {
+        if (typeof g === 'string') {
+          extractedGenres.add(g.toLowerCase());
+        } else if (g && typeof g === 'object' && g.name) {
+          extractedGenres.add(g.name.toLowerCase());
+        }
+      });
+    }
+
+    // 3. Check 'genre_ids' array (TMDB numbers)
+    if (Array.isArray(movie.genre_ids)) {
+      movie.genre_ids.forEach(id => {
+        const genreName = TMDB_GENRE_MAP[id];
+        if (genreName) {
+          extractedGenres.add(genreName.toLowerCase());
+        }
+      });
+    }
+
+    return Array.from(extractedGenres);
+  };
+
+  const displayedMovies = movies.filter((movie) => {
+    if (!selectedGenre) return true;
+    const normalized = getNormalizedGenres(movie);
+    return normalized.includes(selectedGenre.toLowerCase());
+  });
+
   return (
-    <div className="min-h-screen pt-8 pb-16 bg-white">
+    <div className="min-h-screen pt-8 pb-16 bg-[#141414]">
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="mb-8 md:mb-12">
           <h1 className="section-title">Movies Catalogue</h1>
-          <p className="text-slate-600 text-base md:text-lg">
+          <p className="text-slate-400 text-base md:text-lg">
             Browse popular and trending films from around the world
           </p>
         </div>
@@ -257,7 +309,7 @@ export default function AllMovies() {
               placeholder="Search movies by title..."
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 md:py-4 bg-slate-50 text-slate-900 placeholder-slate-500 rounded-lg border border-slate-300 focus:border-indigo-500 focus:outline-none focus:bg-white transition text-sm md:text-base"
+              className="w-full pl-12 pr-4 py-3 md:py-4 bg-[#0a0a0a] text-white placeholder-slate-500 rounded-lg border border-slate-700 focus:border-indigo-500 focus:outline-none focus:bg-[#141414] transition text-sm md:text-base"
             />
           </div>
         </div>
@@ -266,15 +318,15 @@ export default function AllMovies() {
         <div className="mb-8">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 px-4 py-2 md:py-3 rounded-lg bg-slate-100 text-slate-700 hover:text-slate-900 hover:bg-slate-200 transition text-sm md:text-base md:hidden"
+            className="flex items-center gap-2 px-4 py-2 md:py-3 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition text-sm md:text-base md:hidden"
           >
             <Filter size={18} />
             Filters
           </button>
 
           <div className={`${showFilters ? 'block' : 'hidden'} md:block mt-4 md:mt-0`}>
-            <div className="card rounded-xl p-4 md:p-6 shadow-sm border border-slate-100">
-              <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-4 hidden md:block">
+            <div className="card rounded-xl p-4 md:p-6 shadow-sm border border-slate-800">
+              <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4 hidden md:block">
                 Genres
               </h3>
               <div className="flex flex-wrap gap-2">
@@ -282,8 +334,8 @@ export default function AllMovies() {
                   onClick={() => setSelectedGenre('')}
                   className={`px-3 md:px-4 py-2 rounded-lg font-semibold transition-all text-xs md:text-sm ${
                     selectedGenre === ''
-                      ? 'bg-indigo-600 text-white shadow-md'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ? 'bg-primary text-white shadow-md'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                   }`}
                 >
                   All Genres
@@ -294,8 +346,8 @@ export default function AllMovies() {
                     onClick={() => setSelectedGenre(genre)}
                     className={`px-3 md:px-4 py-2 rounded-lg font-semibold transition-all text-xs md:text-sm ${
                       selectedGenre === genre
-                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/30'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        ? 'bg-red-600 text-white shadow-md shadow-red-500/30'
+                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                     }`}
                   >
                     {genre}
@@ -310,10 +362,10 @@ export default function AllMovies() {
         {error && !loading ? (
           <div className="text-center py-16">
             <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-            <div className="whitespace-pre-line text-slate-800 font-semibold text-lg mb-4 max-w-2xl mx-auto">{error}</div>
+            <div className="whitespace-pre-line text-slate-200 font-semibold text-lg mb-4 max-w-2xl mx-auto">{error}</div>
             <button
-              onClick={() => fetchMoviesPage(1, searchQuery, selectedGenre, false)}
-              className="px-6 py-2 bg-indigo-600 text-white rounded-lg flex items-center gap-2 mx-auto hover:bg-indigo-700 transition"
+              onClick={() => fetchMoviesPage(1, searchQuery, false)}
+              className="px-6 py-2 bg-primary text-white rounded-lg flex items-center gap-2 mx-auto hover:bg-red-700 transition"
             >
               <RefreshCw size={18} /> Retry
             </button>
@@ -321,12 +373,12 @@ export default function AllMovies() {
         ) : loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-pulse">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <div key={i} className="bg-slate-200 rounded-xl h-[400px]" />
+              <div key={i} className="bg-slate-700 rounded-xl h-[400px]" />
             ))}
           </div>
-        ) : movies.length === 0 ? (
+        ) : displayedMovies.length === 0 ? (
           <div className="text-center py-16 md:py-24">
-            <p className="text-slate-600 text-base md:text-lg mb-4">
+            <p className="text-slate-400 text-base md:text-lg mb-4">
               {searchQuery || selectedGenre
                 ? 'No movies found matching your criteria.'
                 : 'No movies available at the moment.'}
@@ -334,7 +386,7 @@ export default function AllMovies() {
             {(searchQuery || selectedGenre) && (
               <button
                 onClick={handleClearFilters}
-                className="text-indigo-600 hover:text-indigo-700 transition font-semibold"
+                className="text-primary hover:text-red-400 transition font-semibold"
               >
                 Clear all filters
               </button>
@@ -343,11 +395,11 @@ export default function AllMovies() {
         ) : (
           <div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-5">
-              {movies.map((movie, index) => {
+              {displayedMovies.map((movie, index) => {
                 const movieId = movie._id || movie.id;
                 if (!movieId) return null;
 
-                if (movies.length === index + 1) {
+                if (displayedMovies.length === index + 1) {
                   return (
                     <div ref={lastMovieElementRef} key={`${movieId}-${index}`}>
                       <MovieCard movie={movie} onTrailerClick={() => setTrailerMovie(movie)} />
@@ -368,18 +420,18 @@ export default function AllMovies() {
             {/* Infinite Scroll Loader */}
             {loadingMore && (
               <div className="text-center py-8">
-                <div className="inline-flex items-center gap-3 bg-white px-6 py-3 rounded-full shadow-sm border border-slate-100">
-                  <div className="animate-spin h-5 w-5 text-indigo-600">
+                <div className="inline-flex items-center gap-3 bg-[#141414] px-6 py-3 rounded-full shadow-sm border border-slate-800">
+                  <div className="animate-spin h-5 w-5 text-primary">
                     <div className="h-5 w-5 border-2 border-indigo-600 border-t-transparent rounded-full" />
                   </div>
-                  <p className="text-slate-700 font-medium text-sm">Loading more movies...</p>
+                  <p className="text-slate-300 font-medium text-sm">Loading more movies...</p>
                 </div>
               </div>
             )}
 
             {/* End of list */}
-            {!hasMore && movies.length > 0 && (
-              <div className="text-center py-10 mt-6 border-t border-slate-100">
+            {!hasMore && displayedMovies.length > 0 && (
+              <div className="text-center py-10 mt-6 border-t border-slate-800">
                 <p className="text-slate-500 font-medium">You've reached the end of the catalogue.</p>
               </div>
             )}

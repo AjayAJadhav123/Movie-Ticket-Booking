@@ -3,93 +3,6 @@ import User from '../models/User.js';
 import Movie from '../models/Movie.js';
 import mongoose from 'mongoose';
 import axios from 'axios';
-import { clerkClient } from '@clerk/express';
-
-export const handleClerkWebhook = async (req, res) => {
-  const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
-
-  if (!WEBHOOK_SECRET) {
-    // In development without a configured webhook secret, just acknowledge the webhook
-    console.warn('⚠️ Webhook secret not configured');
-    return res.status(200).json({
-      success: true,
-      message: 'Webhook secret not configured (dev mode)',
-    });
-  }
-
-  // svix.verify() expects the raw request body string (not the parsed object).
-  // server.js saves it as req.rawBody via the express.json verify callback.
-  const payload = req.rawBody || JSON.stringify(req.body);
-  const headers = req.headers;
-
-  let wh;
-  try {
-    wh = new Webhook(WEBHOOK_SECRET);
-  } catch (err) {
-    console.warn('⚠️ Invalid webhook secret format:', err.message);
-    return res.status(200).json({
-      success: true,
-      message: 'Webhook secret invalid (dev mode)',
-    });
-  }
-
-  let evt;
-
-  try {
-    evt = wh.verify(payload, headers);
-  } catch (err) {
-    console.error('Webhook verification failed:', err.message);
-    return res.status(400).json({
-      success: false,
-      message: 'Webhook verification failed',
-    });
-  }
-
-  try {
-    if (evt.type === 'user.created') {
-      const { id, email_addresses, first_name, last_name, image_url } = evt.data;
-
-      const newUser = new User({
-        clerkId: id,
-        name: `${first_name || ''} ${last_name || ''}`.trim() || 'User',
-        email: email_addresses[0]?.email_address || '',
-        image: image_url || null,
-      });
-
-      await newUser.save();
-      console.log(`✅ User created: ${id}`);
-    } else if (evt.type === 'user.updated') {
-      const { id, email_addresses, first_name, last_name, image_url } = evt.data;
-
-      await User.updateOne(
-        { clerkId: id },
-        {
-          $set: {
-            name: `${first_name || ''} ${last_name || ''}`.trim() || 'User',
-            email: email_addresses[0]?.email_address || '',
-            image: image_url || null,
-          },
-        }
-      );
-      console.log(`✅ User updated: ${id}`);
-    } else if (evt.type === 'user.deleted') {
-      const { id } = evt.data;
-      await User.deleteOne({ clerkId: id });
-      console.log(`✅ User deleted: ${id}`);
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: 'Webhook processed successfully',
-    });
-  } catch (error) {
-    console.error('Webhook processing error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Error processing webhook',
-    });
-  }
-};
 
 export const getUser = async (req, res) => {
   try {
@@ -102,36 +15,20 @@ export const getUser = async (req, res) => {
       });
     }
 
-    // Try to find the user first (fast path)
-    let user = await User.findOne({ clerkId: userId });
+    // Try to find the user
+    let user = await User.findById(userId);
 
-    // If the user isn't in MongoDB yet (e.g. local dev where Clerk webhooks
-    // can't reach localhost), create them now from whatever JWT claims we have.
     if (!user) {
-      const decoded = req.decodedToken || {};
-      const name = decoded.name || decoded.given_name || 'User';
-      const email = decoded.email || `${userId}@clerk.local`;
-      const image = decoded.picture || decoded.image_url || null;
-
-      user = await User.findOneAndUpdate(
-        { clerkId: userId },
-        {
-          $setOnInsert: {
-            clerkId: userId,
-            name,
-            email,
-            image,
-            isAdmin: false,
-          },
-        },
-        { upsert: true, new: true }
-      );
-      console.log(`[USER SYNC] Auto-created MongoDB user for Clerk ID: ${userId}`);
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
     }
 
     return res.status(200).json({
       success: true,
       data: user,
+      user: user, // ensure both data and user are returned just in case
     });
   } catch (error) {
     console.error('Error fetching user:', error);
@@ -142,63 +39,6 @@ export const getUser = async (req, res) => {
   }
 };
 
-// Explicit sync endpoint — call this from the frontend right after sign-in/sign-up.
-// Does a full upsert so name/email/image are always up-to-date.
-export const syncUser = async (req, res) => {
-  try {
-    const userId = req.userId;
-    if (!userId) {
-      return res.status(401).json({ success: false, message: 'Unauthorized' });
-    }
-
-    // Pull identity data from the decoded JWT when available,
-    // then fall back to the request body (client can pass { name, email, image }).
-    const decoded = req.decodedToken || {};
-    const body = req.body || {};
-
-    const name =
-      body.name ||
-      decoded.name ||
-      decoded.given_name ||
-      decoded.first_name ||
-      'User';
-    const email =
-      body.email ||
-      decoded.email ||
-      `${userId}@clerk.local`;
-    const image =
-      body.image ||
-      decoded.picture ||
-      decoded.image_url ||
-      null;
-
-    const user = await User.findOneAndUpdate(
-      { clerkId: userId },
-      {
-        $set: { name, email, image },
-        $setOnInsert: { clerkId: userId, isAdmin: false },
-      },
-      { upsert: true, new: true }
-    );
-
-    console.log(`[USER SYNC] Upserted MongoDB user: ${userId} (${email})`);
-
-    return res.status(200).json({
-      success: true,
-      message: 'User synced successfully',
-      data: user,
-    });
-  } catch (error) {
-    console.error('[USER SYNC] Error syncing user:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Error syncing user',
-    });
-  }
-};
-
-// Authoritative admin check using decoded Clerk JWT + MongoDB User record.
-// Automatically creates the MongoDB User on first call (handles local dev where Clerk webhooks can't reach localhost).
 export const checkAdmin = async (req, res) => {
   try {
     const userId = req.userId;
@@ -206,41 +46,15 @@ export const checkAdmin = async (req, res) => {
       return res.status(401).json({ success: false, isAdmin: false, message: 'Unauthorized' });
     }
 
-    const decoded = req.decodedToken || {};
+    const user = await User.findById(userId);
 
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[ADMIN CHECK] userId:', userId);
-      console.log('[ADMIN CHECK] JWT claim keys:', Object.keys(decoded));
+    if (!user || user.isAdmin !== true) {
+      return res.status(403).json({ success: false, message: 'Forbidden' });
     }
 
-    // Upsert the user in MongoDB from JWT claims (in case webhook never fired on localhost)
-    const name = decoded.name || decoded.given_name || 'User';
-    const email = decoded.email || `${userId}@clerk.local`;
-    const image = decoded.picture || decoded.image_url || null;
-
-    let user = await User.findOneAndUpdate(
-      { clerkId: userId },
-      {
-        $setOnInsert: {
-          clerkId: userId,
-          name,
-          email,
-          image,
-          isAdmin: false,
-        },
-      },
-      { upsert: true, new: true }
-    );
-
-    const isAdmin = user.isAdmin === true;
-
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[ADMIN CHECK] MongoDB isAdmin:', isAdmin);
-    }
-
-    return res.status(200).json({ success: true, isAdmin });
+    return res.status(200).json({ success: true, isAdmin: true, user });
   } catch (error) {
-    console.error('[ADMIN CHECK] Error:', error.message, error.stack);
+    console.error('[ADMIN CHECK] Error:', error.message);
     return res.status(500).json({ success: false, isAdmin: false, message: 'Error checking admin status' });
   }
 };
@@ -264,7 +78,7 @@ export const addFavorite = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ clerkId: userId });
+    const user = await User.findById(userId);
 
     if (!user) {
       return res.status(404).json({
@@ -350,7 +164,7 @@ export const removeFavorite = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ clerkId: userId });
+    const user = await User.findById(userId);
 
     if (!user) {
       return res.status(404).json({
@@ -394,7 +208,7 @@ export const getFavorites = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ clerkId: userId }).populate('favorites');
+    const user = await User.findById(userId).populate('favorites');
 
     if (!user) {
       return res.status(404).json({

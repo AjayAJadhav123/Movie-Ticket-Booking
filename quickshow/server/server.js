@@ -4,7 +4,6 @@ dotenv.config();
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { clerkMiddleware } from '@clerk/express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import connectDB from './config/db.js';
@@ -20,6 +19,7 @@ import analyticsRoutes from './routes/analyticsRoutes.js';
 import cinemaRoutes from './routes/cinemaRoutes.js';
 import screenRoutes from './routes/screenRoutes.js';
 import adminAuthRoutes from './routes/adminAuthRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 import { serve } from 'inngest/express';
 import { inngest } from './config/inngest.js';
 import {
@@ -190,24 +190,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-// authorizedParties: the list of frontend origins allowed to generate tokens.
-// Hardcode the production URL so auth never breaks if FRONTEND_URL is missing on Render.
-// jwtKey is intentionally omitted — we let Clerk verify online via CLERK_SECRET_KEY
-// (PEM formatting in env vars is error-prone and causes 'unexpected-error').
-const AUTHORIZED_PARTIES = [
-  'https://movie-ticket-booking-tan.vercel.app', // production (hardcoded)
-  process.env.FRONTEND_URL,                        // production (from env, if set)
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://localhost:5175',
-  'http://localhost:3000',
-].filter(Boolean);
-
-app.use(clerkMiddleware({
-  authorizedParties: AUTHORIZED_PARTIES,
-  secretKey: process.env.CLERK_SECRET_KEY,
-  publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
-}));
+// Middleware for authentication is now handled explicitly in routes via auth.js middleware.
 
 app.use('/api/user', userRoutes);
 app.use('/api/movie', movieRoutes);
@@ -219,6 +202,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/pricing', pricingRoutes);
 app.use('/api/admin/auth', adminAuthRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/admin/analytics', analyticsRoutes);
 
 // Inngest handler - pass functions so Inngest can serve and execute them

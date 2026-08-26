@@ -7,7 +7,7 @@ import axios from 'axios';
 import Movie from '../models/Movie.js';
 
 const TMDB_BASE_URL = 'https://api.tmdb.org/3';
-const TMDB_TIMEOUT = 4000; // 4 seconds
+const TMDB_TIMEOUT = 8000; // 8 seconds
 
 // Fallback movies (emergency only)
 export const FALLBACK_MOVIES = [
@@ -106,7 +106,7 @@ class MovieService {
       return response.data;
     } catch (error) {
       if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
-        throw new Error('TMDB_TIMEOUT');
+        throw new Error('TMDB_TIMEOUT', { cause: error });
       }
       throw error;
     }

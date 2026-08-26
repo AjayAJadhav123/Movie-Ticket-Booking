@@ -219,8 +219,7 @@ export async function getShowPricing(showId) {
     console.error('Error calculating show pricing:', error);
     return {
       success: false,
-      error: error.message,
-    };
+      };
   }
 }
 
@@ -265,8 +264,7 @@ export async function validateBookingPrice(showId, seatCount) {
     console.error('Error validating booking price:', error);
     return {
       success: false,
-      error: error.message,
-    };
+      };
   }
 }
 

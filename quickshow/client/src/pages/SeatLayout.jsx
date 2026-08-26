@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '@clerk/clerk-react';
+import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { useSocketIO } from '../hooks/useSocketIO';
 import SeatGrid from '../components/SeatGrid';
@@ -30,7 +30,7 @@ const loadCashfreeScript = () => {
 export default function SeatLayout() {
   const { showId } = useParams();
   const navigate = useNavigate();
-  const { isLoaded: clerkLoaded, isSignedIn, getToken } = useAuth();
+  const { isLoaded, isSignedIn, token } = useAuth();
   const { selectedSeats, setSelectedSeats } = useApp();
   const [show, setShow] = useState(null);
   const [movie, setMovie] = useState(null);
@@ -90,8 +90,8 @@ export default function SeatLayout() {
 
   const handleBooking = async () => {
 
-    if (!clerkLoaded) {
-      toast.error('Clerk is still loading. Please wait.');
+    if (!isLoaded) {
+      toast.error('Auth is still loading. Please wait.');
       return;
     }
 
@@ -107,7 +107,7 @@ export default function SeatLayout() {
 
     try {
       setIsBooking(true);
-      const token = await getToken();
+      // token is already available from useAuth
 
       // Create Cashfree order on backend
       const response = await apiClient.post(
@@ -185,10 +185,10 @@ export default function SeatLayout() {
 
   if (error || !show) {
     return (
-      <div className="min-h-screen pt-20 pb-16 bg-white flex items-center justify-center px-4">
+      <div className="min-h-screen pt-20 pb-16 bg-[#141414] flex items-center justify-center px-4">
         <div className="card p-8 max-w-md w-full text-center">
           <h2 className="text-xl font-bold text-red-400 mb-2">Error Loading Show</h2>
-          <p className="text-slate-700 mb-6">{error || 'Show not found'}</p>
+          <p className="text-slate-300 mb-6">{error || 'Show not found'}</p>
           <button
             onClick={() => navigate(-1)}
             className="btn-primary w-full"
@@ -204,11 +204,11 @@ export default function SeatLayout() {
 
   return (
     <>
-      <div className="min-h-screen pt-8 pb-16 bg-white">
+      <div className="min-h-screen pt-8 pb-16 bg-[#141414]">
         <div className="container mx-auto px-4 py-8">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 mb-6 font-semibold transition"
+            className="flex items-center gap-2 text-primary hover:text-red-400 mb-6 font-semibold transition"
           >
             <ArrowLeft size={20} />
             Back
@@ -218,32 +218,32 @@ export default function SeatLayout() {
             {/* Seat Grid */}
             <div className="lg:col-span-2">
               <div className="flex items-center justify-between mb-6">
-                <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
+                <h1 className="text-2xl md:text-3xl font-bold text-white">
                   {movie?.title} - Select Seats
                 </h1>
                 {/* Socket.IO Connection Status */}
-                <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-slate-100">
+                <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-slate-800">
                   <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                  <span className="text-xs md:text-sm font-medium text-slate-700">
+                  <span className="text-xs md:text-sm font-medium text-slate-300">
                     {isConnected ? 'Live' : 'Connecting...'}
                   </span>
                 </div>
               </div>
-              <div className="mb-4 text-slate-600 text-sm md:text-base space-y-2">
+              <div className="mb-4 text-slate-400 text-sm md:text-base space-y-2">
                 <p>
-                  <span className="text-slate-700 font-semibold">Theatre:</span> {show.theatre || 'Theatre TBD'}
+                  <span className="text-slate-300 font-semibold">Theatre:</span> {show.theatre || 'Theatre TBD'}
                 </p>
                 <p>
-                  <span className="text-slate-700 font-semibold">Screen:</span> {show.screen || 'Screen TBD'}
+                  <span className="text-slate-300 font-semibold">Screen:</span> {show.screen || 'Screen TBD'}
                 </p>
                 <p>
-                  <span className="text-slate-700 font-semibold">Date:</span> {new Date(show.date).toLocaleDateString()}
+                  <span className="text-slate-300 font-semibold">Date:</span> {new Date(show.date).toLocaleDateString()}
                 </p>
                 <p>
-                  <span className="text-slate-700 font-semibold">Time:</span> {show.time}
+                  <span className="text-slate-300 font-semibold">Time:</span> {show.time}
                 </p>
                 <p>
-                  <span className="text-slate-700 font-semibold">Price per seat:</span> ₹{show.price}
+                  <span className="text-slate-300 font-semibold">Price per seat:</span> ₹{show.price}
                 </p>
               </div>
               <SeatGrid show={show} onSeatsChange={setSelectedSeats} socketLockedSeats={lockedSeats} socketOccupiedSeats={occupiedSeats} />
@@ -252,48 +252,48 @@ export default function SeatLayout() {
             {/* Booking Summary */}
             <div className="lg:col-span-1">
               <div className="card p-4 md:p-6 lg:sticky lg:top-24">
-                <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6 text-slate-900">Booking Summary</h2>
+                <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6 text-white">Booking Summary</h2>
 
                 {/* Dynamic Pricing Display */}
                 <div className="mb-4 md:mb-6">
                   <DynamicPricingDisplay showId={showId} />
                 </div>
 
-                <div className="space-y-3 md:space-y-4 mb-4 md:mb-6 pb-4 md:pb-6 border-b border-slate-200">
+                <div className="space-y-3 md:space-y-4 mb-4 md:mb-6 pb-4 md:pb-6 border-b border-slate-800">
                   <div>
-                    <p className="text-slate-600 mb-1 md:mb-2 text-sm md:text-base">Movie</p>
-                    <p className="font-semibold text-slate-900 text-sm md:text-base">{movie?.title}</p>
+                    <p className="text-slate-400 mb-1 md:mb-2 text-sm md:text-base">Movie</p>
+                    <p className="font-semibold text-white text-sm md:text-base">{movie?.title}</p>
                   </div>
 
                   <div>
-                    <p className="text-slate-600 mb-1 md:mb-2 text-sm md:text-base">Theatre</p>
-                    <p className="font-semibold text-slate-900 text-sm md:text-base">{show.theatre || 'Theatre TBD'}</p>
+                    <p className="text-slate-400 mb-1 md:mb-2 text-sm md:text-base">Theatre</p>
+                    <p className="font-semibold text-white text-sm md:text-base">{show.theatre || 'Theatre TBD'}</p>
                   </div>
 
                   <div>
-                    <p className="text-slate-600 mb-1 md:mb-2 text-sm md:text-base">Screen</p>
-                    <p className="font-semibold text-slate-900 text-sm md:text-base">{show.screen || 'Screen TBD'}</p>
+                    <p className="text-slate-400 mb-1 md:mb-2 text-sm md:text-base">Screen</p>
+                    <p className="font-semibold text-white text-sm md:text-base">{show.screen || 'Screen TBD'}</p>
                   </div>
 
                   <div>
-                    <p className="text-slate-600 mb-1 md:mb-2 text-sm md:text-base">Date</p>
-                    <p className="font-semibold text-slate-900 text-sm md:text-base">
+                    <p className="text-slate-400 mb-1 md:mb-2 text-sm md:text-base">Date</p>
+                    <p className="font-semibold text-white text-sm md:text-base">
                       {new Date(show.date).toLocaleDateString()}
                     </p>
                   </div>
 
                   <div>
-                    <p className="text-slate-600 mb-1 md:mb-2 text-sm md:text-base">Time</p>
-                    <p className="font-semibold text-slate-900 text-sm md:text-base">{show.time}</p>
+                    <p className="text-slate-400 mb-1 md:mb-2 text-sm md:text-base">Time</p>
+                    <p className="font-semibold text-white text-sm md:text-base">{show.time}</p>
                   </div>
 
                   <div>
-                    <p className="text-slate-600 mb-2 text-sm md:text-base">Selected Seats</p>
+                    <p className="text-slate-400 mb-2 text-sm md:text-base">Selected Seats</p>
                     <div className="flex flex-wrap gap-2">
                       {selectedSeats.map((seat) => (
                         <span
                           key={seat}
-                          className="bg-indigo-100 text-indigo-600 px-2 md:px-3 py-1 rounded font-semibold text-xs md:text-sm border border-indigo-300"
+                          className="bg-indigo-100 text-primary px-2 md:px-3 py-1 rounded font-semibold text-xs md:text-sm border border-indigo-300"
                         >
                           {seat}
                         </span>
@@ -307,16 +307,16 @@ export default function SeatLayout() {
 
                 <div className="space-y-2 md:space-y-3 mb-4 md:mb-6">
                   <div className="flex justify-between text-sm md:text-base">
-                    <span className="text-slate-600">Subtotal ({selectedSeats.length} seats)</span>
-                    <span className="font-semibold text-slate-900">₹{totalPrice.toFixed(2)}</span>
+                    <span className="text-slate-400">Subtotal ({selectedSeats.length} seats)</span>
+                    <span className="font-semibold text-white">₹{totalPrice.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm md:text-base">
-                    <span className="text-slate-600">Taxes & Fees (10%)</span>
-                    <span className="font-semibold text-slate-900">₹{(totalPrice * 0.1).toFixed(2)}</span>
+                    <span className="text-slate-400">Taxes & Fees (10%)</span>
+                    <span className="font-semibold text-white">₹{(totalPrice * 0.1).toFixed(2)}</span>
                   </div>
-                  <div className="border-t border-slate-200 pt-2 md:pt-3 flex justify-between">
-                    <span className="font-bold text-slate-900 text-sm md:text-base">Total</span>
-                    <span className="text-indigo-600 font-bold text-sm md:text-base">
+                  <div className="border-t border-slate-800 pt-2 md:pt-3 flex justify-between">
+                    <span className="font-bold text-white text-sm md:text-base">Total</span>
+                    <span className="text-primary font-bold text-sm md:text-base">
                       ₹{(totalPrice * 1.1).toFixed(2)}
                     </span>
                   </div>
@@ -337,7 +337,7 @@ export default function SeatLayout() {
                   )}
                 </button>
 
-                <p className="text-xs md:text-sm text-slate-600 mt-3 md:mt-4 text-center">
+                <p className="text-xs md:text-sm text-slate-400 mt-3 md:mt-4 text-center">
                   Seats will be held for 10 minutes during payment
                 </p>
               </div>

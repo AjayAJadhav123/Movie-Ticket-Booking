@@ -15,7 +15,7 @@ logging.basicConfig(level=os.getenv('LOG_LEVEL', 'INFO'))
 logger = logging.getLogger(__name__)
 
 # Path to pickle files
-AIML_DIR = Path(__file__).parent.parent / '.vscode' / 'aiml'
+AIML_DIR = Path(__file__).parent.parent.parent / '.vscode' / 'aiml'
 
 
 class MLRecommendationService:
@@ -38,11 +38,16 @@ class MLRecommendationService:
             if movie_list_path.exists():
                 with open(movie_list_path, 'rb') as f:
                     self.movie_list = pickle.load(f)
+                
+                import pandas as pd
+                if isinstance(self.movie_list, pd.DataFrame):
+                    self.movie_list = self.movie_list.to_dict('records')
+                    
                 logger.info(f"Loaded {len(self.movie_list)} movies from movie_list.pkl")
                 
                 # Create ID mappings
                 for idx, movie_info in enumerate(self.movie_list):
-                    movie_id = movie_info.get('_id') or movie_info.get('id')
+                    movie_id = movie_info.get('movie_id') or movie_info.get('_id') or movie_info.get('id')
                     if movie_id:
                         self.movie_id_to_index[str(movie_id)] = idx
                         self.index_to_movie_id[idx] = str(movie_id)

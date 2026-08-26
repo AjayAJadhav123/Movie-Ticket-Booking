@@ -165,7 +165,7 @@ const functionHandlers = {
         })),
       };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, };
     }
   },
 
@@ -202,7 +202,7 @@ const functionHandlers = {
         })),
       };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, };
     }
   },
 
@@ -232,7 +232,7 @@ const functionHandlers = {
         },
       };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, };
     }
   },
 
@@ -255,7 +255,7 @@ const functionHandlers = {
         })),
       };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, };
     }
   },
 
@@ -287,7 +287,7 @@ const functionHandlers = {
         },
       };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, };
     }
   },
 };

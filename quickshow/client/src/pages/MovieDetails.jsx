@@ -101,14 +101,14 @@ export default function MovieDetails() {
 
   if (error) {
     return (
-      <div className="min-h-screen pt-20 pb-16 bg-white flex items-center justify-center">
+      <div className="min-h-screen pt-20 pb-16 bg-[#141414] flex items-center justify-center">
         <div className="text-center max-w-md px-4">
           <Ticket size={64} className="mx-auto text-slate-400 mb-4" />
-          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">{error}</h2>
-          <p className="text-slate-600 mb-6">The movie you're looking for is not available.</p>
+          <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">{error}</h2>
+          <p className="text-slate-400 mb-6">The movie you're looking for is not available.</p>
           <button
             onClick={() => navigate('/movies')}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold transition-all"
+            className="bg-primary hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-all"
           >
             Back to Movies
           </button>
@@ -122,7 +122,7 @@ export default function MovieDetails() {
   }
 
   return (
-    <div className="min-h-screen bg-white pb-16">
+    <div className="min-h-screen bg-[#141414] pb-16">
       {/* Hero Section with Backdrop */}
       <div className="relative w-full overflow-hidden mb-12">
         {/* Backdrop */}
@@ -165,8 +165,8 @@ export default function MovieDetails() {
                   </div>
 
                   {/* Movie Info */}
-                  <div className="md:col-span-2 lg:col-span-3 text-slate-900 flex flex-col justify-end lg:justify-center pb-4 md:pb-0">
-                    <h1 className="text-4xl md:text-5xl lg:text-6xl font-black mb-4 drop-shadow-lg text-slate-900">
+                  <div className="md:col-span-2 lg:col-span-3 text-white flex flex-col justify-end lg:justify-center pb-4 md:pb-0">
+                    <h1 className="text-4xl md:text-5xl lg:text-6xl font-black mb-4 drop-shadow-lg text-white">
                       {movie.title}
                     </h1>
 
@@ -184,7 +184,7 @@ export default function MovieDetails() {
 
                     {/* Quick Info */}
                     <div className="space-y-3 mb-6 text-sm md:text-base">
-                      <div className="flex items-center gap-2 text-slate-700">
+                      <div className="flex items-center gap-2 text-slate-300">
                         <Calendar size={18} />
                         <span>{movie.release_date ? new Date(movie.release_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}</span>
                       </div>
@@ -197,14 +197,14 @@ export default function MovieDetails() {
                       )}
 
                       {movie.language && (
-                        <div className="flex items-center gap-2 text-slate-700">
+                        <div className="flex items-center gap-2 text-slate-300">
                           <Globe size={18} />
                           <span>{movie.language.toUpperCase()}</span>
                         </div>
                       )}
                       
                       {movie.runtime && (
-                        <div className="flex items-center gap-2 text-slate-700">
+                        <div className="flex items-center gap-2 text-slate-300">
                           <Clock size={18} />
                           <span>{movie.runtime} mins</span>
                         </div>
@@ -215,7 +215,7 @@ export default function MovieDetails() {
                           {movie.genres.map((genre) => (
                             <span
                               key={genre}
-                              className="px-3 py-1 bg-indigo-100 border border-indigo-300 text-indigo-600 rounded-full text-xs md:text-sm font-semibold"
+                              className="px-3 py-1 bg-indigo-100 border border-indigo-300 text-primary rounded-full text-xs md:text-sm font-semibold"
                             >
                               {genre}
                             </span>
@@ -230,7 +230,7 @@ export default function MovieDetails() {
                         onClick={() => {
                           document.getElementById('shows-section')?.scrollIntoView({ behavior: 'smooth' });
                         }}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-lg font-bold transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-indigo-500/30 text-base"
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-primary hover:bg-red-700 text-white px-8 py-4 rounded-lg font-bold transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-indigo-500/30 text-base"
                       >
                         <Ticket size={20} fill="currentColor" className="text-white" />
                         Book Tickets
@@ -239,7 +239,7 @@ export default function MovieDetails() {
                       {movie.trailer && (
                         <button
                           onClick={() => setTrailerOpen(true)}
-                          className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-md text-slate-900 border border-slate-200 px-8 py-4 rounded-lg font-bold transition-all duration-200 transform hover:scale-105 text-base shadow-sm"
+                          className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#141414]/10 hover:bg-[#141414]/20 backdrop-blur-md text-white border border-slate-800 px-8 py-4 rounded-lg font-bold transition-all duration-200 transform hover:scale-105 text-base shadow-sm"
                         >
                           <Play size={20} fill="currentColor" />
                           Watch Trailer
@@ -258,7 +258,7 @@ export default function MovieDetails() {
       <div className="container mx-auto px-4">
         <div className="mb-12">
           <h2 className="section-title">Story</h2>
-          <p className="text-slate-700 text-base md:text-lg leading-relaxed max-w-4xl">
+          <p className="text-slate-300 text-base md:text-lg leading-relaxed max-w-4xl">
             {movie.overview}
           </p>
 
@@ -266,14 +266,14 @@ export default function MovieDetails() {
           {movie.cast && movie.cast.length > 0 && (
             <div className="mt-10 md:mt-14">
               <div className="flex items-center gap-3 mb-6">
-                <Users size={28} className="text-indigo-600" />
-                <h3 className="text-2xl md:text-3xl font-bold text-slate-900">Cast</h3>
+                <Users size={28} className="text-primary" />
+                <h3 className="text-2xl md:text-3xl font-bold text-white">Cast</h3>
               </div>
               <div className="flex flex-wrap gap-3">
                 {movie.cast.map((actor, index) => (
                   <span
                     key={index}
-                    className="bg-indigo-100 text-indigo-600 px-4 py-2 rounded-full text-sm md:text-base font-semibold border border-indigo-300 hover:bg-indigo-200 transition-colors"
+                    className="bg-indigo-100 text-primary px-4 py-2 rounded-full text-sm md:text-base font-semibold border border-indigo-300 hover:bg-indigo-200 transition-colors"
                   >
                     {actor}
                   </span>
@@ -286,15 +286,15 @@ export default function MovieDetails() {
         {/* Shows Section */}
         <div id="shows-section" className="pt-8 scroll-mt-20">
           <h2 className="section-title flex items-center gap-2">
-            <Ticket className="text-indigo-600" /> Book Tickets
+            <Ticket className="text-primary" /> Book Tickets
           </h2>
 
           {/* No Shows Message */}
           {!selectedDate && showsForDate.length === 0 && (
             <div className="card card-hover p-8 md:p-12 text-center">
               <Ticket size={48} className="mx-auto text-slate-400 mb-4" />
-              <p className="text-slate-700 text-lg md:text-xl">No shows available for this movie at the moment.</p>
-              <p className="text-slate-600 text-sm md:text-base mt-2">Check back soon for showtime updates!</p>
+              <p className="text-slate-300 text-lg md:text-xl">No shows available for this movie at the moment.</p>
+              <p className="text-slate-400 text-sm md:text-base mt-2">Check back soon for showtime updates!</p>
             </div>
           )}
 
@@ -302,11 +302,11 @@ export default function MovieDetails() {
           {selectedDate && (
             <>
               <div className="mb-8">
-                <h3 className="text-lg md:text-xl font-semibold text-slate-900 mb-4">Showing on {new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</h3>
+                <h3 className="text-lg md:text-xl font-semibold text-white mb-4">Showing on {new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</h3>
 
                 {showsForDate.length === 0 ? (
                   <div className="card card-hover p-8 text-center">
-                    <p className="text-slate-600 text-base md:text-lg">No shows available for this date</p>
+                    <p className="text-slate-400 text-base md:text-lg">No shows available for this date</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -316,24 +316,24 @@ export default function MovieDetails() {
                         className="card card-hover p-5 md:p-6 transform transition-all hover:-translate-y-1"
                       >
                         {/* Theatre and Screen */}
-                        <div className="mb-3 pb-3 border-b border-slate-200">
-                          <p className="text-slate-600 text-xs uppercase tracking-wider font-semibold mb-1">Location</p>
-                          <p className="text-sm md:text-base font-semibold text-slate-900">{show.theatre || 'Theatre TBD'}</p>
-                          <p className="text-xs md:text-sm text-slate-600">{show.screen || 'Screen TBD'}</p>
+                        <div className="mb-3 pb-3 border-b border-slate-800">
+                          <p className="text-slate-400 text-xs uppercase tracking-wider font-semibold mb-1">Location</p>
+                          <p className="text-sm md:text-base font-semibold text-white">{show.theatre || 'Theatre TBD'}</p>
+                          <p className="text-xs md:text-sm text-slate-400">{show.screen || 'Screen TBD'}</p>
                         </div>
 
                         <div className="mb-4">
-                          <p className="text-slate-600 text-xs uppercase tracking-wider font-semibold">Show Time</p>
-                          <p className="text-2xl md:text-3xl font-bold text-slate-900 mt-2">{show.time}</p>
+                          <p className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Show Time</p>
+                          <p className="text-2xl md:text-3xl font-bold text-white mt-2">{show.time}</p>
                         </div>
 
-                        <div className="mb-4 pb-4 border-b border-slate-200">
-                          <p className="text-slate-600 text-xs uppercase tracking-wider font-semibold">Price per Seat</p>
-                          <p className="text-2xl md:text-3xl font-bold text-indigo-600 mt-2">₹{show.price.toFixed(2)}</p>
+                        <div className="mb-4 pb-4 border-b border-slate-800">
+                          <p className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Price per Seat</p>
+                          <p className="text-2xl md:text-3xl font-bold text-primary mt-2">₹{show.price.toFixed(2)}</p>
                         </div>
 
                         <div className="mb-6">
-                          <p className="text-slate-600 text-xs uppercase tracking-wider font-semibold">Available Seats</p>
+                          <p className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Available Seats</p>
                           <p className="text-xl md:text-2xl font-bold text-green-600 mt-2">
                             {show.totalSeats - (show.occupiedSeats?.length || 0)} / {show.totalSeats}
                           </p>
@@ -341,7 +341,7 @@ export default function MovieDetails() {
 
                         <button
                           onClick={() => handleSelectShow(show)}
-                          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition-all duration-200 transform hover:scale-105 text-sm md:text-base shadow-md hover:shadow-lg"
+                          className="w-full bg-primary hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-all duration-200 transform hover:scale-105 text-sm md:text-base shadow-md hover:shadow-lg"
                         >
                           Select Seats
                         </button>
@@ -366,18 +366,18 @@ export default function MovieDetails() {
       <div className="container mx-auto px-4 mt-16 pb-12">
         {movie.similar && movie.similar.length > 0 ? (
           <section>
-            <h2 className="text-2xl font-bold text-slate-900 mb-6">Similar Movies</h2>
+            <h2 className="text-2xl font-bold text-white mb-6">Similar Movies</h2>
             <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-4">
               {movie.similar.map((similarMovie) => (
                 <div key={similarMovie.id} className="flex-shrink-0 w-44 cursor-pointer" onClick={() => navigate(`/movie/${similarMovie.id}`)}>
-                  <div className="relative h-64 bg-slate-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition">
+                  <div className="relative h-64 bg-slate-700 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition">
                     <img 
                       src={similarMovie.poster_path ? `https://image.tmdb.org/t/p/w300${similarMovie.poster_path}` : '/movie-placeholder.svg'} 
                       alt={similarMovie.title}
                       className="w-full h-full object-cover hover:scale-105 transition duration-300" 
                     />
                   </div>
-                  <h3 className="mt-2 text-sm font-semibold text-slate-800 truncate">{similarMovie.title}</h3>
+                  <h3 className="mt-2 text-sm font-semibold text-slate-200 truncate">{similarMovie.title}</h3>
                 </div>
               ))}
             </div>

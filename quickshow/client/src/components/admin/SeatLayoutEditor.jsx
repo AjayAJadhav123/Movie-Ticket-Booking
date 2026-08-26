@@ -65,14 +65,14 @@ export default function SeatLayoutEditor({ rows, seatsPerRow, layout, onChange }
   if (!currentLayout || currentLayout.length === 0) return null;
 
   return (
-    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+    <div className="bg-[#09090b] border border-slate-800/50 rounded-xl p-4">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="font-semibold text-slate-900 text-sm flex items-center gap-2">
-          <Maximize size={16} className="text-indigo-600" />
+        <h3 className="font-semibold text-white text-sm flex items-center gap-2">
+          <Maximize size={16} className="text-primary" />
           Visual Seat Map Editor
         </h3>
-        <div className="text-sm font-medium text-slate-600">
-          Active Seats: <span className="text-indigo-600 font-bold">{getActiveSeatCount()}</span>
+        <div className="text-sm font-medium text-slate-400">
+          Active Seats: <span className="text-primary font-bold">{getActiveSeatCount()}</span>
         </div>
       </div>
       
@@ -102,8 +102,8 @@ export default function SeatLayoutEditor({ rows, seatsPerRow, layout, onChange }
                     onClick={() => toggleSeat(rIdx, cIdx)}
                     className={`w-7 h-7 sm:w-8 sm:h-8 rounded-t-lg rounded-b-sm text-[9px] sm:text-[10px] font-semibold flex items-center justify-center transition-colors
                       ${seat.status === 'available' 
-                        ? 'bg-indigo-100 text-indigo-700 border border-indigo-200 hover:bg-indigo-200' 
-                        : 'bg-slate-200 text-slate-400 border border-slate-300 hover:bg-slate-300 opacity-50'
+                        ? 'bg-indigo-100 text-red-400 border border-indigo-200 hover:bg-indigo-200' 
+                        : 'bg-slate-700 text-slate-400 border border-slate-700 hover:bg-slate-300 opacity-50'
                       }`}
                     title={seat.id}
                   >
@@ -119,14 +119,14 @@ export default function SeatLayoutEditor({ rows, seatsPerRow, layout, onChange }
         </div>
       </div>
       
-      <div className="flex justify-center gap-6 mt-6 pt-4 border-t border-slate-200 text-xs">
+      <div className="flex justify-center gap-6 mt-6 pt-4 border-t border-slate-800/50 text-xs">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded bg-indigo-100 border border-indigo-200"></div>
-          <span className="text-slate-600">Available</span>
+          <span className="text-slate-400">Available</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-slate-200 border border-slate-300 opacity-50"></div>
-          <span className="text-slate-600">Hidden / Aisle</span>
+          <div className="w-4 h-4 rounded bg-slate-700 border border-slate-700 opacity-50"></div>
+          <span className="text-slate-400">Hidden / Aisle</span>
         </div>
       </div>
     </div>

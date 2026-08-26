@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '@clerk/clerk-react';
+import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import { useApp } from '../context/AppContext';
 import MovieCard from './MovieCard';
 
 export default function RecommendedMoviesCarousel({ movieId, movieTitle }) {
-  const { isSignedIn } = useUser();
+  const { isSignedIn } = useAuth();
   const navigate = useNavigate();
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -63,10 +63,10 @@ export default function RecommendedMoviesCarousel({ movieId, movieTitle }) {
   if (loading) {
     return (
       <section className="py-8">
-        <h2 className="text-2xl font-bold text-slate-900 mb-6">You May Also Like</h2>
+        <h2 className="text-2xl font-bold text-white mb-6">You May Also Like</h2>
         <div className="flex gap-4 overflow-hidden">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="flex-shrink-0 w-44 h-64 bg-slate-200 rounded-lg animate-pulse" />
+            <div key={i} className="flex-shrink-0 w-44 h-64 bg-slate-700 rounded-lg animate-pulse" />
           ))}
         </div>
       </section>
@@ -80,7 +80,7 @@ export default function RecommendedMoviesCarousel({ movieId, movieTitle }) {
 
   return (
     <section className="py-8">
-      <h2 className="text-2xl font-bold text-slate-900 mb-6">You May Also Like</h2>
+      <h2 className="text-2xl font-bold text-white mb-6">You May Also Like</h2>
 
       <div className="relative">
         {/* Scroll Container */}
@@ -98,7 +98,7 @@ export default function RecommendedMoviesCarousel({ movieId, movieTitle }) {
               {/* Movie Card */}
               <div className="group cursor-pointer">
                 {/* Poster Image */}
-                <div className="relative h-56 bg-slate-200 rounded-lg overflow-hidden mb-3">
+                <div className="relative h-56 bg-slate-700 rounded-lg overflow-hidden mb-3">
                   {movie.poster_path || movie.backdrop_path ? (
                     <img
                       src={
@@ -116,7 +116,7 @@ export default function RecommendedMoviesCarousel({ movieId, movieTitle }) {
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-slate-300 to-slate-400 flex items-center justify-center">
-                      <span className="text-slate-600 text-sm">No Image</span>
+                      <span className="text-slate-400 text-sm">No Image</span>
                     </div>
                   )}
 
@@ -162,7 +162,7 @@ export default function RecommendedMoviesCarousel({ movieId, movieTitle }) {
                         }
                       }}
                       disabled={processingFavorites[movie._id]}
-                      className={`opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-2 bg-white rounded-full hover:bg-indigo-600 hover:text-white text-red-500 ${
+                      className={`opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-2 bg-[#141414] rounded-full hover:bg-primary hover:text-white text-red-500 ${
                         processingFavorites[movie._id] ? 'cursor-not-allowed opacity-50' : ''
                       }`}
                     >
@@ -186,12 +186,12 @@ export default function RecommendedMoviesCarousel({ movieId, movieTitle }) {
                 </div>
 
                 {/* Movie Info */}
-                <h3 className="font-semibold text-slate-900 text-sm line-clamp-2 group-hover:text-indigo-600 transition-colors">
+                <h3 className="font-semibold text-white text-sm line-clamp-2 group-hover:text-primary transition-colors">
                   {movie.title}
                 </h3>
 
                 {movie.genres && movie.genres.length > 0 && (
-                  <p className="text-xs text-slate-600 mt-1 line-clamp-1">
+                  <p className="text-xs text-slate-400 mt-1 line-clamp-1">
                     {movie.genres.slice(0, 2).join(', ')}
                   </p>
                 )}
@@ -211,7 +211,7 @@ export default function RecommendedMoviesCarousel({ movieId, movieTitle }) {
           <>
             <button
               onClick={() => scroll('left')}
-              className="hidden lg:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-14 z-10 items-center justify-center w-10 h-10 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition"
+              className="hidden lg:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-14 z-10 items-center justify-center w-10 h-10 bg-primary text-white rounded-full hover:bg-red-700 transition"
               aria-label="Scroll left"
             >
               <ChevronLeft size={20} />
@@ -219,7 +219,7 @@ export default function RecommendedMoviesCarousel({ movieId, movieTitle }) {
 
             <button
               onClick={() => scroll('right')}
-              className="hidden lg:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-14 z-10 items-center justify-center w-10 h-10 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition"
+              className="hidden lg:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-14 z-10 items-center justify-center w-10 h-10 bg-primary text-white rounded-full hover:bg-red-700 transition"
               aria-label="Scroll right"
             >
               <ChevronRight size={20} />

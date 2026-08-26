@@ -60,46 +60,63 @@ export const createStripeSession = async (req, res) => {
       });
     }
 
-    const show = await Show.findById(showId).populate('movieId');
+    const lockExpiryTime = new Date(Date.now() - 10 * 60 * 1000); // 10 minutes ago
+
+    // 1. Remove expired locks to free up seats (Phantom Lock Fix)
+    await Show.updateOne(
+      { _id: showId },
+      { $pull: { lockedSeats: { lockedAt: { $lt: lockExpiryTime } } } }
+    );
+
+    const lockedSeatsEntry = seats.map((seat) => ({
+      seatNumber: seat,
+      userId,
+      lockedAt: new Date(),
+    }));
+
+    // 2. Atomically check and lock seats (Race Condition Fix)
+    const show = await Show.findOneAndUpdate(
+      {
+        _id: showId,
+        occupiedSeats: { $nin: seats },
+        'lockedSeats.seatNumber': { $nin: seats }
+      },
+      {
+        $push: { lockedSeats: { $each: lockedSeatsEntry } }
+      },
+      { new: true }
+    ).populate('movieId');
 
     if (!show) {
-      return res.status(404).json({
+      const existingShow = await Show.findById(showId);
+      if (!existingShow) {
+        return res.status(404).json({ success: false, message: 'Show not found' });
+      }
+      return res.status(409).json({
         success: false,
-        message: 'Show not found',
+        message: 'One or more selected seats are already occupied or locked',
       });
     }
 
-    const occupiedSeatSet = new Set(show.occupiedSeats);
-    const selectedSeatSet = new Set(seats);
-
-    for (const seat of selectedSeatSet) {
-      if (occupiedSeatSet.has(seat)) {
-        return res.status(409).json({
-          success: false,
-          message: 'One or more selected seats are already occupied',
-        });
-      }
-    }
-
-    // Get user, create if doesn't exist
-    let user = await User.findOne({ clerkId: userId });
+    // Get user
+    let user = await User.findById(userId);
     
     if (!user) {
-      // Create a basic user entry from Clerk userId
-      user = new User({
-        clerkId: userId,
-        name: 'User',
-        email: `user+${userId}@example.com`,
-      });
-      await user.save();
+      // Rollback seat lock if we can't find the user
+      await Show.updateOne({ _id: showId }, { $pull: { lockedSeats: { userId } } });
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    const pricePerSeat = show.price;
-    const subtotalAmount = pricePerSeat * seats.length;
-    const taxAmount = Math.round(subtotalAmount * 0.1 * 100) / 100; // 10% tax
-    const totalAmount = subtotalAmount + taxAmount;
+    // Fix: Calculate strictly in integers (paise) to avoid floating-point math issues
+    const pricePerSeatPaise = Math.round(show.price * 100);
+    const subtotalPaise = pricePerSeatPaise * seats.length;
+    const taxPaise = Math.round(subtotalPaise * 0.1); // 10% tax
+    const totalPaise = subtotalPaise + taxPaise;
     
-    console.log(`💰 Booking Calculation: ${seats.length} seats × ₹${pricePerSeat} = ₹${subtotalAmount} + ₹${taxAmount} tax = ₹${totalAmount} total`);
+    // Store in rupees for backward compatibility in DB
+    const totalAmount = totalPaise / 100;
+    
+    console.log(`💰 Booking Calculation: ${seats.length} seats × ₹${show.price} = ₹${subtotalPaise/100} + ₹${taxPaise/100} tax = ₹${totalAmount} total`);
 
     const booking = new Booking({
       userId,
@@ -114,19 +131,6 @@ export const createStripeSession = async (req, res) => {
 
     await booking.save();
 
-    const lockedSeatsEntry = seats.map((seat) => ({
-      seatNumber: seat,
-      userId,
-      bookedAt: new Date(),
-    }));
-
-    await Show.updateOne(
-      { _id: showId },
-      {
-        $push: { lockedSeats: { $each: lockedSeatsEntry } },
-      }
-    );
-
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card', 'upi'],
       mode: 'payment',
@@ -138,7 +142,7 @@ export const createStripeSession = async (req, res) => {
               name: `${show.movieId?.title || 'Movie'} - Seats: ${seats.join(', ')}`,
               description: `Show: ${show.time} on ${show.date.toDateString()}`,
             },
-            unit_amount: Math.round(pricePerSeat * 100),
+            unit_amount: pricePerSeatPaise,
           },
           quantity: seats.length,
         },
@@ -149,7 +153,7 @@ export const createStripeSession = async (req, res) => {
               name: 'Taxes & Fees (10%)',
               description: 'Service tax and booking fees',
             },
-            unit_amount: Math.round(taxAmount * 100),
+            unit_amount: taxPaise,
           },
           quantity: 1,
         },
@@ -641,15 +645,9 @@ export const createCashfreeOrder = async (req, res) => {
     }
 
     // Get user, create if doesn't exist
-    let user = await User.findOne({ clerkId: userId });
-    
+    let user = await User.findById(userId);
     if (!user) {
-      user = new User({
-        clerkId: userId,
-        name: 'User',
-        email: `user+${userId}@example.com`,
-      });
-      await user.save();
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
     const pricePerSeat = show.price;
@@ -732,13 +730,13 @@ export const createCashfreeOrder = async (req, res) => {
 
       const orderId = `order_${booking._id.toString()}_${Date.now()}`;
 
-      // Ensure URLs are fully qualified with http/https protocol
+      // Ensure URLs are fully qualified with https (Cashfree requirement)
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
       const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
       
-      // Validate URLs have protocol
-      const returnUrl = frontendUrl.startsWith('http') ? `${frontendUrl}/my-bookings?order_id=${orderId}` : `https://${frontendUrl}/my-bookings?order_id=${orderId}`;
-      const notifyUrl = backendUrl.startsWith('http') ? `${backendUrl}/api/booking/cashfree-webhook` : `https://${backendUrl}/api/booking/cashfree-webhook`;
+      // Force https for Cashfree validation
+      const returnUrl = `${frontendUrl}/my-bookings?order_id=${orderId}`.replace('http://', 'https://');
+      const notifyUrl = `${backendUrl}/api/booking/cashfree-webhook`.replace('http://', 'https://');
 
       const request = {
         order_id: orderId,

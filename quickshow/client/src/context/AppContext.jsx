@@ -1,14 +1,12 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { useAuth, useUser } from '@clerk/clerk-react';
-
+import { useAuth } from './AuthContext';
 
 const AppContext = createContext();
 
 // Wrapper component to use useAuth hook
 function AppProviderInner({ children }) {
-  const { getToken, isLoaded, isSignedIn } = useAuth();
-  const { user: clerkUser } = useUser();
+  const { isLoaded, isSignedIn, user } = useAuth();
   const [movies, setMovies] = useState([]);
   const [latestMovies, setLatestMovies] = useState([]);
   const [trendingMovies, setTrendingMovies] = useState([]);
@@ -48,18 +46,8 @@ function AppProviderInner({ children }) {
 
   const apiClient = apiClientRef.current;
 
-  // Store getToken in a ref so we can access it in interceptor without re-creating
-  const getTokenRef = useRef(getToken);
+  // Setup interceptor ONCE
   useEffect(() => {
-    getTokenRef.current = getToken;
-  }, [getToken]);
-
-  // Setup interceptor ONCE when Clerk is loaded
-  useEffect(() => {
-    if (!isLoaded) {
-      return;
-    }
-
     // Setup fresh interceptor
     const requestInterceptorId = apiClient.interceptors.request.use(
       async (config) => {
@@ -68,18 +56,18 @@ function AppProviderInner({ children }) {
           const adminToken = localStorage.getItem('adminToken');
           if (adminToken) {
             config.headers = config.headers || {};
-            config.headers.Authorization = `Bearer ${adminToken}`;
+            config.headers['Authorization'] = `Bearer ${adminToken}`;
             return config;
           }
 
-          // Otherwise, get token from Clerk ref (always current)
-          const token = await getTokenRef.current();
+          // Otherwise, get standard token
+          const token = localStorage.getItem('token');
           if (token) {
             config.headers = config.headers || {};
-            config.headers.Authorization = `Bearer ${token}`;
+            config.headers['Authorization'] = `Bearer ${token}`;
           }
         } catch (error) {
-          console.error('Error getting Clerk token:', error.message);
+          console.error('Error getting token:', error.message);
         }
         return config;
       },
@@ -89,46 +77,7 @@ function AppProviderInner({ children }) {
     return () => {
       apiClient.interceptors.request.eject(requestInterceptorId);
     };
-  }, [isLoaded, apiClient]);
-
-  // ── User sync ──────────────────────────────────────────────────────────────
-  // Whenever a Clerk session becomes active, upsert the user in MongoDB.
-  // This handles local dev (where Clerk webhooks can't reach localhost) and
-  // any edge cases where the webhook was missed in production.
-  useEffect(() => {
-    if (!isLoaded || !isSignedIn || !clerkUser) return;
-
-    const syncUserToMongoDB = async () => {
-      try {
-        const primaryEmail =
-          clerkUser.primaryEmailAddress?.emailAddress ||
-          clerkUser.emailAddresses?.[0]?.emailAddress ||
-          '';
-
-        const fullName =
-          clerkUser.fullName ||
-          `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() ||
-          'User';
-
-        const imageUrl = clerkUser.imageUrl || clerkUser.profileImageUrl || null;
-
-        // Use apiClient (not raw axios) so the auth interceptor auto-attaches
-        // the Clerk Bearer token — no need to call getToken() manually here.
-        await apiClient.post('/api/user/sync', {
-          name: fullName,
-          email: primaryEmail,
-          image: imageUrl,
-        });
-        console.log('[AppContext] User synced to MongoDB');
-      } catch (err) {
-        // Non-fatal – the backend auto-creates on next authenticated request anyway
-        console.warn('[AppContext] User sync failed (non-fatal):', err.message);
-      }
-    };
-
-    syncUserToMongoDB();
-  }, [isLoaded, isSignedIn, clerkUser, apiClient]);
-  // ──────────────────────────────────────────────────────────────────────────
+  }, [apiClient]);
 
   const fetchMovies = useCallback(async (filters = {}, append = false) => {
     try {

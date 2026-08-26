@@ -1,15 +1,18 @@
 import axios from 'axios';
 import mongoose from 'mongoose';
 import Movie from '../models/Movie.js';
+import User from '../models/User.js';
+import Booking from '../models/Booking.js';
 
 const TMDB_BASE_URL = 'https://api.tmdb.org/3';
+const FALLBACK_DEMO_MOVIES = [];
 
 // Function to get TMDB API key at runtime
 const getTMDBKey = () => process.env.TMDB_API_KEY;
 
 
 
-const DEFAULT_TMDB_TIMEOUT_MS = 3000;
+const DEFAULT_TMDB_TIMEOUT_MS = 8000;
 const TMDB_TRANSIENT_ERROR_CODES = new Set([
   'ETIMEDOUT',
   'ECONNRESET',
@@ -797,14 +800,32 @@ export const getRecommendations = async (req, res) => {
     }
 
     try {
-      // Call AI service with timeout
-      const response = await axios.get(
-        `${AI_SERVICE_URL}/api/recommendations/${userId}`,
+      // Fetch user's watch history
+      const user = await User.findById(userId).select('favorites').lean();
+      const favorites = user?.favorites || [];
+
+      const bookings = await Booking.find({ userId, status: 'confirmed' })
+        .populate({ path: 'showId', select: 'movieId' })
+        .lean();
+
+      const bookedMovieIds = bookings
+        .filter(b => b.showId && b.showId.movieId)
+        .map(b => b.showId.movieId.toString());
+
+      const watchedIds = [...new Set([...favorites.map(f => f.toString()), ...bookedMovieIds])];
+
+      if (watchedIds.length === 0) {
+        return getPopularMoviesAsRecommendations(req, res);
+      }
+
+      // Call AI service personalized endpoint
+      const response = await axios.post(
+        `${AI_SERVICE_URL}/api/recommendations/personalized`,
+        watchedIds,
         {
           timeout: 10000, // 10 second timeout
           params: {
             limit: 10,
-            exclude_watched: true,
           },
         }
       );

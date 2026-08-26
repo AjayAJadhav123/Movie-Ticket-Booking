@@ -31,13 +31,13 @@ const fmtK = (n) => n >= 1000 ? `₹${(n / 1000).toFixed(1)}k` : `₹${n?.toFixe
 
 function KpiCard({ label, value, sub, icon: Icon, color }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+    <div className="bg-[#0f172a] rounded-xl border border-slate-800/50 shadow-sm p-5">
       <div className="flex items-start justify-between mb-3">
         <div className={`p-2.5 rounded-xl ${color}`}>
           <Icon size={18} className="text-white" />
         </div>
       </div>
-      <p className="text-2xl font-extrabold text-slate-900 tracking-tight">{value}</p>
+      <p className="text-2xl font-extrabold text-white tracking-tight">{value}</p>
       <p className="text-sm font-medium text-slate-500 mt-0.5">{label}</p>
       {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
     </div>
@@ -47,11 +47,11 @@ function KpiCard({ label, value, sub, icon: Icon, color }) {
 function SectionHeading({ icon: Icon, title, sub }) {
   return (
     <div className="flex items-center gap-2 mb-5">
-      <div className="p-2 rounded-lg bg-indigo-50">
-        <Icon size={16} className="text-indigo-600" />
+      <div className="p-2 rounded-lg bg-red-500/10">
+        <Icon size={16} className="text-red-500" />
       </div>
       <div>
-        <h2 className="text-base font-bold text-slate-900 leading-tight">{title}</h2>
+        <h2 className="text-base font-bold text-white leading-tight">{title}</h2>
         {sub && <p className="text-xs text-slate-500">{sub}</p>}
       </div>
     </div>
@@ -170,9 +170,9 @@ export default function AdminAnalytics() {
               <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
                 <Activity size={14} className="text-white" />
               </div>
-              <span className="text-xs font-semibold text-indigo-600 uppercase tracking-widest">Real-time Analytics</span>
+              <span className="text-xs font-semibold text-red-500 uppercase tracking-widest">Real-time Analytics</span>
             </div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Analytics Dashboard</h1>
+            <h1 className="text-3xl font-extrabold text-white tracking-tight">Analytics Dashboard</h1>
             {lastRefresh && (
               <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
                 <Clock size={11} />
@@ -188,7 +188,7 @@ export default function AdminAnalytics() {
               <select
                 value={range}
                 onChange={e => setRange(e.target.value)}
-                className="appearance-none pl-3 pr-8 py-2 text-sm rounded-xl border border-slate-200 bg-white font-medium text-slate-700 shadow-sm focus:ring-2 focus:ring-indigo-300 outline-none cursor-pointer"
+                className="appearance-none pl-3 pr-8 py-2 text-sm rounded-xl border border-slate-800/50 bg-[#0f172a] font-medium text-slate-300 shadow-sm focus:ring-2 focus:ring-red-500/20 outline-none cursor-pointer"
               >
                 {RANGES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
               </select>
@@ -199,10 +199,10 @@ export default function AdminAnalytics() {
             {range === 'custom' && (
               <>
                 <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)}
-                  className="text-sm rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm focus:ring-2 focus:ring-indigo-300 outline-none" />
+                  className="text-sm rounded-xl border border-slate-800/50 bg-[#0f172a] px-3 py-2 shadow-sm focus:ring-2 focus:ring-red-500/20 outline-none" />
                 <span className="text-slate-400 text-sm">to</span>
                 <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)}
-                  className="text-sm rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm focus:ring-2 focus:ring-indigo-300 outline-none" />
+                  className="text-sm rounded-xl border border-slate-800/50 bg-[#0f172a] px-3 py-2 shadow-sm focus:ring-2 focus:ring-red-500/20 outline-none" />
               </>
             )}
 
@@ -212,7 +212,7 @@ export default function AdminAnalytics() {
                 <select
                   value={groupBy}
                   onChange={e => setGroupBy(e.target.value)}
-                  className="appearance-none pl-3 pr-8 py-2 text-sm rounded-xl border border-slate-200 bg-white font-medium text-slate-700 shadow-sm focus:ring-2 focus:ring-indigo-300 outline-none cursor-pointer"
+                  className="appearance-none pl-3 pr-8 py-2 text-sm rounded-xl border border-slate-800/50 bg-[#0f172a] font-medium text-slate-300 shadow-sm focus:ring-2 focus:ring-red-500/20 outline-none cursor-pointer"
                 >
                   <option value="day">Daily</option>
                   <option value="week">Weekly</option>
@@ -225,7 +225,7 @@ export default function AdminAnalytics() {
             <button
               onClick={fetchAll}
               disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-sm font-semibold text-slate-700 shadow-sm hover:shadow-md hover:border-indigo-300 hover:text-indigo-600 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0f172a] border border-slate-800/50 text-sm font-semibold text-slate-300 shadow-sm hover:shadow-md hover:border-indigo-300 hover:text-red-500 transition-all disabled:opacity-50"
             >
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
               Refresh
@@ -235,7 +235,7 @@ export default function AdminAnalytics() {
 
         {/* ── Error ──────────────────────────────────────────────────────── */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-3">
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
             <AlertCircle size={20} className="text-red-500 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="font-semibold text-red-900">Error</p>
@@ -246,7 +246,7 @@ export default function AdminAnalytics() {
         )}
 
         {/* ── Tabs nav ───────────────────────────────────────────────────── */}
-        <div className="flex gap-1 mb-8 bg-white rounded-2xl border border-slate-200 p-1.5 overflow-x-auto shadow-sm">
+        <div className="flex gap-1 mb-8 bg-[#0f172a] rounded-xl border border-slate-800/50 p-1.5 overflow-x-auto shadow-sm">
           {TABS.map(tab => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -257,7 +257,7 @@ export default function AdminAnalytics() {
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all duration-200 flex-shrink-0 ${
                   active
                     ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-md'
-                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                    : 'text-slate-500 hover:text-slate-200 hover:bg-[#09090b]'
                 }`}
               >
                 <Icon size={14} />
@@ -271,10 +271,10 @@ export default function AdminAnalytics() {
         {loading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl border border-slate-200 p-5 h-32 animate-pulse">
-                <div className="w-10 h-10 rounded-xl bg-slate-200 mb-3" />
-                <div className="h-7 bg-slate-200 rounded w-3/4 mb-2" />
-                <div className="h-4 bg-slate-100 rounded w-1/2" />
+              <div key={i} className="bg-[#0f172a] rounded-xl border border-slate-800/50 p-5 h-32 animate-pulse">
+                <div className="w-10 h-10 rounded-xl bg-slate-700 mb-3" />
+                <div className="h-7 bg-slate-700 rounded w-3/4 mb-2" />
+                <div className="h-4 bg-slate-800 rounded w-1/2" />
               </div>
             ))}
           </div>
@@ -295,7 +295,7 @@ export default function AdminAnalytics() {
 
             {/* Revenue trend (overview teaser) */}
             {trends?.chartData?.length > 0 && (
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-8">
+              <div className="bg-[#0f172a] rounded-xl border border-slate-800/50 shadow-sm p-6 mb-8">
                 <SectionHeading icon={TrendingUp} title="Revenue Trend" sub={`Total ₹${fmt(trends.totalRevenue)} · ${trends.totalBookings} bookings`} />
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
@@ -306,7 +306,7 @@ export default function AdminAnalytics() {
                           <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                       <XAxis dataKey="_id" stroke="#94A3B8" tick={{ fontSize: 11 }} />
                       <YAxis stroke="#94A3B8" tick={{ fontSize: 11 }} tickFormatter={fmtK} />
                       <Tooltip {...tooltipStyle} formatter={v => [`₹${fmt(v)}`, 'Revenue']} />
@@ -320,12 +320,12 @@ export default function AdminAnalytics() {
             {/* Demand by day of week */}
             {demand?.byDayOfWeek?.length > 0 && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                <div className="bg-[#0f172a] rounded-xl border border-slate-800/50 shadow-sm p-6">
                   <SectionHeading icon={Calendar} title="Bookings by Day of Week" />
                   <div className="h-56">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={demand.byDayOfWeek.map(d => ({ ...d, day: DAY_LABELS[d._id] || d._id }))}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                         <XAxis dataKey="day" stroke="#94A3B8" tick={{ fontSize: 11 }} />
                         <YAxis stroke="#94A3B8" tick={{ fontSize: 11 }} />
                         <Tooltip {...tooltipStyle} />
@@ -335,13 +335,13 @@ export default function AdminAnalytics() {
                   </div>
                 </div>
 
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                <div className="bg-[#0f172a] rounded-xl border border-slate-800/50 shadow-sm p-6">
                   <SectionHeading icon={Clock} title="Booking Volume by Hour" />
                   {demand?.byHour?.length > 0 ? (
                     <div className="h-56">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={demand.byHour.map(d => ({ ...d, hour: `${d._id}:00` }))}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+                          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                           <XAxis dataKey="hour" stroke="#94A3B8" tick={{ fontSize: 10 }} />
                           <YAxis stroke="#94A3B8" tick={{ fontSize: 11 }} />
                           <Tooltip {...tooltipStyle} />
@@ -369,7 +369,7 @@ export default function AdminAnalytics() {
                 </div>
 
                 {/* Revenue time-series */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-8">
+                <div className="bg-[#0f172a] rounded-xl border border-slate-800/50 shadow-sm p-6 mb-8">
                   <SectionHeading icon={TrendingUp} title="Revenue Over Time" sub={`Grouped by ${trends.groupBy} · ${RANGES.find(r=>r.value===range)?.label}`} />
                   {trends.chartData?.length > 0 ? (
                     <div className="h-72">
@@ -385,7 +385,7 @@ export default function AdminAnalytics() {
                               <stop offset="95%" stopColor="#10B981" stopOpacity={0}   />
                             </linearGradient>
                           </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+                          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                           <XAxis dataKey="_id" stroke="#94A3B8" tick={{ fontSize: 11 }} />
                           <YAxis stroke="#94A3B8" tick={{ fontSize: 11 }} tickFormatter={fmtK} />
                           <Tooltip {...tooltipStyle} formatter={(v, n) => [n === 'Revenue' ? `₹${fmt(v)}` : v, n]} />
@@ -400,16 +400,16 @@ export default function AdminAnalytics() {
 
                 {/* Booking status breakdown */}
                 {trends.statusBreakdown?.length > 0 && (
-                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-8">
+                  <div className="bg-[#0f172a] rounded-xl border border-slate-800/50 shadow-sm p-6 mb-8">
                     <SectionHeading icon={Ticket} title="Booking Status Breakdown" />
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {trends.statusBreakdown.map(s => (
-                        <div key={s._id} className="p-4 rounded-xl border border-slate-100 bg-slate-50">
+                        <div key={s._id} className="p-4 rounded-xl border border-slate-800/50 bg-[#09090b]">
                           <div className="flex items-center gap-2 mb-2">
                             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: STATUS_COLORS[s._id] || '#94A3B8' }} />
-                            <span className="text-sm font-semibold text-slate-700 capitalize">{s._id}</span>
+                            <span className="text-sm font-semibold text-slate-300 capitalize">{s._id}</span>
                           </div>
-                          <p className="text-2xl font-extrabold text-slate-900">{fmt(s.count)}</p>
+                          <p className="text-2xl font-extrabold text-white">{fmt(s.count)}</p>
                           {s.amount > 0 && <p className="text-xs text-slate-500 mt-1">₹{fmt(s.amount)}</p>}
                         </div>
                       ))}
@@ -419,7 +419,7 @@ export default function AdminAnalytics() {
 
                 {/* Genre revenue pie */}
                 {genres?.length > 0 && (
-                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                  <div className="bg-[#0f172a] rounded-xl border border-slate-800/50 shadow-sm p-6">
                     <SectionHeading icon={Film} title="Revenue by Genre" />
                     <div className="h-72">
                       <ResponsiveContainer width="100%" height="100%">
@@ -447,7 +447,7 @@ export default function AdminAnalytics() {
                 {/* Status distribution */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                   {/* Status pie */}
-                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                  <div className="bg-[#0f172a] rounded-xl border border-slate-800/50 shadow-sm p-6">
                     <SectionHeading icon={Ticket} title="Booking Status Distribution" />
                     {bookingStatus.statusDistribution?.length > 0 ? (
                       <div className="h-64">
@@ -468,14 +468,14 @@ export default function AdminAnalytics() {
                   </div>
 
                   {/* Payment method */}
-                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                  <div className="bg-[#0f172a] rounded-xl border border-slate-800/50 shadow-sm p-6">
                     <SectionHeading icon={DollarSign} title="Payment Method Distribution" />
                     {bookingStatus.paymentMethodDistribution?.length > 0 ? (
                       <>
                         <div className="h-52">
                           <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={bookingStatus.paymentMethodDistribution.map(p => ({ method: p._id || 'unknown', count: p.count, amount: p.totalAmount }))}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+                              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                               <XAxis dataKey="method" stroke="#94A3B8" tick={{ fontSize: 12 }} />
                               <YAxis stroke="#94A3B8" tick={{ fontSize: 11 }} />
                               <Tooltip {...tooltipStyle} formatter={(v, n) => [n === 'amount' ? `₹${fmt(v)}` : v, n === 'amount' ? 'Revenue' : 'Count']} />
@@ -485,8 +485,8 @@ export default function AdminAnalytics() {
                         </div>
                         <div className="mt-4 space-y-2">
                           {bookingStatus.paymentMethodDistribution.map((p, i) => (
-                            <div key={i} className="flex justify-between text-sm border-b border-slate-100 pb-1 last:border-0">
-                              <span className="font-medium text-slate-700 capitalize">{p._id || 'Unknown'}</span>
+                            <div key={i} className="flex justify-between text-sm border-b border-slate-800/50 pb-1 last:border-0">
+                              <span className="font-medium text-slate-300 capitalize">{p._id || 'Unknown'}</span>
                               <span className="text-slate-500">{p.count} bookings · ₹{fmt(p.totalAmount)}</span>
                             </div>
                           ))}
@@ -498,12 +498,12 @@ export default function AdminAnalytics() {
 
                 {/* Payment status */}
                 {bookingStatus.paymentStatusDistribution?.length > 0 && (
-                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-8">
+                  <div className="bg-[#0f172a] rounded-xl border border-slate-800/50 shadow-sm p-6 mb-8">
                     <SectionHeading icon={Activity} title="Payment Status" />
                     <div className="grid grid-cols-3 gap-4">
                       {bookingStatus.paymentStatusDistribution.map((p, i) => (
-                        <div key={i} className="text-center p-4 bg-slate-50 rounded-xl border border-slate-100">
-                          <p className="text-2xl font-extrabold text-slate-900">{fmt(p.count)}</p>
+                        <div key={i} className="text-center p-4 bg-[#09090b] rounded-xl border border-slate-800/50">
+                          <p className="text-2xl font-extrabold text-white">{fmt(p.count)}</p>
                           <p className="text-sm font-medium text-slate-500 mt-1 capitalize">{p._id}</p>
                         </div>
                       ))}
@@ -513,12 +513,12 @@ export default function AdminAnalytics() {
 
                 {/* Recent bookings */}
                 {bookingStatus.recentBookings?.length > 0 && (
-                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                  <div className="bg-[#0f172a] rounded-xl border border-slate-800/50 shadow-sm p-6">
                     <SectionHeading icon={Clock} title="Recent Bookings" />
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="border-b border-slate-100">
+                          <tr className="border-b border-slate-800/50">
                             {['Movie', 'Show Date', 'Seats', 'Amount', 'Status', 'Payment', 'Created'].map(h => (
                               <th key={h} className="text-left py-3 px-3 text-slate-500 font-semibold">{h}</th>
                             ))}
@@ -526,11 +526,11 @@ export default function AdminAnalytics() {
                         </thead>
                         <tbody>
                           {bookingStatus.recentBookings.map((b, i) => (
-                            <tr key={i} className="border-b border-slate-50 hover:bg-slate-50 transition">
-                              <td className="py-2.5 px-3 font-medium text-slate-800 max-w-[160px] truncate">{b.movieTitle || '—'}</td>
-                              <td className="py-2.5 px-3 text-slate-600">{b.showDate ? new Date(b.showDate).toLocaleDateString() : '—'}</td>
-                              <td className="py-2.5 px-3 text-slate-600">{b.seats?.length || 0}</td>
-                              <td className="py-2.5 px-3 font-semibold text-slate-900">₹{fmt(b.amount)}</td>
+                            <tr key={i} className="border-b border-slate-50 hover:bg-[#09090b] transition">
+                              <td className="py-2.5 px-3 font-medium text-slate-200 max-w-[160px] truncate">{b.movieTitle || '—'}</td>
+                              <td className="py-2.5 px-3 text-slate-400">{b.showDate ? new Date(b.showDate).toLocaleDateString() : '—'}</td>
+                              <td className="py-2.5 px-3 text-slate-400">{b.seats?.length || 0}</td>
+                              <td className="py-2.5 px-3 font-semibold text-white">₹{fmt(b.amount)}</td>
                               <td className="py-2.5 px-3">
                                 <span className="px-2 py-0.5 rounded-full text-xs font-semibold capitalize"
                                   style={{ backgroundColor: `${STATUS_COLORS[b.status]}22`, color: STATUS_COLORS[b.status] }}>
@@ -557,12 +557,12 @@ export default function AdminAnalytics() {
             {movies?.length > 0 ? (
               <>
                 {/* Top movies bar chart */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-8">
+                <div className="bg-[#0f172a] rounded-xl border border-slate-800/50 shadow-sm p-6 mb-8">
                   <SectionHeading icon={Film} title="Top Movies by Revenue" />
                   <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={movies.slice(0, 10).map(m => ({ title: m.movieTitle?.length > 15 ? m.movieTitle.slice(0, 15) + '…' : m.movieTitle, revenue: m.totalRevenue, bookings: m.totalBookings }))}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                         <XAxis dataKey="title" stroke="#94A3B8" tick={{ fontSize: 10 }} />
                         <YAxis stroke="#94A3B8" tick={{ fontSize: 11 }} tickFormatter={fmtK} />
                         <Tooltip {...tooltipStyle} formatter={(v, n) => [n === 'revenue' ? `₹${fmt(v)}` : v, n === 'revenue' ? 'Revenue' : 'Bookings']} />
@@ -573,12 +573,12 @@ export default function AdminAnalytics() {
                 </div>
 
                 {/* Table */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                <div className="bg-[#0f172a] rounded-xl border border-slate-800/50 shadow-sm p-6">
                   <SectionHeading icon={Film} title="Movie Performance Table" />
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-slate-100">
+                        <tr className="border-b border-slate-800/50">
                           {['#', 'Movie', 'Revenue', 'Bookings', 'Tickets', 'Shows', 'Rating'].map(h => (
                             <th key={h} className="text-left py-3 px-3 text-slate-500 font-semibold">{h}</th>
                           ))}
@@ -586,13 +586,13 @@ export default function AdminAnalytics() {
                       </thead>
                       <tbody>
                         {movies.map((m, i) => (
-                          <tr key={i} className="border-b border-slate-50 hover:bg-slate-50 transition">
+                          <tr key={i} className="border-b border-slate-50 hover:bg-[#09090b] transition">
                             <td className="py-2.5 px-3 text-slate-400 font-mono text-xs">{i + 1}</td>
-                            <td className="py-2.5 px-3 font-semibold text-slate-800">{m.movieTitle}</td>
+                            <td className="py-2.5 px-3 font-semibold text-slate-200">{m.movieTitle}</td>
                             <td className="py-2.5 px-3 font-bold text-emerald-700">₹{fmt(m.totalRevenue)}</td>
-                            <td className="py-2.5 px-3 text-slate-700">{fmt(m.totalBookings)}</td>
-                            <td className="py-2.5 px-3 text-slate-600">{fmt(m.totalTickets)}</td>
-                            <td className="py-2.5 px-3 text-slate-600">{m.showCount}</td>
+                            <td className="py-2.5 px-3 text-slate-300">{fmt(m.totalBookings)}</td>
+                            <td className="py-2.5 px-3 text-slate-400">{fmt(m.totalTickets)}</td>
+                            <td className="py-2.5 px-3 text-slate-400">{m.showCount}</td>
                             <td className="py-2.5 px-3">
                               {m.avgRating > 0 && (
                                 <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full text-xs font-semibold">
@@ -611,12 +611,12 @@ export default function AdminAnalytics() {
 
             {/* Popular shows */}
             {popularShows?.length > 0 && (
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mt-8">
+              <div className="bg-[#0f172a] rounded-xl border border-slate-800/50 shadow-sm p-6 mt-8">
                 <SectionHeading icon={Calendar} title="Popular Shows" sub="By revenue for selected period" />
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-slate-100">
+                      <tr className="border-b border-slate-800/50">
                         {['Movie', 'Date', 'Time', 'Theatre', 'Screen', 'Occupancy', 'Revenue', 'Bookings'].map(h => (
                           <th key={h} className="text-left py-3 px-3 text-slate-500 font-semibold">{h}</th>
                         ))}
@@ -624,22 +624,22 @@ export default function AdminAnalytics() {
                     </thead>
                     <tbody>
                       {popularShows.map((s, i) => (
-                        <tr key={i} className="border-b border-slate-50 hover:bg-slate-50 transition">
-                          <td className="py-2.5 px-3 font-semibold text-slate-800 max-w-[160px] truncate">{s.movieTitle}</td>
-                          <td className="py-2.5 px-3 text-slate-600">{s.date ? new Date(s.date).toLocaleDateString() : '—'}</td>
-                          <td className="py-2.5 px-3 text-slate-600">{s.time}</td>
+                        <tr key={i} className="border-b border-slate-50 hover:bg-[#09090b] transition">
+                          <td className="py-2.5 px-3 font-semibold text-slate-200 max-w-[160px] truncate">{s.movieTitle}</td>
+                          <td className="py-2.5 px-3 text-slate-400">{s.date ? new Date(s.date).toLocaleDateString() : '—'}</td>
+                          <td className="py-2.5 px-3 text-slate-400">{s.time}</td>
                           <td className="py-2.5 px-3 text-slate-500 max-w-[120px] truncate">{s.theatre}</td>
                           <td className="py-2.5 px-3 text-slate-500">{s.screen}</td>
                           <td className="py-2.5 px-3">
                             <div className="flex items-center gap-2">
-                              <div className="flex-1 h-1.5 bg-slate-200 rounded-full max-w-[60px]">
-                                <div className="h-1.5 rounded-full bg-indigo-500" style={{ width: `${Math.min(s.occupancyPct, 100)}%` }} />
+                              <div className="flex-1 h-1.5 bg-slate-700 rounded-full max-w-[60px]">
+                                <div className="h-1.5 rounded-full bg-red-500/10" style={{ width: `${Math.min(s.occupancyPct, 100)}%` }} />
                               </div>
-                              <span className="text-xs font-semibold text-slate-700">{s.occupancyPct?.toFixed(0)}%</span>
+                              <span className="text-xs font-semibold text-slate-300">{s.occupancyPct?.toFixed(0)}%</span>
                             </div>
                           </td>
                           <td className="py-2.5 px-3 font-bold text-emerald-700">₹{fmt(s.totalRevenue)}</td>
-                          <td className="py-2.5 px-3 text-slate-600">{s.totalBookings}</td>
+                          <td className="py-2.5 px-3 text-slate-400">{s.totalBookings}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -657,12 +657,12 @@ export default function AdminAnalytics() {
               <>
                 {/* Cinema revenue chart */}
                 {cinemaAnalytics.cinemaRevenue?.length > 0 ? (
-                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-8">
+                  <div className="bg-[#0f172a] rounded-xl border border-slate-800/50 shadow-sm p-6 mb-8">
                     <SectionHeading icon={Building2} title="Revenue by Cinema / Theatre" sub="Derived from booking show.theatre field" />
                     <div className="h-64">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={cinemaAnalytics.cinemaRevenue.map(c => ({ name: c._id?.length > 18 ? c._id.slice(0, 18) + '…' : c._id, revenue: c.totalRevenue, bookings: c.totalBookings, occupancy: Math.round(c.avgOccupancy) }))}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+                          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                           <XAxis dataKey="name" stroke="#94A3B8" tick={{ fontSize: 11 }} />
                           <YAxis stroke="#94A3B8" tick={{ fontSize: 11 }} tickFormatter={fmtK} />
                           <Tooltip {...tooltipStyle} formatter={(v, n) => [n === 'revenue' ? `₹${fmt(v)}` : v, n === 'revenue' ? 'Revenue' : n]} />
@@ -677,12 +677,12 @@ export default function AdminAnalytics() {
 
                 {/* Cinema database list */}
                 {cinemaAnalytics.cinemaList?.length > 0 && (
-                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-8">
+                  <div className="bg-[#0f172a] rounded-xl border border-slate-800/50 shadow-sm p-6 mb-8">
                     <SectionHeading icon={Building2} title="Registered Cinemas" />
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="border-b border-slate-100">
+                          <tr className="border-b border-slate-800/50">
                             {['Name', 'City', 'Status', 'Screens', 'Capacity'].map(h => (
                               <th key={h} className="text-left py-3 px-3 text-slate-500 font-semibold">{h}</th>
                             ))}
@@ -690,16 +690,16 @@ export default function AdminAnalytics() {
                         </thead>
                         <tbody>
                           {cinemaAnalytics.cinemaList.map((c, i) => (
-                            <tr key={i} className="border-b border-slate-50 hover:bg-slate-50 transition">
-                              <td className="py-2.5 px-3 font-semibold text-slate-800">{c.name}</td>
-                              <td className="py-2.5 px-3 text-slate-600">{c.city}</td>
+                            <tr key={i} className="border-b border-slate-50 hover:bg-[#09090b] transition">
+                              <td className="py-2.5 px-3 font-semibold text-slate-200">{c.name}</td>
+                              <td className="py-2.5 px-3 text-slate-400">{c.city}</td>
                               <td className="py-2.5 px-3">
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${c.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${c.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-800 text-slate-500'}`}>
                                   {c.status}
                                 </span>
                               </td>
-                              <td className="py-2.5 px-3 text-slate-600">{c.totalScreens}</td>
-                              <td className="py-2.5 px-3 text-slate-600">{c.totalCapacity}</td>
+                              <td className="py-2.5 px-3 text-slate-400">{c.totalScreens}</td>
+                              <td className="py-2.5 px-3 text-slate-400">{c.totalCapacity}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -710,7 +710,7 @@ export default function AdminAnalytics() {
 
                 {/* Show occupancy per theatre */}
                 {cinemaAnalytics.showOccupancy?.length > 0 && (
-                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                  <div className="bg-[#0f172a] rounded-xl border border-slate-800/50 shadow-sm p-6">
                     <SectionHeading icon={Monitor} title="Show Occupancy by Theatre" />
                     <div className="space-y-3">
                       {cinemaAnalytics.showOccupancy.map((t, i) => {
@@ -718,11 +718,11 @@ export default function AdminAnalytics() {
                         return (
                           <div key={i}>
                             <div className="flex justify-between text-sm mb-1.5">
-                              <span className="font-medium text-slate-700 truncate max-w-[60%]">{t._id || 'Unknown Theatre'}</span>
+                              <span className="font-medium text-slate-300 truncate max-w-[60%]">{t._id || 'Unknown Theatre'}</span>
                               <span className="text-slate-500 text-xs">{t.showCount} shows · {pct}% occupied</span>
                             </div>
-                            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                              <div className={`h-2 rounded-full transition-all duration-500 ${pct > 70 ? 'bg-emerald-500' : pct > 40 ? 'bg-amber-500' : 'bg-indigo-500'}`}
+                            <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                              <div className={`h-2 rounded-full transition-all duration-500 ${pct > 70 ? 'bg-emerald-500' : pct > 40 ? 'bg-amber-500' : 'bg-red-500/10'}`}
                                 style={{ width: `${pct}%` }} />
                             </div>
                           </div>
@@ -742,7 +742,7 @@ export default function AdminAnalytics() {
             {insights?.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
                 {insights.map((ins, i) => (
-                  <div key={i} className={`p-5 rounded-2xl border-l-4 ${ins.priority === 'high' ? 'bg-red-50 border-red-500' : 'bg-blue-50 border-blue-500'}`}>
+                  <div key={i} className={`p-5 rounded-xl border-l-4 ${ins.priority === 'high' ? 'bg-red-50 border-red-500' : 'bg-blue-50 border-blue-500'}`}>
                     <div className="flex items-start gap-3">
                       <Zap size={18} className={ins.priority === 'high' ? 'text-red-500 flex-shrink-0 mt-0.5' : 'text-blue-500 flex-shrink-0 mt-0.5'} />
                       <div>
@@ -757,9 +757,9 @@ export default function AdminAnalytics() {
                 ))}
               </div>
             ) : (
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-12 text-center mb-8">
+              <div className="bg-[#0f172a] rounded-xl border border-slate-800/50 shadow-sm p-12 text-center mb-8">
                 <Zap size={48} className="mx-auto text-slate-300 mb-4" />
-                <h3 className="text-lg font-semibold text-slate-600 mb-2">No Insights Yet</h3>
+                <h3 className="text-lg font-semibold text-slate-400 mb-2">No Insights Yet</h3>
                 <p className="text-slate-500 text-sm">Insights will appear once the system has confirmed bookings to analyze.</p>
               </div>
             )}
@@ -771,9 +771,9 @@ export default function AdminAnalytics() {
 
         {/* ── No data fallback ─────────────────────────────────────────────── */}
         {!loading && !overview && !error && activeTab === 'overview' && (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-12 text-center">
+          <div className="bg-[#0f172a] rounded-xl border border-slate-800/50 shadow-sm p-12 text-center">
             <BarChart3 size={48} className="mx-auto text-slate-300 mb-4" />
-            <h3 className="text-xl font-semibold text-slate-600 mb-2">No Analytics Data</h3>
+            <h3 className="text-xl font-semibold text-slate-400 mb-2">No Analytics Data</h3>
             <p className="text-slate-500">Analytics will appear once shows and bookings are created in the system.</p>
           </div>
         )}

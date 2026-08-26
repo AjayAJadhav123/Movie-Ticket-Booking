@@ -147,7 +147,7 @@ export const sendBookingConfirmationEmail = inngest.createFunction(
       }
     } catch (error) {
       console.error('Error in sendBookingConfirmationEmail:', error.message);
-      return { error: error.message };
+      return { };
     }
   }
 );
@@ -218,7 +218,7 @@ export const sendShowReminderEmail = inngest.createFunction(
       }
     } catch (error) {
       console.error('Error in sendShowReminderEmail:', error.message);
-      return { error: error.message };
+      return { };
     }
   }
 );
@@ -304,7 +304,7 @@ export const sendNewShowNotification = inngest.createFunction(
       return { success: true, usersNotified: successCount, failures: failureCount };
     } catch (error) {
       console.error('Error in sendNewShowNotification:', error.message);
-      return { error: error.message };
+      return { };
     }
   }
 );

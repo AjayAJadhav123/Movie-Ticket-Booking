@@ -20,9 +20,17 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #ffffff;
-  color: #0f172a;
+  background: #0a0a0a;
+  color: #f1f5f9;
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}
+
+/* Prevent text cursor/selection on interactive elements */
+button, a, [role="button"], [role="tab"] {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 /* ── Container ────────────────────────────────────────────── */
@@ -36,24 +44,24 @@ body {
 }
 
 .btn-primary {
-  @apply btn bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 shadow-sm hover:shadow-md;
+  @apply btn bg-primary text-white hover:bg-red-700 active:scale-95 shadow-sm hover:shadow-md;
 }
 
 .btn-secondary {
-  @apply btn bg-slate-800 text-white hover:bg-slate-900 active:scale-95 shadow-sm hover:shadow-md;
+  @apply btn bg-slate-800 text-white hover:bg-slate-700 active:scale-95 shadow-sm hover:shadow-md;
 }
 
 .btn-outline {
-  @apply btn border border-slate-300 text-slate-700 hover:border-indigo-500 hover:text-indigo-600 hover:bg-indigo-50;
+  @apply btn border border-slate-700 text-slate-300 hover:border-primary hover:text-primary hover:bg-primary/10;
 }
 
 /* ── Cards ────────────────────────────────────────────────── */
 .card {
-  @apply bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm;
+  @apply bg-[#141414] rounded-xl overflow-hidden shadow-sm;
 }
 
 .card-hover {
-  @apply transition-all duration-200 hover:shadow-md hover:border-slate-300;
+  @apply transition-all duration-200 hover:shadow-md ring-1 ring-transparent hover:ring-slate-800;
 }
 
 /* ── Typography ───────────────────────────────────────────── */
