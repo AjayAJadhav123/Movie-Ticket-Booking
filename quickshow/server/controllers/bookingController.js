@@ -824,9 +824,9 @@ export const verifyCashfreePayment = async (req, res) => {
     }
 
     const userId = req.userId;
-    const { orderId, paymentId, bookingId } = req.body;
+    const { orderId, bookingId } = req.body;
 
-    if (!orderId || !paymentId || !bookingId) {
+    if (!orderId || !bookingId) {
       return res.status(400).json({
         success: false,
         message: 'Missing required payment verification fields',
@@ -860,13 +860,14 @@ export const verifyCashfreePayment = async (req, res) => {
       });
     }
 
-    // Get payment from Cashfree
-    const paymentResponse = await cfInstance.PGOrderFetchPayment(orderId, paymentId);
+    // Get order from Cashfree
+    const orderResponse = await cfInstance.PGFetchOrder(orderId);
 
-    if (paymentResponse.data?.payment_status === 'SUCCESS') {
+    if (orderResponse.data?.order_status === 'PAID') {
       if (booking.status !== 'confirmed') {
         booking.status = 'confirmed';
-        booking.paymentId = paymentId;
+        // paymentId is not strictly needed for Cashfree order, but if we need it we would fetch payments
+        // We'll set cashfreeOrderId again just to be safe
         booking.cashfreeOrderId = orderId;
         await booking.save();
 
@@ -914,7 +915,7 @@ export const verifyCashfreePayment = async (req, res) => {
       return res.status(200).json({
         success: true,
         data: {
-          status: paymentResponse.data?.payment_status || 'FAILED',
+          status: orderResponse.data?.order_status || 'FAILED',
           message: 'Payment not successful',
         },
       });

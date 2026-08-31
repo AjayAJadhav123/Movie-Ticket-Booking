@@ -26,9 +26,8 @@ export default function MyBookings() {
       if (sessionId) {
         verifyPaymentFromSession(sessionId);
       } else if (orderId) {
-        // Cashfree payment - booking should auto-confirm via webhook
-        toast.info('Verifying your payment...');
-        setTimeout(() => fetchUserBookings(), 2000);
+        // Cashfree payment
+        verifyCashfreePaymentFromOrder(orderId);
       }
     }
   }, [isSignedIn, searchParams]);
@@ -38,7 +37,6 @@ export default function MyBookings() {
       setVerifyingPayment(true);
       
       // Find the booking that corresponds to this session
-      // We'll do this by checking all pending bookings
       const pendingBookings = bookings.filter(b => b.status === 'pending');
       
       for (const booking of pendingBookings) {
@@ -54,11 +52,9 @@ export default function MyBookings() {
           if (response.data.success) {
             if (response.data.data.status === 'paid') {
               toast.success('✅ Payment confirmed! Your booking is confirmed.');
-              // Refresh bookings to show updated status
               setTimeout(() => fetchUserBookings(), 500);
             } else if (response.data.data.status === 'unpaid') {
               toast.info('Payment is still processing. Please check back in a moment.');
-              // Auto-refresh after 3 seconds
               setTimeout(() => fetchUserBookings(), 3000);
             }
           }
@@ -67,7 +63,40 @@ export default function MyBookings() {
       }
     } catch (error) {
       console.error('Error verifying payment:', error);
-      // Don't show error - payment might still go through via webhook
+      toast.info('Verifying your payment...');
+    } finally {
+      setVerifyingPayment(false);
+    }
+  };
+
+  const verifyCashfreePaymentFromOrder = async (orderId) => {
+    try {
+      setVerifyingPayment(true);
+      
+      const pendingBookings = bookings.filter(b => b.status === 'pending');
+      
+      for (const booking of pendingBookings) {
+        if (booking.cashfreeOrderId === orderId) {
+          // Verify Cashfree payment
+          const response = await apiClient.post('/api/booking/verify-cashfree-payment', {
+            orderId: orderId,
+            bookingId: booking._id
+          });
+          
+          if (response.data.success) {
+            if (response.data.data.status === 'confirmed') {
+              toast.success('✅ Payment confirmed! Your booking is confirmed.');
+              setTimeout(() => fetchUserBookings(), 500);
+            } else {
+              toast.info('Payment is still processing or failed. Please check back.');
+              setTimeout(() => fetchUserBookings(), 3000);
+            }
+          }
+          break;
+        }
+      }
+    } catch (error) {
+      console.error('Error verifying cashfree payment:', error);
       toast.info('Verifying your payment...');
     } finally {
       setVerifyingPayment(false);
