@@ -730,13 +730,25 @@ export const createCashfreeOrder = async (req, res) => {
 
       const orderId = `order_${booking._id.toString()}_${Date.now()}`;
 
-      // Ensure URLs are fully qualified with https (Cashfree requirement)
-      const frontendUrl = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? 'https://movie-ticket-booking-tan.vercel.app' : 'http://localhost:5173');
-      const backendUrl = process.env.BACKEND_URL || (process.env.NODE_ENV === 'production' ? 'https://movie-ticket-booking-o9ga.onrender.com' : 'http://localhost:5000');
-      
-      // Force https for Cashfree validation
-      const returnUrl = `${frontendUrl}/my-bookings?order_id=${orderId}`.replace('http://', 'https://');
-      const notifyUrl = `${backendUrl}/api/booking/cashfree-webhook`.replace('http://', 'https://');
+      // Cashfree PRODUCTION mode rejects localhost as return_url (domain whitelist check).
+      // When CASHFREE_ENV=PRODUCTION, always use deployed production URLs so Cashfree accepts them.
+      // When CASHFREE_ENV=SANDBOX, use local/configured URLs for dev testing.
+      const isCashfreeProduction = process.env.CASHFREE_ENV === 'PRODUCTION';
+      const PROD_FRONTEND = 'https://movie-ticket-booking-tan.vercel.app';
+      const PROD_BACKEND = 'https://movie-ticket-booking-o9ga.onrender.com';
+
+      const frontendUrl = isCashfreeProduction
+        ? PROD_FRONTEND
+        : (process.env.FRONTEND_URL || 'http://localhost:5173');
+      const backendUrl = isCashfreeProduction
+        ? PROD_BACKEND
+        : (process.env.BACKEND_URL || 'http://localhost:5000');
+
+      // Always https for Cashfree
+      const returnUrl = `${frontendUrl}/my-bookings?order_id=${orderId}`;
+      const notifyUrl = `${backendUrl}/api/booking/cashfree-webhook`;
+      console.log(`💳 Cashfree URLs → return: ${returnUrl}`);
+      console.log(`💳 Cashfree URLs → notify: ${notifyUrl}`);
 
       const request = {
         order_id: orderId,

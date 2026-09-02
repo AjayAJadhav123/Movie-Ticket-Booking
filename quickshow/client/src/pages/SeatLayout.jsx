@@ -10,6 +10,11 @@ import Spinner from '../components/Spinner';
 import { toast } from 'react-toastify';
 import { ArrowLeft } from 'lucide-react';
 
+// Polyfill PaymentInterface for Firefox compatibility (Cashfree SDK requires it)
+if (typeof window !== 'undefined' && !window.PaymentInterface) {
+  window.PaymentInterface = class PaymentInterface {};
+}
+
 // Cashfree script handler
 const loadCashfreeScript = () => {
   return new Promise((resolve) => {
@@ -17,6 +22,10 @@ const loadCashfreeScript = () => {
     if (window.Cashfree) {
       resolve(true);
       return;
+    }
+    // Apply polyfill before SDK loads
+    if (!window.PaymentInterface) {
+      window.PaymentInterface = class PaymentInterface {};
     }
     const script = document.createElement('script');
     script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
@@ -138,25 +147,37 @@ export default function SeatLayout() {
         // Initialize Cashfree and open checkout
         if (window.Cashfree && paymentSessionId) {
           try {
-            const cashfree = window.Cashfree({
-              mode: import.meta.env.PROD ? "production" : "sandbox",
-            });
+            // Ensure polyfill is in place before SDK init
+            if (!window.PaymentInterface) {
+              window.PaymentInterface = class PaymentInterface {};
+            }
+
+            const cashfreeMode = import.meta.env.VITE_CASHFREE_MODE || (import.meta.env.PROD ? 'production' : 'sandbox');
+            const cashfree = window.Cashfree({ mode: cashfreeMode });
             
             const checkoutOptions = {
               paymentSessionId: paymentSessionId,
               redirectTarget: '_self',
             };
             
-            cashfree.checkout(checkoutOptions).then((result) => {
-              if (result.error) {
-                console.error('Cashfree checkout error:', result.error);
+            const result = await cashfree.checkout(checkoutOptions);
+            if (result && result.error) {
+              console.error('Cashfree checkout error:', result.error);
+              // Domain not whitelisted in Cashfree dashboard
+              if (result.error.message && result.error.message.includes('not enabled')) {
+                toast.error('This domain is not whitelisted in Cashfree. Please whitelist localhost:5173 in your Cashfree merchant dashboard → Developers → App Credentials.');
+              } else {
                 toast.error(result.error.message || 'Failed to complete payment');
-                setIsBooking(false);
               }
-            });
+              setIsBooking(false);
+            }
           } catch (error) {
             console.error('Cashfree initialization error:', error);
-            toast.error('Payment gateway initialization failed');
+            if (error.message && error.message.includes('PaymentInterface')) {
+              toast.error('Browser compatibility issue with payment SDK. Please try in Chrome.');
+            } else {
+              toast.error('Payment gateway initialization failed. Please try again.');
+            }
             setIsBooking(false);
           }
         } else if (!paymentSessionId) {

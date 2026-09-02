@@ -75,7 +75,7 @@ export const initializeEmailService = () => {
 
       // Resend uses nodemailer-resend transport
       transporter = nodemailer.createTransport({
-        host: 'smtp.resend.dev',
+        host: 'smtp.resend.com',
         port: 465,
         secure: true,
         auth: {

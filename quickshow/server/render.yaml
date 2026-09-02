@@ -17,6 +17,10 @@ services:
     autoDeploy: true
     
     # Environment variables that must be set in Render dashboard:
+    # EMAIL_PROVIDER - 'gmail', 'smtp', or 'resend' (default is 'gmail')
+    # SENDER_EMAIL - Email address to send from (Required for all providers)
+    # SMTP_PASS - App password if using 'gmail'
+    # RESEND_API_KEY - API key if using 'resend'
     # MONGODB_URI - MongoDB Atlas connection string
     # CLERK_SECRET_KEY - Clerk secret key
     # CLERK_WEBHOOK_SECRET - Clerk webhook secret
