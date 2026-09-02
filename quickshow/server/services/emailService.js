@@ -73,18 +73,40 @@ export const initializeEmailService = () => {
         return null;
       }
 
-      // Resend uses nodemailer-resend transport
-      transporter = nodemailer.createTransport({
-        host: 'smtp.resend.com',
-        port: 465,
-        secure: true,
-        auth: {
-          user: 'resend',
-          pass: resendApiKey,
-        },
-      });
+      // Render blocks outbound SMTP (ports 465, 587) on their standard tiers,
+      // so we use a custom transport object that calls the Resend HTTP API.
+      transporter = {
+        verify: async () => true,
+        sendMail: async (mailOptions) => {
+          // Normalize to for Resend API (can be array or string)
+          const to = Array.isArray(mailOptions.to) ? mailOptions.to : [mailOptions.to];
+          
+          // eslint-disable-next-line no-undef
+          const response = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${resendApiKey}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              from: mailOptions.from,
+              to: to,
+              subject: mailOptions.subject,
+              html: mailOptions.html
+            })
+          });
 
-      console.log('✅ Email service initialized: Resend');
+          if (!response.ok) {
+            const errorData = await response.text();
+            throw new Error(`Resend API Error: ${response.status} - ${errorData}`);
+          }
+          
+          const data = await response.json();
+          return { messageId: data.id };
+        }
+      };
+
+      console.log('✅ Email service initialized: Resend (HTTP API)');
     } else {
       console.warn(`⚠️ Unknown email provider: ${emailProvider}`);
       return null;
