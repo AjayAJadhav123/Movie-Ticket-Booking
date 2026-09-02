@@ -23,11 +23,20 @@ function AppProviderInner({ children }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // In production (Vercel), VITE_BACKEND_URL is not set — relative URLs are used
-  // so the vercel.json proxy can forward /api/* to the Render backend.
-  // In local dev, vite.config.js proxies /api to localhost:5000 — also relative.
-  // Only set VITE_BACKEND_URL if you need absolute URLs (e.g. for direct fetch outside proxy).
-  const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
+  // Robust parsing of VITE_BACKEND_URL to prevent common production errors
+  const getApiBase = () => {
+    let envUrl = import.meta.env.VITE_BACKEND_URL || '';
+    if (import.meta.env.PROD && envUrl.includes('localhost')) {
+      return ''; // Force relative URLs in production if localhost is accidentally baked in
+    }
+    // Clean up accidental trailing slashes or /api suffixes that cause 404s
+    envUrl = envUrl.replace(/\/+$/, '');
+    if (envUrl.endsWith('/api')) {
+      envUrl = envUrl.substring(0, envUrl.length - 4);
+    }
+    return envUrl;
+  };
+  const API_BASE = getApiBase();
 
   // Create axios client once (stable reference)
   const apiClientRef = useRef(null);

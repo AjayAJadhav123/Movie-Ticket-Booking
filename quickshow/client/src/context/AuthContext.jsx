@@ -3,7 +3,14 @@ import axios from 'axios';
 
 const AuthContext = createContext();
 
-const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
+const getApiBase = () => {
+  let envUrl = import.meta.env.VITE_BACKEND_URL || '';
+  if (import.meta.env.PROD && envUrl.includes('localhost')) return '';
+  envUrl = envUrl.replace(/\/+$/, '');
+  if (envUrl.endsWith('/api')) envUrl = envUrl.substring(0, envUrl.length - 4);
+  return envUrl;
+};
+const API_BASE = getApiBase();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);

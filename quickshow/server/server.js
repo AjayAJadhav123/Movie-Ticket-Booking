@@ -160,8 +160,8 @@ app.use(
         return callback(null, true);
       }
 
-      // Check if origin is in allowed list
-      if (allowedOrigins.includes(origin)) {
+      // Check if origin is in allowed list or is a Vercel deployment
+      if (allowedOrigins.includes(origin) || (origin && origin.endsWith('.vercel.app'))) {
         return callback(null, true);
       }
 

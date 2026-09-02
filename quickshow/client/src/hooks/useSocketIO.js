@@ -17,7 +17,17 @@ export const useSocketIO = (showId) => {
   useEffect(() => {
     if (!showId) return;
 
-    const SOCKET_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+    // Socket.IO requires an absolute URL. If PROD and localhost is embedded, or it's missing, fallback to production backend.
+    const getSocketUrl = () => {
+      let envUrl = import.meta.env.VITE_BACKEND_URL || '';
+      if (import.meta.env.PROD && (!envUrl || envUrl.includes('localhost'))) {
+        return 'https://movie-ticket-booking-o9ga.onrender.com';
+      }
+      envUrl = envUrl.replace(/\/+$/, '');
+      if (envUrl.endsWith('/api')) envUrl = envUrl.substring(0, envUrl.length - 4);
+      return envUrl || 'http://localhost:5000';
+    };
+    const SOCKET_URL = getSocketUrl();
 
     // Get auth token and establish connection
     const setupSocket = async () => {
