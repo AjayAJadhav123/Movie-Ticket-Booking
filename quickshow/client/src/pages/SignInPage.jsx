@@ -11,9 +11,11 @@ export default function SignInPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   const { login } = useAuth();
   const navigate = useNavigate();
+
+
 
   const handleStandardLogin = async (e) => {
     e.preventDefault();
@@ -57,8 +59,8 @@ export default function SignInPage() {
           <form onSubmit={handleStandardLogin} className="space-y-4">
             <div>
               <label className="block text-slate-300 text-sm font-medium mb-1">Email Address</label>
-              <input 
-                type="email" 
+              <input
+                type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-[#0a0a0a] border border-slate-700 text-white rounded-lg py-2 px-4 focus:border-indigo-500 focus:outline-none transition"
@@ -66,11 +68,11 @@ export default function SignInPage() {
                 required
               />
             </div>
-            
+
             <div>
               <label className="block text-slate-300 text-sm font-medium mb-1">Password</label>
-              <input 
-                type="password" 
+              <input
+                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-[#0a0a0a] border border-slate-700 text-white rounded-lg py-2 px-4 focus:border-indigo-500 focus:outline-none transition"
@@ -85,8 +87,8 @@ export default function SignInPage() {
               </Link>
             </div>
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={loading}
               className="w-full bg-primary hover:bg-red-700 text-white font-semibold rounded-lg py-2.5 transition-all disabled:opacity-50"
             >
