@@ -167,8 +167,8 @@ export const sendEmail = async (to, subject, html, options = {}) => {
     const info = await transporter.sendMail(mailOptions);
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.warn(`⚠️ Background email skipped (${error.message}). This is expected if the host blocks SMTP.`);
-    return { success: false, };
+    console.error(`⚠️ Email sending failed: ${error.message}`);
+    return { success: false, error: error.message };
   }
 };
 

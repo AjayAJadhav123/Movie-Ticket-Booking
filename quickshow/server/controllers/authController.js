@@ -108,18 +108,19 @@ export const register = async (req, res) => {
         ]);
 
         try {
-          const emailPromise = emailService.sendEmail(
+          const emailResult = await emailService.sendEmail(
             existingUser.email,
             'Verify your QuickShow account',
             getOtpEmailTemplate(otp, existingUser.name)
-          ).catch(err => console.error('Background email error:', err.message));
+          );
           
-          await Promise.race([
-            emailPromise,
-            new Promise(resolve => setTimeout(resolve, 3000))
-          ]);
+          if (!emailResult.success) {
+            console.error(`[OTP Error] Failed to send OTP to ***@${existingUser.email.split('@')[1]}: ${emailResult.error}`);
+            return safeRespond(500, { success: false, message: 'Failed to send OTP email. Please check if your email provider is correctly configured.' });
+          }
         } catch (emailErr) {
-          console.error('Error sending OTP email (safe failure):', emailErr.message);
+          console.error(`[OTP Error] Exception sending OTP: ${emailErr.message}`);
+          return safeRespond(500, { success: false, message: 'Failed to send OTP email.' });
         }
 
         return safeRespond(200, { success: true, message: 'Account updated. Please verify your email with the OTP sent.' });
@@ -146,18 +147,19 @@ export const register = async (req, res) => {
     ]);
 
     try {
-      const emailPromise = emailService.sendEmail(
+      const emailResult = await emailService.sendEmail(
         newUser.email,
         'Verify your QuickShow account',
         getOtpEmailTemplate(otp, newUser.name)
-      ).catch(err => console.error('Background email error:', err.message));
+      );
       
-      await Promise.race([
-        emailPromise,
-        new Promise(resolve => setTimeout(resolve, 3000))
-      ]);
+      if (!emailResult.success) {
+        console.error(`[OTP Error] Failed to send OTP to ***@${newUser.email.split('@')[1]}: ${emailResult.error}`);
+        return safeRespond(500, { success: false, message: 'Failed to send OTP email. Please check if your email provider is correctly configured.' });
+      }
     } catch (emailErr) {
-      console.error('Error sending OTP email (safe failure):', emailErr.message);
+      console.error(`[OTP Error] Exception sending OTP: ${emailErr.message}`);
+      return safeRespond(500, { success: false, message: 'Failed to send OTP email.' });
     }
 
     return safeRespond(201, { success: true, message: 'Account created. Please verify your email with the OTP sent.' });
@@ -234,12 +236,16 @@ export const resendOtp = async (req, res) => {
     
     console.log(`[DEV/TEST] Resend OTP for ${email}: ${otp}`);
     
-    // Non-blocking email send
-    emailService.sendEmail(
+    const emailResult = await emailService.sendEmail(
       user.email,
       'Your New QuickShow Verification Code',
       getOtpEmailTemplate(otp, user.name)
-    ).catch(err => console.error(err));
+    );
+    
+    if (!emailResult.success) {
+      console.error(`[OTP Error] Failed to resend OTP to ***@${user.email.split('@')[1]}: ${emailResult.error}`);
+      return res.status(500).json({ success: false, message: 'Failed to resend OTP email. Please try again later.' });
+    }
     
     res.status(200).json({ success: true, message: 'OTP resent successfully' });
   } catch (error) {
