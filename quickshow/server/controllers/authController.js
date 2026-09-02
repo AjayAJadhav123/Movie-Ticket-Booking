@@ -99,7 +99,9 @@ export const register = async (req, res) => {
         existingUser.verificationOtp = otp;
         existingUser.verificationOtpExpire = Date.now() + 10 * 60 * 1000;
         
-        console.log(`[DEV/TEST] Registration (resend) OTP for ${email}: ${otp}`);
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`[DEV/TEST] Registration (resend) OTP for ${email}: ${otp}`);
+        }
         
         // Save user (with 5s DB timeout)
         await Promise.race([
@@ -133,7 +135,9 @@ export const register = async (req, res) => {
     const otp = generateOTP();
 
     // Create user (with 5s DB timeout)
-    console.log(`[DEV/TEST] Registration OTP for ${email}: ${otp}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[DEV/TEST] Registration OTP for ${email}: ${otp}`);
+    }
     const newUser = await Promise.race([
       User.create({
         name,
@@ -234,7 +238,9 @@ export const resendOtp = async (req, res) => {
     user.verificationOtpExpire = Date.now() + 10 * 60 * 1000;
     await user.save();
     
-    console.log(`[DEV/TEST] Resend OTP for ${email}: ${otp}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[DEV/TEST] Resend OTP for ${email}: ${otp}`);
+    }
     
     const emailResult = await emailService.sendEmail(
       user.email,
@@ -364,7 +370,9 @@ export const forgotPassword = async (req, res) => {
       <a href=${resetUrl} clicktracking=off>${resetUrl}</a>
     `;
 
-    console.log(`[DEV/TEST] Password Reset URL for ${email}: ${resetUrl}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[DEV/TEST] Password Reset URL for ${email}: ${resetUrl}`);
+    }
 
     try {
       // Fire and forget email to prevent hanging if SMTP is blocked
