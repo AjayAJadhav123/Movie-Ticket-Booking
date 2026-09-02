@@ -116,7 +116,7 @@ export const register = async (req, res) => {
           
           if (!emailResult.success) {
             console.error(`[OTP Error] Failed to send OTP to ***@${existingUser.email.split('@')[1]}: ${emailResult.error}`);
-            return safeRespond(500, { success: false, message: 'Failed to send OTP email. Please check if your email provider is correctly configured.' });
+            return safeRespond(400, { success: false, message: 'Failed to send OTP email. Please check if your email provider is correctly configured.' });
           }
         } catch (emailErr) {
           console.error(`[OTP Error] Exception sending OTP: ${emailErr.message}`);
@@ -155,7 +155,7 @@ export const register = async (req, res) => {
       
       if (!emailResult.success) {
         console.error(`[OTP Error] Failed to send OTP to ***@${newUser.email.split('@')[1]}: ${emailResult.error}`);
-        return safeRespond(500, { success: false, message: 'Failed to send OTP email. Please check if your email provider is correctly configured.' });
+        return safeRespond(400, { success: false, message: 'Failed to send OTP email. Please check if your email provider is correctly configured.' });
       }
     } catch (emailErr) {
       console.error(`[OTP Error] Exception sending OTP: ${emailErr.message}`);
@@ -244,7 +244,7 @@ export const resendOtp = async (req, res) => {
     
     if (!emailResult.success) {
       console.error(`[OTP Error] Failed to resend OTP to ***@${user.email.split('@')[1]}: ${emailResult.error}`);
-      return res.status(500).json({ success: false, message: 'Failed to resend OTP email. Please try again later.' });
+      return res.status(400).json({ success: false, message: 'Failed to resend OTP email. Please check your email configuration.' });
     }
     
     res.status(200).json({ success: true, message: 'OTP resent successfully' });
