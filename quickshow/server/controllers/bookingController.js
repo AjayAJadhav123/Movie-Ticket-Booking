@@ -734,8 +734,8 @@ export const createCashfreeOrder = async (req, res) => {
       // When CASHFREE_ENV=PRODUCTION, always use deployed production URLs so Cashfree accepts them.
       // When CASHFREE_ENV=SANDBOX, use local/configured URLs for dev testing.
       const isCashfreeProduction = process.env.CASHFREE_ENV === 'PRODUCTION';
-      const PROD_FRONTEND = 'https://movie-ticket-booking-tan.vercel.app';
-      const PROD_BACKEND = 'https://movie-ticket-booking-o9ga.onrender.com';
+      const PROD_FRONTEND = 'https://movie-ticket-booking-seven-psi.vercel.app';
+      const PROD_BACKEND = 'https://movie-ticket-booking-4p6x.onrender.com';
 
       const frontendUrl = isCashfreeProduction
         ? PROD_FRONTEND

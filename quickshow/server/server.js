@@ -101,8 +101,8 @@ app.use(helmet({
         "https://api.stripe.com",
         "wss://",
         "ws://localhost:*",
-        "https://movie-ticket-booking-o9ga.onrender.com",
-        "https://movie-ticket-booking-tan.vercel.app",
+        "https://movie-ticket-booking-4p6x.onrender.com",
+        "https://movie-ticket-booking-seven-psi.vercel.app",
         process.env.BACKEND_URL || "http://localhost:5000",
         process.env.FRONTEND_URL || "http://localhost:5173",
       ],
@@ -140,9 +140,8 @@ app.use(
     origin: function (origin, callback) {
       // Production origins that are allowed
       const allowedOrigins = [
-        'https://movie-ticket-booking-tan.vercel.app', // Production frontend (hardcoded fallback)
-        'https://movie-ticket-booking-qwfg.vercel.app', // Additional Vercel frontend
-        process.env.FRONTEND_URL,                       // Set this in Render dashboard
+        'https://movie-ticket-booking-seven-psi.vercel.app', // Production frontend
+        process.env.FRONTEND_URL,                            // Set this in Render dashboard
         // Development origins (only in development mode)
         ...(process.env.NODE_ENV !== 'production' ? [
           'http://localhost:3000',
