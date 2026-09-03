@@ -154,7 +154,18 @@ export const sendEmail = async (to, subject, html, options = {}) => {
       return { success: false, error: 'Email service not configured' };
     }
 
-    const senderEmail = process.env.SENDER_EMAIL;
+    const isRender = process.env.RENDER || process.env.RENDER_SERVICE_ID;
+    const emailProvider = process.env.EMAIL_PROVIDER || (process.env.RESEND_API_KEY || isRender || process.env.NODE_ENV === 'production' ? 'resend' : 'gmail');
+    
+    let senderEmail = process.env.SENDER_EMAIL;
+    
+    // Resend does not allow sending FROM @gmail.com domains unless verified (impossible).
+    // It requires using their onboarding email for testing.
+    if (emailProvider === 'resend' && senderEmail && (senderEmail.endsWith('@gmail.com') || senderEmail.endsWith('@yahoo.com'))) {
+      senderEmail = 'onboarding@resend.dev';
+      console.log('⚠️ Overriding sender email to onboarding@resend.dev because Resend requires a verified domain or their testing email.');
+    }
+
     const from = options.from || `QuickShow <${senderEmail}>`;
 
     const mailOptions = {
