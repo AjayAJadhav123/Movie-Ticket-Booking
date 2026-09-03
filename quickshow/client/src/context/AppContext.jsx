@@ -23,17 +23,13 @@ function AppProviderInner({ children }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Robust parsing of VITE_BACKEND_URL to prevent common production errors
+  // In production: ALWAYS use relative URLs so Vercel proxy (vercel.json) routes
+  // /api/* requests to Render. Any absolute URL here bypasses the proxy → CORS errors.
   const getApiBase = () => {
+    if (import.meta.env.PROD) return '';
     let envUrl = import.meta.env.VITE_BACKEND_URL || '';
-    if (import.meta.env.PROD && envUrl.includes('localhost')) {
-      return ''; // Force relative URLs in production if localhost is accidentally baked in
-    }
-    // Clean up accidental trailing slashes or /api suffixes that cause 404s
     envUrl = envUrl.replace(/\/+$/, '');
-    if (envUrl.endsWith('/api')) {
-      envUrl = envUrl.substring(0, envUrl.length - 4);
-    }
+    if (envUrl.endsWith('/api')) envUrl = envUrl.substring(0, envUrl.length - 4);
     return envUrl;
   };
   const API_BASE = getApiBase();

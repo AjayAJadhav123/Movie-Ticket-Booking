@@ -5,13 +5,10 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 import AuthLayout from '../components/AuthLayout';
 
-// Always use relative URLs in production so Vercel proxy routes to Render correctly
-const getApiBase = () => {
-  const envUrl = import.meta.env.VITE_BACKEND_URL || '';
-  if (import.meta.env.PROD && (!envUrl || envUrl.includes('localhost'))) return '';
-  return envUrl.replace(/\/+$/, '').replace(/\/api$/, '');
-};
-const API_BASE = getApiBase();
+// In production: ALWAYS use relative URLs (empty string)
+// Vercel proxy (vercel.json) forwards /api/* to Render.
+// An absolute Render URL here bypasses the proxy and causes CORS errors.
+const API_BASE = import.meta.env.PROD ? '' : (import.meta.env.VITE_BACKEND_URL || '');
 
 
 export default function ResetPassword() {

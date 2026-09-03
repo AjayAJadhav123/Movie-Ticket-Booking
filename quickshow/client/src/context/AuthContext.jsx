@@ -4,8 +4,9 @@ import axios from 'axios';
 const AuthContext = createContext();
 
 const getApiBase = () => {
+  // In production: ALWAYS use relative URLs so Vercel proxy routes to Render
+  if (import.meta.env.PROD) return '';
   let envUrl = import.meta.env.VITE_BACKEND_URL || '';
-  if (import.meta.env.PROD && envUrl.includes('localhost')) return '';
   envUrl = envUrl.replace(/\/+$/, '');
   if (envUrl.endsWith('/api')) envUrl = envUrl.substring(0, envUrl.length - 4);
   return envUrl;
