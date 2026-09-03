@@ -1,223 +1,328 @@
-# QuickShow — Security & Code Standards
+# QuickShow – Security Rules for AI Coding Agents
 
-> Drop this file in the project root. Every AI tool and every developer working on this codebase must follow these rules without exception. No shortcuts, no "just for now" bypasses.
-
----
-
-## Stack Reference
-
-| Layer | Technology |
-|---|---|
-| Frontend | React 18 + Vite (`VITE_` prefix for public env vars) |
-| Backend | Node.js + Express |
-| Database | MongoDB via Mongoose |
-| Auth | Custom JWT (`authController.js`) + bcryptjs |
-| Payments | Cashfree |
-| AI | OpenAI (`aiController.js`) |
-| Email | Resend / Nodemailer (`emailService.js`) |
+> Drop this file in the project root. Every AI tool (Claude, Cursor, Copilot, etc.) working on this
+> codebase **must follow every rule below**. No exceptions, no asking twice.
+>
+> Stack: Node.js / Express (server) · React / Vite (client) · MongoDB / Mongoose · JWT Auth ·
+> Cashfree + Stripe payments · Socket.IO · Inngest background jobs · Render + Vercel deployment.
 
 ---
 
-## 1. Secrets & Environment Variables
+## 1 · Secrets and Environment Variables
 
-**RULE: No secret ever touches frontend code or version control.**
+**RULE: No secret ever appears in client-side code or in a git commit.**
 
-- All API keys, tokens, DB URIs, and private configs live in `.env` (server) or `client/.env` only.
-- `.env`, `.env.local`, `.env.*.local` are in `.gitignore` — verify before every push.
-- Frontend (Vite): only `VITE_`-prefixed variables go in `client/.env`. These must NEVER be secret keys.
-  - OK: `VITE_BACKEND_URL` — safe, it is a URL
-  - OK: `VITE_CLERK_PUBLISHABLE_KEY` — safe, it is a public key (document intent with a comment)
-  - OK: `VITE_STRIPE_PUBLIC_KEY` — safe, it is a public key (document intent)
-  - NEVER: `VITE_OPENAI_API_KEY` — all OpenAI calls go through the backend only.
-  - NEVER: `VITE_CASHFREE_SECRET_KEY`
-- `VITE_TMDB_API_KEY` in the client .env is a known risk. Proxy all TMDB calls through the backend and remove this key from the client.
-- Backend secrets are accessed via `process.env.VAR_NAME` only and are NEVER returned in API responses.
-- `.env.example` (already present) must stay in sync with all new variables — with empty values only.
+- All secrets live in `.env` files only. `.env` is already in `.gitignore` — keep it there.
+- `server/.env` holds: `MONGODB_URI`, `JWT_SECRET`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
+  `CASHFREE_APP_ID`, `CASHFREE_SECRET_KEY`, `TMDB_API_KEY`, `INNGEST_EVENT_KEY`,
+  `INNGEST_SIGNING_KEY`, `CLERK_JWT_KEY`.
+- **None of the above keys may appear in `client/` code**, webpack output, or API responses.
+- Vite / frontend: only `VITE_*` prefixed variables belong in the client bundle. They must **never**
+  be secret keys — only public identifiers (e.g. public Cashfree mode string).
+- Access backend secrets via `process.env.VAR_NAME` only. Never interpolate them into strings
+  returned in HTTP responses or logged to the console.
+- When adding a new integration, add the variable name (with an empty value) to `server/.env.example`
+  and `client/.env.example` immediately.
+- If a value is intentionally public (e.g. Stripe publishable key, Cashfree mode), add an explicit
+  comment: `// PUBLIC KEY — intentionally exposed`.
 
----
+```js
+// ✅ Correct
+const cashfree = new Cashfree(CFEnvironment.SANDBOX, process.env.CASHFREE_APP_ID, process.env.CASHFREE_SECRET_KEY);
 
-## 2. Rate Limiting
-
-**RULE: Every public-facing endpoint has rate limiting. No exceptions.**
-
-The project already uses `express-rate-limit` in `adminAuthRoutes.js`. Apply the same pattern everywhere:
-
-| Endpoint Type | Limit |
-|---|---|
-| Auth (login, register, OTP, forgot-password) | 5 req / 15 min per IP |
-| General API | 60 req / min per IP |
-| AI / LLM proxy (`/api/ai/*`) | 10 req / min per user |
-| File uploads (if added) | 5 req / min per IP |
-
-- Always return `429 Too Many Requests` with a `Retry-After` header.
-- Never swallow rate limit errors on the frontend — show a clear user-facing message.
+// ❌ Never
+const cashfree = new Cashfree(1, 'CFxxxxxx', 'cfsk_ma_test_...');
+```
 
 ---
 
-## 3. Input Validation & Sanitization
+## 2 · Rate Limiting
 
-**RULE: Validate and sanitize everything on the server. Client-side validation is UX only.**
+**RULE: Every public-facing Express route must be covered by a rate limiter.**
 
-- Use a schema validation library for all incoming request bodies. Recommended: Zod or Joi.
-- Validate: data type, string length limits, required fields, allowed enum values, email format.
-- Sanitize all string inputs before storing or displaying them.
-- Use Mongoose (already in use) — never interpolate user input into raw MongoDB queries.
-- For any future file uploads: validate MIME type, file extension, AND file size server-side.
-- Reject invalid input with `400 Bad Request` and log the attempt server-side.
+The project already uses `express-rate-limit`. Maintain and extend these limits:
 
----
+| Route group | Limit | Window |
+|---|---|---|
+| Auth (`/api/user/login`, `/register`, `/forgot-password`, OTP) | 15 req | 15 min |
+| Booking / Payment (`/api/booking/*`) | 20 req | 15 min |
+| AI chat (`/api/ai/*`) | 10 req | 1 min |
+| General API | 100 req | 15 min |
+| File / image uploads | 5 req | 1 min |
 
-## 4. Authentication & Authorization
+- Return `429` with `Retry-After` header — already configured via `standardHeaders: true`.
+- Never silently swallow `429` in the frontend. Show a user-readable toast/message.
+- When adding a new route file, import and apply the appropriate limiter from the start.
 
-**RULE: Verify identity AND permission on every protected request.**
-
-- Passwords use bcryptjs (already in use). Minimum salt rounds: 12. Never store plain text.
-- JWTs are signed with `process.env.JWT_SECRET` (minimum 32 characters). Already in `authController.js`.
-- JWT expiry: user tokens 7d (current), admin tokens 24h (current). Consider shortening user tokens to 1d.
-- Refresh tokens not yet implemented. If added: store in httpOnly cookies, NEVER in localStorage.
-- `requireAuthMiddleware` + `requireAdminMiddleware` chain must be applied to ALL admin routes.
-- Always check both authentication (is this a valid user?) AND authorization (does this user own this resource?).
-- Add explicit ownership check: `if (resource.userId.toString() !== req.userId) return 403`
-
----
-
-## 5. Database Security
-
-**RULE: Always use Mongoose models and methods. Never concatenate user input into queries.**
-
-- Mongoose is in use — keep it that way for all database operations.
-- Never use ``, raw `eval`, or string-interpolated queries.
-- Sanitize inputs before passing to Mongoose.
-- Select only the fields you need. Avoid returning entire documents when a subset is enough.
-- Never return raw database errors to the client — they leak schema information.
-- MongoDB URI contains credentials — lives in `process.env.MONGODB_URI` only, never in source.
+```js
+// Adding a new route — always apply a limiter
+import rateLimit from 'express-rate-limit';
+const uploadLimiter = rateLimit({ windowMs: 60_000, max: 5, standardHeaders: true, legacyHeaders: false });
+router.post('/upload', uploadLimiter, requireAuth, handleUpload);
+```
 
 ---
 
-## 6. CORS Configuration
+## 3 · Input Validation and Sanitization
 
-**RULE: Never use wildcard CORS in production.**
+**RULE: Validate and sanitize all user input on the server before any DB write or downstream call.**
 
-- Explicitly whitelist only the domains that need access using `process.env.FRONTEND_URL`.
-- Restrict allowed HTTP methods to only what each route needs.
-- Never: `app.use(cors({ origin: '*' }))` in production.
+- The project does not yet use Zod or Joi systematically — add schema validation when writing new
+  controller functions.
+- For MongoDB / Mongoose: always use Mongoose schema types (type, required, maxlength, enum). Never
+  build raw query strings from user input.
+- Sanitize string fields before storing: trim whitespace, enforce `maxlength`.
+- Validate that ObjectIds are valid Mongo IDs before calling `findById()`.
+- File uploads: validate MIME type and extension server-side. Never trust `req.file.mimetype` alone —
+  use a magic-byte library such as `file-type`.
+- Reject invalid input with `400 Bad Request`. Include a clear field-level error message for the
+  client but never expose internal error details.
 
----
-
-## 7. HTTP Security Headers
-
-**RULE: Always keep helmet active. Never disable it to fix a loading error.**
-
-The project uses `helmet` in `server.js` (confirmed). Keep this configuration active.
-Required headers: Content-Security-Policy, X-Frame-Options: DENY, X-Content-Type-Options: nosniff, Strict-Transport-Security, Referrer-Policy: strict-origin-when-cross-origin.
-
-Any new third-party CDN added to the frontend must be added to the CSP — never disable CSP to fix a console error.
-
----
-
-## 8. File Upload Security
-
-**RULE: Validate, rename, and store uploads safely. (Applies when file uploads are added.)**
-
-This project does not currently have file uploads. When added:
-- Validate MIME type by reading file headers (magic bytes), not just Content-Type.
-- Size limits: 5MB for images, 25MB for documents.
-- Store in cloud bucket (S3, GCS, or Cloudinary) — never in local filesystem or web root.
-- Rename uploaded files to a UUID. Never use the original filename.
-- Never serve user-uploaded files with executable permissions.
+```js
+// ✅ Safe: Mongoose ObjectId check before query
+import mongoose from 'mongoose';
+if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'Invalid ID' });
+const doc = await Model.findById(req.params.id);
+```
 
 ---
 
-## 9. Error Handling & Logging
+## 4 · Authentication and Authorization
 
-**RULE: Never return internal error details to the client.**
+**RULE: Verify both identity and ownership on every protected request.**
 
-- Return generic messages: "Something went wrong" or "Server error".
-- Log full error details server-side with context: timestamp, route, req.userId if available.
-- Use correct HTTP status codes:
-  - 400 — bad input / validation failure
-  - 401 — not authenticated
-  - 403 — authenticated but not authorized
-  - 404 — resource not found
-  - 429 — rate limited
-  - 500 — unexpected server error
-- Never return 500 for a validation failure.
-- Never expose: error.message, error.stack, database field names, or query details in API responses.
+The project uses custom JWT (`jsonwebtoken`) + bcrypt. Rules:
+
+- Passwords: bcrypt with **minimum cost 12**. Never store plain-text or MD5/SHA1 hashes.
+- JWTs:
+  - Signed with `process.env.JWT_SECRET` (must be ≥ 32 random characters — enforce at startup).
+  - Short expiry: user tokens `24h`, admin tokens `8h`. Refresh token support should use httpOnly cookies.
+  - Verify token version (`decoded.tokenVersion === user.tokenVersion`) to support forced logout —
+    already implemented; do not remove this check.
+- Every protected route must use `requireAuthMiddleware` from `server/middleware/auth.js`.
+- Admin routes must additionally check `req.isAdminToken === true`. Never rely solely on a body/query
+  field claiming admin status.
+- Ownership checks: always confirm the resource belongs to `req.userId`. The ObjectId fix
+  (`booking.userId.toString() !== req.userId`) is in place — maintain this pattern everywhere.
+- Account lockout after 5 consecutive failed logins — add if not already present in `authController`.
+
+```js
+// ✅ Check identity AND ownership
+const booking = await Booking.findById(bookingId);
+if (!booking) return res.status(404).json({ message: 'Not found' });
+if (booking.userId.toString() !== req.userId) return res.status(403).json({ message: 'Forbidden' });
+```
 
 ---
 
-## 10. Dependency Security
+## 5 · Database Security (MongoDB / Mongoose)
 
-**RULE: Run npm audit after every install and before every deploy.**
+**RULE: All DB access goes through Mongoose models. No raw query string construction.**
 
-- Run `npm audit` on both `client/` and `server/` after installing packages.
-- Fix all high and critical severity issues before shipping.
-- Do not install packages that have not been updated in 2+ years for security-relevant functionality.
-- Never delete `package-lock.json`.
+- Never interpolate user input into query objects directly. Use typed schema fields.
+- Dangerous operators (`$where`, `$function`, JavaScript execution) are forbidden unless absolutely
+  required and independently reviewed.
+- Sanitize inputs that reach `.find()` or `.aggregate()` to prevent NoSQL injection (`{ $gt: '' }`
+  style attacks).
+- The MongoDB Atlas user should only have `readWrite` on the application database — not `atlasAdmin`.
+- Never return raw Mongoose error objects to the client — they expose field names and schema info.
+- Use `.lean()` for read-only queries to improve performance and to prevent accidental mutation.
+- Index fields used in frequent queries (`userId`, `showId`, `status`, `cashfreeOrderId`).
+
+```js
+// ✅ Safe: Mongoose typed query
+const bookings = await Booking.find({ userId: req.userId, status: 'confirmed' }).lean();
+
+// ❌ Never: user input as operator key
+const bookings = await Booking.find({ userId: req.body.filter }); // could be { $gt: '' }
+```
 
 ---
 
-## 11. XSS Prevention
+## 6 · CORS Configuration
+
+**RULE: No wildcard CORS in production. Explicit origin allowlist only.**
+
+Current allowlist lives in `server/server.js`. Rules:
+
+- Allowlist includes: `https://quickshow-eight.vercel.app`, `http://localhost:5173`,
+  `http://localhost:3000`, and `http://localhost:5001`.
+- When adding a new deployment domain, add it to the allowlist — not by widening the pattern.
+- `credentials: true` is required (auth cookies / headers). Do not remove.
+- Preflight `OPTIONS` requests are handled by the cors middleware — do not bypass with a blanket
+  `app.options('*', ...)`.
+
+---
+
+## 7 · HTTP Security Headers (Helmet)
+
+**RULE: Helmet is already applied in `server.js`. Do not remove or loosen its config.**
+
+Current directives include:
+
+- `Content-Security-Policy` scoped to known CDNs (Cashfree, TMDB, Google Fonts, Socket.IO CDN).
+- `X-Frame-Options: DENY` (clickjacking protection).
+- `X-Content-Type-Options: nosniff`.
+- `Strict-Transport-Security` (HSTS).
+- `X-Powered-By` removed.
+
+When adding a new external resource (CDN, API domain, iframe), update the `contentSecurityPolicy`
+directives in Helmet's config rather than removing CSP entirely.
+
+---
+
+## 8 · File Upload Security
+
+**RULE: Server-side validation of type, size, and name is mandatory for all uploads.**
+
+- Validate MIME type using magic bytes (`file-type` npm package), not just the `Content-Type` header.
+- Enforce size limits: **5 MB** for images, **25 MB** for documents.
+- Rename uploaded files to a UUID (`crypto.randomUUID()`). Never use `req.file.originalname` as the
+  stored filename.
+- Store files in a cloud bucket (S3 / Cloudinary / GCS). Never serve user uploads from the Express
+  static middleware.
+- Never grant executable permissions to upload directories.
+
+---
+
+## 9 · Error Handling and Logging
+
+**RULE: Generic messages to the client. Full context server-side.**
+
+- API responses to the client must never contain stack traces, Mongoose error objects, raw SQL errors,
+  or internal variable names.
+- Use correct status codes: `400` validation, `401` unauthenticated, `403` forbidden, `404` not found,
+  `429` rate limited, `500` unhandled server error.
+- Every `catch` block must log: timestamp, route, sanitized input summary, error message, and user ID
+  if available.
+- Cashfree / Stripe errors: log the full upstream error server-side. Return only a sanitized
+  `message` field to the client. The error-masking bug (returning 500 for Cashfree 401) has been
+  fixed — do not re-introduce generic masking that hides the root cause.
+- Set up a Sentry / Logtail / Datadog integration in production for persistent error tracking.
+
+```js
+// ✅ Correct error response pattern
+catch (err) {
+  console.error('[createCashfreeOrder]', { userId: req.userId, err: err.message });
+  const status = err.response?.status || 500;
+  return res.status(status).json({ success: false, message: err.response?.data?.message || 'Payment error' });
+}
+```
+
+---
+
+## 10 · Dependency Security
+
+**RULE: Audit dependencies after every `npm install`. Pin versions in production.**
+
+- Run `npm audit` in both `server/` and `client/` after installing packages. Fix `high` and
+  `critical` issues before merging.
+- Do not install packages that have had no security updates in ≥ 2 years.
+- Use exact versions (`"express": "4.19.2"`) in production `package.json` files, not ranges.
+- Review `postinstall` / `preinstall` scripts in new packages before accepting them.
+- Known dependency note: `cashfree-pg` v6.0.4 defaults `XApiVersion` to `2026-01-01` which the
+  Sandbox rejects — the fix (`cashfree.XApiVersion = "2023-08-01"`) must be preserved.
+
+---
+
+## 11 · XSS Prevention
 
 **RULE: Never render dynamic user content as raw HTML.**
 
-- No `dangerouslySetInnerHTML` in React unless content is sanitized with DOMPurify first.
-- No `eval()`, `new Function()`, or `innerHTML` assignments with dynamic user content.
-- No inline `<script>` tags — move all JS to external files to allow CSP enforcement.
-- The AI assistant chat responses must be rendered as plain text or sanitized with DOMPurify — never rendered raw as HTML.
+- React's JSX escapes output by default — do not bypass this with `dangerouslySetInnerHTML`.
+- If rich text from a user or LLM must be rendered as HTML, sanitize it with `DOMPurify` first.
+- Do not use `eval()`, `new Function()`, or `innerHTML` with dynamic content anywhere in `client/`.
+- Avoid inline `<script>` tags in JSX. Move JavaScript to module files to enable CSP enforcement.
+- LLM / AI responses rendered in `AIChat.jsx` must be treated as untrusted — sanitize before display.
+
+```js
+// ✅ Safe: let React escape
+<p>{userGeneratedContent}</p>
+
+// ✅ Safe: sanitize before dangerouslySetInnerHTML
+import DOMPurify from 'dompurify';
+<div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(llmOutput) }} />
+
+// ❌ Never
+<div dangerouslySetInnerHTML={{ __html: llmOutput }} />
+```
 
 ---
 
-## 12. AI / LLM-Specific Rules (OpenAI)
+## 12 · Payment and Booking Security (Cashfree + Stripe)
 
-**RULE: Treat LLM inputs and outputs as untrusted. Protect the token budget.**
+**RULE: Never trust client-supplied payment amounts or status. Always verify server-side.**
 
-- NEVER call OpenAI directly from the frontend. All LLM calls go through `/api/ai/*` backend endpoints.
-- `OPENAI_API_KEY` must NEVER appear in any VITE_ variable or client code.
-- Sanitize user input before passing to the LLM to prevent prompt injection.
-- `max_tokens` is already set to 1000 in `aiController.js`. Do not remove this limit.
-- Log token usage per user (prompt + completion tokens) to detect abuse early.
-- Implement per-user token budgets or session-based rate limits to prevent cost attacks.
-- Validate and sanitize LLM output before rendering in the UI — AI-generated HTML is an XSS risk.
+QuickShow-specific payment rules:
+
+- The booking amount is always calculated **server-side** from the show's database price, never from
+  `req.body.amount`.
+- After Cashfree checkout, the `/api/booking/verify-cashfree-payment` endpoint must call the Cashfree
+  API to confirm `payment_status === 'SUCCESS'` before marking a booking `confirmed`. Do not skip
+  this step.
+- Cashfree `return_url` and `notify_url` must point to the backend's own domain, not a user-supplied
+  URL.
+- Stripe webhook events must be verified with `stripe.webhooks.constructEvent()` using
+  `STRIPE_WEBHOOK_SECRET`. Never trust unverified webhook payloads.
+- Seat locks released on payment failure must go through the unlock endpoint — do not skip cleanup.
+- Do not expose `paymentSessionId`, `orderId`, or payment credentials in frontend error messages or
+  console logs.
+- Cashfree environment must be consistent: `SANDBOX` ↔ sandbox credentials ↔ sandbox SDK mode.
+  `PRODUCTION` ↔ production credentials. Mismatches cause authentication failures.
 
 ---
 
-## 13. Pre-Deploy Checklist
+## 13 · AI / LLM-Specific Rules (AIChat + ai-service)
 
-Run through this before EVERY deploy. Takes 2 minutes.
+**RULE: Treat LLM inputs and outputs as untrusted data.**
 
-- [ ] .env files are NOT committed to git (`git status` check)
-- [ ] All secrets are set in the hosting platform env config (Render, Vercel)
-- [ ] `NODE_ENV=production` is set on the server
-- [ ] Debug logging and verbose error output are disabled in production
-- [ ] MongoDB is NOT publicly exposed (IP allowlist configured in Atlas)
-- [ ] HTTPS is enforced on all endpoints
-- [ ] Rate limiting is active on all public auth endpoints
-- [ ] CORS is restricted to the production frontend URL only
-- [ ] Helmet is active and CSP is not disabled
-- [ ] `npm audit` run on both client and server — no high/critical issues open
-- [ ] No hardcoded API keys, tokens, or secrets in any source file
-- [ ] Admin routes all use `requireAuthMiddleware` + `requireAdminMiddleware`
-- [ ] AI endpoints have per-user rate limiting active
-- [ ] Unused or test API routes are removed or protected
-- [ ] `VITE_TMDB_API_KEY` proxied through backend (or acknowledged risk documented)
+- The `OPENAI_API_KEY` (or equivalent) lives in `ai-service/.env` only. It must never appear in
+  client-side code or be proxied to the browser.
+- All LLM API calls go through the `ai-service` backend. The browser calls `/api/ai/*`, never the
+  LLM provider directly.
+- Set `max_tokens` on every LLM call. Failing to do so exposes the app to runaway cost attacks.
+- Sanitize user messages before passing to the LLM (strip prompt injection patterns where possible).
+- Validate and sanitize LLM output before rendering in `AIChat.jsx`. Generated HTML is an XSS vector.
+- Log token usage per user per session. Implement per-user token budgets to cap daily spend.
+
+---
+
+## Pre-Deploy Gate (Run before every production deploy)
+
+```
+[ ] server/.env is NOT committed to git (`git status` shows no .env files)
+[ ] All secrets are set in Render environment variables (not hardcoded)
+[ ] All secrets are set in Vercel environment variables
+[ ] NODE_ENV=production on the server
+[ ] Debug logging / verbose console.log statements removed or gated behind NODE_ENV check
+[ ] MongoDB Atlas IP allowlist does not include 0.0.0.0/0 (open to the world)
+[ ] HTTPS enforced end-to-end (Render + Vercel both force HTTPS by default — verify)
+[ ] Rate limiting is active on all /api/* routes
+[ ] CORS allowlist contains only the production Vercel domain + no wildcards
+[ ] Cashfree environment = PRODUCTION with production credentials (not sandbox)
+[ ] Stripe is in live mode with live keys (not test)
+[ ] npm audit shows 0 high/critical vulnerabilities in both server/ and client/
+[ ] Unused test routes / scripts removed from server/routes/
+```
 
 ---
 
 ## Quick Reference
 
-| Area | Rule | Status in QuickShow |
+| Area | Rule | Project-Specific Note |
 |---|---|---|
-| Secrets | Keys in `.env` only. Never in frontend code | `VITE_TMDB_API_KEY` is a known gap |
-| Rate Limiting | 5 req/15 min auth; 60 req/min general | `express-rate-limit` installed — expand coverage |
-| Input Validation | Server-side schema validation required | Add Zod to all route handlers |
-| Auth | bcrypt min cost 12; JWT short expiry | bcryptjs in use; admin tokens 24h OK |
-| DB Security | Mongoose only. No raw queries | Mongoose in use |
-| CORS | No wildcard in production | Set `FRONTEND_URL` env var explicitly |
-| HTTP Headers | CSP, HSTS, X-Frame-Options: DENY | helmet in use — never disable |
-| File Uploads | MIME + extension + UUID rename | Not yet implemented — follow rules when added |
-| Error Handling | Generic messages to client; full logs server-side | Partially done — audit new controllers |
-| Dependencies | `npm audit` after every install | Run before every PR merge |
-| XSS | No `dangerouslySetInnerHTML`, no `eval()` | Currently clean |
-| AI / LLM | Sanitize input; server-side key; token budgets | `max_tokens` set; add per-user logging |
-| Deploy Gate | Run checklist before every ship | See Section 13 |
+| **Secrets** | `.env` only. Never in `client/`. | `CASHFREE_SECRET_KEY`, `JWT_SECRET`, `STRIPE_SECRET_KEY` are backend-only |
+| **Rate Limiting** | Auth: 15/15min. API: 100/15min. AI: 10/1min. | `authRoutes.js` already has limiter — extend to new routes |
+| **Input Validation** | Mongoose schema + ObjectId check on every param | `mongoose.isValidObjectId()` before `findById()` |
+| **Auth** | bcrypt ≥ cost 12. JWT ≥ 32-char secret. Short expiry. | Check `tokenVersion` — do not remove |
+| **Ownership** | `.toString()` comparison on ObjectIds | Fixed in `getBookingById` — maintain the pattern |
+| **DB** | Mongoose models only. No raw string queries. | Use `.lean()` for read-only |
+| **CORS** | Explicit origin allowlist. No `*` in prod. | Allowlist in `server.js` |
+| **Headers** | Helmet already applied. Do not loosen CSP. | Add new CDN domains to CSP rather than removing it |
+| **Uploads** | MIME + size + UUID rename. Cloud storage only. | Never `express.static()` user uploads |
+| **Errors** | Generic to client. Full context in server logs. | Do not re-introduce 500 masking over Cashfree errors |
+| **Deps** | `npm audit` after every install. Exact versions in prod. | `cashfree.XApiVersion = "2023-08-01"` must stay |
+| **XSS** | No `dangerouslySetInnerHTML` without DOMPurify. | Apply to AI chat output rendering |
+| **Payments** | Server-side amount calculation. Verify after checkout. | `verifyCashfreePayment` endpoint is mandatory — never skip |
+| **LLM** | Server-side key. `max_tokens` always set. Sanitize output. | Route all LLM calls through `ai-service` |
+| **Deploy** | Run the 12-point gate above before every ship. | Switch Cashfree env + Stripe to live mode |

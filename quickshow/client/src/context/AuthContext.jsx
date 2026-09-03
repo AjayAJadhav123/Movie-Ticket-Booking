@@ -73,6 +73,11 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const handleAdminLogout = () => {
+    localStorage.removeItem('adminToken');
+    setAdminToken(null);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -83,6 +88,7 @@ export const AuthProvider = ({ children }) => {
         adminToken,
         login: handleLogin,
         logout: handleLogout,
+        adminLogout: handleAdminLogout,
       }}
     >
       {children}

@@ -3,7 +3,7 @@
 
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-import Movie from './models/Movie.js';
+import Movie from '../models/Movie.js';
 
 dotenv.config();
 

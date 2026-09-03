@@ -39,11 +39,11 @@ export default function ViewBookings() {
   const getStatusColor = (status) => {
     switch (status) {
       case 'confirmed':
-        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+        return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
       case 'pending':
-        return 'bg-amber-100 text-amber-800 border-amber-200';
+        return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
       case 'cancelled':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-red-500/10 text-red-400 border-red-500/20';
       default:
         return 'bg-slate-800 text-slate-200 border-slate-800/50';
     }
@@ -108,7 +108,7 @@ export default function ViewBookings() {
       ) : (
         <div className="bg-[#0f172a] rounded-xl shadow-sm border border-slate-800/50 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
+            <table className="w-full min-w-[700px] text-sm text-left">
               <thead className="bg-[#09090b] text-slate-500 font-semibold border-b border-slate-800/50 uppercase tracking-wider text-xs">
                 <tr>
                   <th className="px-6 py-4">Booking ID & User</th>
@@ -118,9 +118,9 @@ export default function ViewBookings() {
                   <th className="px-6 py-4 text-center">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-800/50">
                 {filteredBookings.map((booking) => (
-                  <tr key={booking._id} className="hover:bg-[#09090b] transition-colors">
+                  <tr key={booking._id} className="hover:bg-[#0f172a] transition-colors">
                     <td className="px-6 py-4">
                       <div className="font-mono text-xs text-red-500 mb-1">
                         #{booking._id.slice(-6).toUpperCase()}

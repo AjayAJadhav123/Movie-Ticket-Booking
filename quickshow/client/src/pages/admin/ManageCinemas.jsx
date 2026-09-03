@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { Plus, Edit2, Trash2, Eye, MapPin, Phone, Mail, XCircle, CheckCircle } from 'lucide-react';
 import Loading from '../../components/Loading';
 import { toast } from 'react-hot-toast';
+import DarkSelect from '../../components/admin/DarkSelect';
 
 export default function ManageCinemas() {
   const { apiClient } = useApp();
@@ -185,20 +186,24 @@ export default function ManageCinemas() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="input"
           />
-          <select value={cityFilter} onChange={(e) => setCityFilter(e.target.value)} className="input">
-            <option value="">All Cities</option>
-            {cities.map((city) => (
-              <option key={city} value={city}>
-                {city}
-              </option>
-            ))}
-          </select>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="input">
-            <option value="">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="maintenance">Maintenance</option>
-          </select>
+          <DarkSelect
+            value={cityFilter}
+            onChange={(e) => setCityFilter(e.target.value)}
+            options={[
+              { value: '', label: 'All Cities' },
+              ...cities.map((city) => ({ value: city, label: city }))
+            ]}
+          />
+          <DarkSelect
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            options={[
+              { value: '', label: 'All Status' },
+              { value: 'active', label: 'Active' },
+              { value: 'inactive', label: 'Inactive' },
+              { value: 'maintenance', label: 'Maintenance' },
+            ]}
+          />
         </div>
       </div>
 
@@ -227,10 +232,10 @@ export default function ManageCinemas() {
                 <span
                   className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
                     cinema.status === 'active'
-                      ? 'bg-green-100 text-green-700'
+                      ? 'bg-emerald-500/10 text-emerald-400'
                       : cinema.status === 'inactive'
-                      ? 'bg-red-100 text-red-700'
-                      : 'bg-yellow-100 text-yellow-700'
+                      ? 'bg-red-500/10 text-red-400'
+                      : 'bg-amber-500/10 text-amber-400'
                   }`}
                 >
                   {cinema.status}
@@ -254,10 +259,10 @@ export default function ManageCinemas() {
                 <button onClick={() => openEditModal(cinema)} className="p-2 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg">
                   <Edit2 size={18} />
                 </button>
-                <button onClick={() => handleDelete(cinema._id, false)} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                <button onClick={() => handleDelete(cinema._id, false)} className="p-2 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg">
                   <XCircle size={18} />
                 </button>
-                <button onClick={() => handleDelete(cinema._id, true)} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                <button onClick={() => handleDelete(cinema._id, true)} className="p-2 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg">
                   <Trash2 size={18} />
                 </button>
               </div>
@@ -284,7 +289,7 @@ export default function ManageCinemas() {
                 <label className="block text-sm font-medium mb-1">Address*</label>
                 <textarea required value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} className="input w-full" rows="3" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Phone*</label>
                   <input type="tel" required value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="input w-full" />
@@ -296,7 +301,7 @@ export default function ManageCinemas() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Facilities</label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 gap-2">
                   {facilityOptions.map((facility) => (
                     <label key={facility} className="flex items-center gap-2 cursor-pointer text-sm">
                       <input type="checkbox" checked={formData.facilities.includes(facility)} onChange={() => toggleFacility(facility)} className="rounded text-red-500 focus:ring-red-500/20" />

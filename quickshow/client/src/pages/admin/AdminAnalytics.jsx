@@ -5,6 +5,7 @@ import {
   AlertCircle, RefreshCw, Calendar, Building2, Film,
   Clock, Activity, Monitor, ChevronDown,
 } from 'lucide-react';
+import DarkSelect from '../../components/admin/DarkSelect';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   AreaChart, Area,
@@ -184,16 +185,12 @@ export default function AdminAnalytics() {
           {/* Controls */}
           <div className="flex flex-wrap items-center gap-3">
             {/* Date range selector */}
-            <div className="relative">
-              <select
+              <DarkSelect
                 value={range}
                 onChange={e => setRange(e.target.value)}
-                className="appearance-none pl-3 pr-8 py-2 text-sm rounded-xl border border-slate-800/50 bg-[#0f172a] font-medium text-slate-300 shadow-sm focus:ring-2 focus:ring-red-500/20 outline-none cursor-pointer"
-              >
-                {RANGES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-              </select>
-              <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            </div>
+                options={RANGES}
+                className="w-40"
+              />
 
             {/* Custom range inputs */}
             {range === 'custom' && (
@@ -208,18 +205,16 @@ export default function AdminAnalytics() {
 
             {/* Group-by (revenue tab) */}
             {activeTab === 'revenue' && (
-              <div className="relative">
-                <select
-                  value={groupBy}
-                  onChange={e => setGroupBy(e.target.value)}
-                  className="appearance-none pl-3 pr-8 py-2 text-sm rounded-xl border border-slate-800/50 bg-[#0f172a] font-medium text-slate-300 shadow-sm focus:ring-2 focus:ring-red-500/20 outline-none cursor-pointer"
-                >
-                  <option value="day">Daily</option>
-                  <option value="week">Weekly</option>
-                  <option value="month">Monthly</option>
-                </select>
-                <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              </div>
+              <DarkSelect
+                value={groupBy}
+                onChange={e => setGroupBy(e.target.value)}
+                options={[
+                  { value: 'day', label: 'Daily' },
+                  { value: 'week', label: 'Weekly' },
+                  { value: 'month', label: 'Monthly' },
+                ]}
+                className="w-32"
+              />
             )}
 
             <button
@@ -235,13 +230,13 @@ export default function AdminAnalytics() {
 
         {/* ── Error ──────────────────────────────────────────────────────── */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3">
             <AlertCircle size={20} className="text-red-500 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="font-semibold text-red-900">Error</p>
-              <p className="text-red-700 text-sm">{error}</p>
+              <p className="font-semibold text-red-400">Error</p>
+              <p className="text-red-400/80 text-sm">{error}</p>
             </div>
-            <button onClick={fetchAll} className="text-red-600 text-sm font-semibold underline">Retry</button>
+            <button onClick={fetchAll} className="text-red-400 text-sm font-semibold underline hover:text-red-300">Retry</button>
           </div>
         )}
 
@@ -500,7 +495,7 @@ export default function AdminAnalytics() {
                 {bookingStatus.paymentStatusDistribution?.length > 0 && (
                   <div className="bg-[#0f172a] rounded-xl border border-slate-800/50 shadow-sm p-6 mb-8">
                     <SectionHeading icon={Activity} title="Payment Status" />
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       {bookingStatus.paymentStatusDistribution.map((p, i) => (
                         <div key={i} className="text-center p-4 bg-[#09090b] rounded-xl border border-slate-800/50">
                           <p className="text-2xl font-extrabold text-white">{fmt(p.count)}</p>
@@ -516,7 +511,7 @@ export default function AdminAnalytics() {
                   <div className="bg-[#0f172a] rounded-xl border border-slate-800/50 shadow-sm p-6">
                     <SectionHeading icon={Clock} title="Recent Bookings" />
                     <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
+                      <table className="w-full min-w-[600px] text-sm">
                         <thead>
                           <tr className="border-b border-slate-800/50">
                             {['Movie', 'Show Date', 'Seats', 'Amount', 'Status', 'Payment', 'Created'].map(h => (
@@ -576,7 +571,7 @@ export default function AdminAnalytics() {
                 <div className="bg-[#0f172a] rounded-xl border border-slate-800/50 shadow-sm p-6">
                   <SectionHeading icon={Film} title="Movie Performance Table" />
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="w-full min-w-[600px] text-sm">
                       <thead>
                         <tr className="border-b border-slate-800/50">
                           {['#', 'Movie', 'Revenue', 'Bookings', 'Tickets', 'Shows', 'Rating'].map(h => (
@@ -614,7 +609,7 @@ export default function AdminAnalytics() {
               <div className="bg-[#0f172a] rounded-xl border border-slate-800/50 shadow-sm p-6 mt-8">
                 <SectionHeading icon={Calendar} title="Popular Shows" sub="By revenue for selected period" />
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full min-w-[600px] text-sm">
                     <thead>
                       <tr className="border-b border-slate-800/50">
                         {['Movie', 'Date', 'Time', 'Theatre', 'Screen', 'Occupancy', 'Revenue', 'Bookings'].map(h => (
@@ -680,7 +675,7 @@ export default function AdminAnalytics() {
                   <div className="bg-[#0f172a] rounded-xl border border-slate-800/50 shadow-sm p-6 mb-8">
                     <SectionHeading icon={Building2} title="Registered Cinemas" />
                     <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
+                      <table className="w-full min-w-[600px] text-sm">
                         <thead>
                           <tr className="border-b border-slate-800/50">
                             {['Name', 'City', 'Status', 'Screens', 'Capacity'].map(h => (

@@ -90,10 +90,10 @@ export default function SeatGrid({ show, onSeatsChange, socketLockedSeats = new 
       </div>
 
       <div className="flex justify-center mb-6 md:mb-8 w-full">
-        <div className="inline-flex flex-col gap-2 min-w-fit items-center">
+        <div className="inline-flex flex-col gap-1 md:gap-2 min-w-fit items-center">
           {layout.map((rowItem) => (
-            <div key={rowItem.row} className="flex items-center gap-2 md:gap-3">
-              <div className="w-5 md:w-6 text-xs font-bold text-slate-400 text-right shrink-0">
+            <div key={rowItem.row} className="flex items-center gap-1.5 md:gap-3">
+              <div className="w-5 md:w-6 text-[10px] md:text-xs font-bold text-slate-400 text-right shrink-0">
                 {rowItem.row}
               </div>
               

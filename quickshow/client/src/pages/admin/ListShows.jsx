@@ -96,7 +96,7 @@ export default function ListShows() {
       ) : (
         <div className="bg-[#0f172a] rounded-xl shadow-sm border border-slate-800/50 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
+            <table className="w-full min-w-[700px] text-sm text-left">
               <thead className="bg-[#09090b] text-slate-500 font-semibold border-b border-slate-800/50 uppercase tracking-wider text-xs">
                 <tr>
                   <th className="px-6 py-4">Movie</th>
@@ -107,9 +107,9 @@ export default function ListShows() {
                   <th className="px-6 py-4 text-center">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-800/50">
                 {filteredShows.map((show) => (
-                  <tr key={show._id} className="hover:bg-[#09090b] transition">
+                  <tr key={show._id} className="hover:bg-slate-800/30 transition">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-14 bg-slate-800 rounded-md overflow-hidden shrink-0">
@@ -153,8 +153,8 @@ export default function ListShows() {
                         return (
                           <div className="flex flex-col items-center gap-1">
                             <span className={`px-2.5 py-1 rounded-md text-xs font-bold inline-block ${
-                              pct < 10 ? 'bg-red-100 text-red-700' :
-                              pct < 50 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                              pct < 10 ? 'bg-red-500/10 text-red-400' :
+                              pct < 50 ? 'bg-amber-500/10 text-amber-400' : 'bg-emerald-500/10 text-emerald-400'
                             }`}>
                               {available} / {show.totalSeats}
                             </span>
@@ -165,7 +165,7 @@ export default function ListShows() {
                     <td className="px-6 py-4 text-center">
                       <button
                         onClick={() => handleDeleteShow(show._id)}
-                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition"
+                        className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition"
                         title="Delete Show"
                       >
                         <Trash2 size={18} />

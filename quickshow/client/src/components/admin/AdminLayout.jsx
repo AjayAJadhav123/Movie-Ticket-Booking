@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { 
   LayoutDashboard, 
   BarChart3, 
@@ -51,8 +52,10 @@ export default function AdminLayout() {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
+  const { adminLogout } = useAuth();
+  
   const handleLogout = () => {
-    localStorage.removeItem('adminToken');
+    adminLogout();
     navigate('/admin');
   };
 
@@ -62,16 +65,15 @@ export default function AdminLayout() {
     <div className="flex h-screen bg-[#09090b] overflow-hidden font-sans text-slate-300">
       
       {/* Mobile Sidebar Overlay */}
-      {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-900/20 z-40 lg:hidden backdrop-blur-sm"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
+      <div 
+        className={`fixed inset-0 z-40 lg:hidden transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)' }}
+        onClick={() => setIsMobileMenuOpen(false)}
+      />
 
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-[260px] bg-[#0f172a] border-r border-slate-800/50 transition-transform duration-300 ease-in-out
+        fixed inset-y-0 left-0 z-50 w-[260px] bg-[#0f172a] border-r border-slate-800/50 transition-transform duration-300 ease-in-out will-change-transform
         lg:static lg:translate-x-0 flex flex-col shadow-xl
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>

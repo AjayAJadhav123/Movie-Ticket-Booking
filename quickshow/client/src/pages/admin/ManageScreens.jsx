@@ -5,6 +5,7 @@ import Loading from '../../components/Loading';
 import { toast } from 'react-hot-toast';
 
 import SeatLayoutEditor from '../../components/admin/SeatLayoutEditor';
+import DarkSelect from '../../components/admin/DarkSelect';
 
 export default function ManageScreens() {
   const { apiClient } = useApp();
@@ -234,17 +235,16 @@ export default function ManageScreens() {
 
       <div className="bg-[#0f172a] p-5 rounded-xl shadow-sm border border-slate-800/50 flex flex-col sm:flex-row gap-4 items-center">
         <label className="block text-sm font-medium">Select Cinema</label>
-        <select
+        <DarkSelect
           value={selectedCinema}
           onChange={(e) => setSelectedCinema(e.target.value)}
-          className="input w-full md:w-auto min-w-[300px]"
-        >
-          {cinemas.map((cinema) => (
-            <option key={cinema._id} value={cinema._id}>
-              {cinema.name} - {cinema.city}
-            </option>
-          ))}
-        </select>
+          options={cinemas.map((cinema) => ({
+            value: cinema._id,
+            label: `${cinema.name} - ${cinema.city}`
+          }))}
+          className="w-full md:w-auto min-w-[300px]"
+          placeholder="Select Cinema"
+        />
       </div>
 
       {/* Screen List */}
@@ -267,10 +267,10 @@ export default function ManageScreens() {
                 <span
                   className={`px-2 py-1 rounded text-xs font-semibold ${
                     screen.status === 'active'
-                      ? 'bg-green-100 text-green-700'
+                      ? 'bg-emerald-500/10 text-emerald-400'
                       : screen.status === 'inactive'
-                      ? 'bg-red-100 text-red-700'
-                      : 'bg-yellow-100 text-yellow-700'
+                      ? 'bg-red-500/10 text-red-400'
+                      : 'bg-amber-500/10 text-amber-400'
                   }`}
                 >
                   {screen.status}
@@ -299,7 +299,7 @@ export default function ManageScreens() {
                 </button>
                 <button
                   onClick={() => handleDelete(screen._id)}
-                  className="flex-1 btn-outline text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 text-xs py-2"
+                  className="flex-1 btn-outline text-red-500 border-red-500/20 hover:bg-red-500/10 hover:border-red-500/30 text-xs py-2"
                 >
                   Delete
                 </button>
@@ -317,20 +317,17 @@ export default function ManageScreens() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Cinema*</label>
-                <select
-                  required
+                <DarkSelect
                   value={formData.cinemaId}
                   onChange={(e) => setFormData({ ...formData, cinemaId: e.target.value })}
-                  className="input w-full"
+                  options={cinemas.map((cinema) => ({
+                    value: cinema._id,
+                    label: `${cinema.name} - ${cinema.city}`
+                  }))}
+                  className="w-full"
                   disabled={editMode}
-                >
-                  <option value="">Select Cinema</option>
-                  {cinemas.map((cinema) => (
-                    <option key={cinema._id} value={cinema._id}>
-                      {cinema.name} - {cinema.city}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Select Cinema"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Screen Name*</label>
@@ -338,13 +335,14 @@ export default function ManageScreens() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Screen Type*</label>
-                <select value={formData.screenType} onChange={(e) => setFormData({ ...formData, screenType: e.target.value })} className="input w-full">
-                  {screenTypeOptions.map((type) => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
+                <DarkSelect
+                  value={formData.screenType}
+                  onChange={(e) => setFormData({ ...formData, screenType: e.target.value })}
+                  options={screenTypeOptions.map((type) => ({ value: type, label: type }))}
+                  className="w-full"
+                />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Rows*</label>
                   <input type="number" required min="1" max="50" value={formData.rows} onChange={(e) => setFormData({ ...formData, rows: parseInt(e.target.value) })} className="input w-full" />
@@ -377,7 +375,7 @@ export default function ManageScreens() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Facilities</label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {facilityOptions.map((facility) => (
                     <label key={facility} className="flex items-center gap-2 cursor-pointer text-sm">
                       <input type="checkbox" checked={formData.facilities.includes(facility)} onChange={() => toggleFacility(facility)} className="rounded text-red-500 focus:ring-red-500/20" />
@@ -388,11 +386,16 @@ export default function ManageScreens() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Status*</label>
-                <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="input w-full">
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="maintenance">Maintenance</option>
-                </select>
+                <DarkSelect
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  options={[
+                    { value: 'active', label: 'Active' },
+                    { value: 'inactive', label: 'Inactive' },
+                    { value: 'maintenance', label: 'Maintenance' },
+                  ]}
+                  className="w-full"
+                />
               </div>
               <div className="pt-4 flex gap-3">
                 <button type="submit" className="btn-primary flex-1">Save Screen</button>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { toast } from 'react-hot-toast';
+import DarkSelect from '../../components/admin/DarkSelect';
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, Trash2, ChevronRight, ChevronLeft, Calendar, Clock, MapPin, DollarSign } from 'lucide-react';
 import SeatLayoutEditor from '../../components/admin/SeatLayoutEditor';
@@ -427,33 +428,35 @@ export default function AddShow() {
             <MapPin size={16} className="inline mr-2" />
             Cinema Location
           </label>
-          <select
+          <DarkSelect
             value={selectedCinemaId}
             onChange={handleCinemaChange}
-            className="w-full px-4 py-3 border border-slate-700 rounded-lg focus:outline-none focus:border-indigo-600"
-          >
-            <option value="">Select a Cinema</option>
-            {cinemas.map(cinema => (
-              <option key={cinema._id} value={cinema._id}>{cinema.name} - {cinema.city}</option>
-            ))}
-          </select>
+            options={[
+              { value: '', label: 'Select a Cinema' },
+              ...cinemas.map(cinema => ({
+                value: cinema._id,
+                label: `${cinema.name} - ${cinema.city}`
+              }))
+            ]}
+            className="w-full"
+          />
         </div>
 
         <div>
           <label className="block text-slate-300 font-semibold mb-2">Screen</label>
-          <select
+          <DarkSelect
             value={selectedScreenId}
             onChange={handleScreenChange}
             disabled={!selectedCinemaId || screens.length === 0}
-            className="w-full px-4 py-3 border border-slate-700 rounded-lg focus:outline-none focus:border-indigo-600 disabled:bg-slate-800"
-          >
-            <option value="">{selectedCinemaId ? 'Select a Screen' : 'Select Cinema first'}</option>
-            {screens.map(screen => (
-              <option key={screen._id} value={screen._id}>
-                {screen.name} ({screen.screenType})
-              </option>
-            ))}
-          </select>
+            options={[
+              { value: '', label: selectedCinemaId ? 'Select a Screen' : 'Select Cinema first' },
+              ...screens.map(screen => ({
+                value: screen._id,
+                label: `${screen.name} (${screen.screenType})`
+              }))
+            ]}
+            className="w-full"
+          />
         </div>
       </div>
     </div>

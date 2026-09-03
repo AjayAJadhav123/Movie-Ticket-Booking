@@ -74,7 +74,7 @@ export default function AdminLogin() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-red-600/10 rounded-full blur-[100px]" />
       </div>
 
-      <div className="relative z-10 w-full max-w-[420px]">
+      <div className="relative z-10 w-full max-w-sm md:max-w-md px-4 sm:px-0">
         {/* Premium Glass Panel */}
         <div className="bg-[#0f172a]/80 backdrop-blur-xl rounded-xl border border-white/5 shadow-2xl overflow-hidden">
           

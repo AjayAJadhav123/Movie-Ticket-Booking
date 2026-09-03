@@ -23,6 +23,7 @@ body {
   background: #0a0a0a;
   color: #f1f5f9;
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  color-scheme: dark;
 }
 
 /* Prevent text cursor/selection on interactive elements */
@@ -154,4 +155,9 @@ button, a, [role="button"], [role="tab"] {
 
 .__clerk_internal_mask {
   display: none !important;
+}
+
+/* ── Form Controls (Global) ───────────────────────────────── */
+.input {
+  @apply px-4 py-2.5 bg-[#0f172a] border border-slate-800/50 rounded-xl text-white text-sm focus:outline-none focus:border-red-500/50 focus:ring-2 focus:ring-red-500/20 transition-all placeholder:text-slate-500;
 }

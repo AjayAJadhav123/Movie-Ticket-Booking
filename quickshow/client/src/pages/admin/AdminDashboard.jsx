@@ -145,7 +145,7 @@ export default function AdminDashboard() {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-100 text-red-700 rounded-xl flex items-center gap-3 text-sm font-medium">
+        <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl flex items-center gap-3 text-sm font-medium">
           <AlertCircle size={18} className="text-red-500" />
           {error}
         </div>
@@ -167,7 +167,7 @@ export default function AdminDashboard() {
             label="Total Bookings" 
             value={counts.totalBookings?.toLocaleString()} 
             icon={Ticket} 
-            colorClass="bg-teal-50 text-teal-600"
+            colorClass="bg-teal-500/10 text-teal-400"
             secondaryLabel="Today's Bookings"
             secondaryValue="0"
           />
@@ -175,7 +175,7 @@ export default function AdminDashboard() {
             label="Total Movies" 
             value={counts.totalMovies?.toLocaleString()} 
             icon={Film} 
-            colorClass="bg-fuchsia-50 text-fuchsia-600"
+            colorClass="bg-fuchsia-500/10 text-fuchsia-400"
             secondaryLabel="Active Movies"
             secondaryValue={counts.totalMovies?.toLocaleString()}
           />
@@ -183,7 +183,7 @@ export default function AdminDashboard() {
             label="Total Users" 
             value={counts.totalUsers?.toLocaleString()} 
             icon={Users} 
-            colorClass="bg-blue-50 text-blue-600"
+            colorClass="bg-blue-500/10 text-blue-400"
             secondaryLabel="Active Users"
             secondaryValue={counts.totalUsers?.toLocaleString()}
           />
@@ -191,7 +191,7 @@ export default function AdminDashboard() {
             label="Total Cinemas" 
             value={counts.totalCinemas?.toLocaleString()} 
             icon={Building2} 
-            colorClass="bg-orange-50 text-orange-600"
+            colorClass="bg-orange-500/10 text-orange-400"
             secondaryLabel="Active Cinemas"
             secondaryValue={counts.totalCinemas?.toLocaleString()}
           />
@@ -199,7 +199,7 @@ export default function AdminDashboard() {
             label="Total Screens" 
             value={counts.totalScreens?.toLocaleString()} 
             icon={Monitor} 
-            colorClass="bg-sky-50 text-sky-600"
+            colorClass="bg-sky-500/10 text-sky-400"
             secondaryLabel="Active Screens"
             secondaryValue={counts.totalScreens?.toLocaleString()}
           />
@@ -207,7 +207,7 @@ export default function AdminDashboard() {
             label="Active Shows" 
             value={counts.totalShows?.toLocaleString()} 
             icon={Calendar} 
-            colorClass="bg-pink-50 text-pink-600"
+            colorClass="bg-pink-500/10 text-pink-400"
             secondaryLabel="Today's Shows"
             secondaryValue={counts.totalShows?.toLocaleString()}
           />
@@ -215,7 +215,7 @@ export default function AdminDashboard() {
             label="Occupancy Rate" 
             value={`${counts.occupancyPercentage}%`} 
             icon={TrendingUp} 
-            colorClass="bg-emerald-50 text-emerald-600"
+            colorClass="bg-emerald-500/10 text-emerald-400"
             secondaryLabel="Average Occupancy"
             secondaryValue={`${counts.occupancyPercentage}%`}
           />
@@ -247,7 +247,7 @@ export default function AdminDashboard() {
                  <p className="text-sm text-slate-500">Recent bookings will appear here.</p>
               </div>
             ) : (
-              <table className="w-full text-[13px] text-left border-collapse">
+              <table className="w-full min-w-[800px] text-[13px] text-left border-collapse">
                 <thead className="text-slate-400 uppercase text-[11px] font-semibold tracking-wider border-b border-slate-800/50 bg-slate-800/20">
                   <tr>
                     <th className="px-6 py-4 font-bold">Movie</th>
@@ -286,10 +286,10 @@ export default function AdminDashboard() {
                         ₹{booking.amount}
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider ${
-                          booking.status === 'confirmed' ? 'bg-emerald-50 text-emerald-600' :
-                          booking.status === 'cancelled' ? 'bg-red-50 text-red-600' :
-                          'bg-amber-50 text-amber-600'
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider border ${
+                          booking.status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                          booking.status === 'cancelled' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                          'bg-amber-500/10 text-amber-400 border-amber-500/20'
                         }`}>
                           {booking.status}
                         </span>

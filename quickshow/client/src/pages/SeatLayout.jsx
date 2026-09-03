@@ -124,16 +124,11 @@ export default function SeatLayout() {
         {
           showId,
           seats: selectedSeats,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
         }
       );
 
       if (response.data.success) {
-        const { orderId, bookingId, amount, paymentSessionId } = response.data.data;
+        const { orderId, bookingId, amount, paymentSessionId, environment } = response.data.data;
         
         // Load Cashfree script
         const scriptLoaded = await loadCashfreeScript();
@@ -152,7 +147,7 @@ export default function SeatLayout() {
               window.PaymentInterface = class PaymentInterface {};
             }
 
-            const cashfreeMode = import.meta.env.VITE_CASHFREE_MODE || (import.meta.env.PROD ? 'production' : 'sandbox');
+            const cashfreeMode = environment || 'sandbox';
             const cashfree = window.Cashfree({ mode: cashfreeMode });
             
             const checkoutOptions = {
@@ -238,14 +233,15 @@ export default function SeatLayout() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
             {/* Seat Grid */}
             <div className="lg:col-span-2">
-              <div className="flex items-center justify-between mb-6">
-                <h1 className="text-2xl md:text-3xl font-bold text-white">
-                  {movie?.title} - Select Seats
+              <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white leading-tight min-w-0 flex-1">
+                  <span className="block truncate">{movie?.title}</span>
+                  <span className="text-base sm:text-lg md:text-xl text-slate-400 font-semibold">Select Seats</span>
                 </h1>
                 {/* Socket.IO Connection Status */}
-                <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-slate-800">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 shrink-0">
                   <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                  <span className="text-xs md:text-sm font-medium text-slate-300">
+                  <span className="text-xs font-medium text-slate-300">
                     {isConnected ? 'Live' : 'Connecting...'}
                   </span>
                 </div>

@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import Loading from '../../components/Loading';
 import { Search, Trash2, Plus, AlertCircle, Loader, X, Film } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import DarkSelect from '../../components/admin/DarkSelect';
 
 export default function AdminMovies() {
   const { apiClient } = useApp();
@@ -154,16 +155,15 @@ export default function AdminMovies() {
               className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-800/50 focus:outline-none focus:border-red-500/50 focus:ring-2 focus:ring-red-500/20 transition"
             />
           </div>
-          <select
+          <DarkSelect
             value={selectedGenre}
             onChange={(e) => { setSelectedGenre(e.target.value); setPage(1); }}
-            className="px-4 py-2.5 rounded-xl border border-slate-800/50 focus:outline-none focus:border-red-500/50 bg-[#0f172a] min-w-[200px]"
-          >
-            <option value="">All Genres</option>
-            {genres.map((genre) => (
-              <option key={genre} value={genre}>{genre}</option>
-            ))}
-          </select>
+            options={[
+              { value: '', label: 'All Genres' },
+              ...genres.map((genre) => ({ value: genre, label: genre }))
+            ]}
+            className="min-w-[200px]"
+          />
           {(searchTerm || selectedGenre) && (
             <button
               onClick={() => { setSearchTerm(''); setSelectedGenre(''); setPage(1); }}
@@ -189,7 +189,7 @@ export default function AdminMovies() {
       ) : (
         <div className="bg-[#0f172a] rounded-xl shadow-sm border border-slate-800/50 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
+            <table className="w-full min-w-[640px] text-sm text-left">
               <thead className="bg-[#09090b] text-slate-500 font-semibold border-b border-slate-800/50 uppercase tracking-wider text-xs">
                 <tr>
                   <th className="px-6 py-4">Poster</th>
@@ -200,9 +200,9 @@ export default function AdminMovies() {
                   <th className="px-6 py-4 text-center">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-800/50">
                 {movies.map((movie) => (
-                  <tr key={movie._id} className="hover:bg-[#09090b] transition">
+                  <tr key={movie._id} className="hover:bg-slate-800/30 transition">
                     <td className="px-6 py-3">
                       {movie.poster_path ? (
                         <img src={`https://image.tmdb.org/t/p/w92${movie.poster_path}`} alt={movie.title} className="h-16 w-12 object-cover rounded-md shadow-sm" />
@@ -225,7 +225,7 @@ export default function AdminMovies() {
                       <button
                         onClick={() => deleteMovie(movie._id, movie.title)}
                         disabled={deleting === movie._id}
-                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
+                        className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition disabled:opacity-50"
                         title="Delete Movie"
                       >
                         {deleting === movie._id ? <Loader size={18} className="animate-spin" /> : <Trash2 size={18} />}
@@ -277,8 +277,8 @@ export default function AdminMovies() {
             
             <div className="p-6">
               {tmdbApiKeyMissing ? (
-                <div className="bg-red-50 text-red-700 p-4 rounded-xl flex gap-3">
-                  <AlertCircle size={20} />
+                <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl flex gap-3">
+                  <AlertCircle size={20} className="text-red-500" />
                   <div>
                     <p className="font-bold">TMDB API Key Missing</p>
                     <p className="text-sm">Please set TMDB_API_KEY in server/.env to use this feature.</p>

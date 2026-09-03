@@ -18,6 +18,7 @@ function buildDateRange(query) {
   if (range === 'custom') {
     if (!startDate || !endDate) return null;
     const s = new Date(startDate);
+    s.setHours(0, 0, 0, 0);
     const e = new Date(endDate);
     e.setHours(23, 59, 59, 999);
     if (isNaN(s) || isNaN(e) || s > e) return null;
@@ -31,19 +32,19 @@ function buildDateRange(query) {
     return { $gte: start, $lte: end };
   }
   if (range === '7d') {
-    const start = new Date(now); start.setDate(now.getDate() - 7);
+    const start = new Date(now); start.setDate(now.getDate() - 7); start.setHours(0, 0, 0, 0);
     return { $gte: start, $lte: now };
   }
   if (range === '30d') {
-    const start = new Date(now); start.setDate(now.getDate() - 30);
+    const start = new Date(now); start.setDate(now.getDate() - 30); start.setHours(0, 0, 0, 0);
     return { $gte: start, $lte: now };
   }
   if (range === '90d') {
-    const start = new Date(now); start.setDate(now.getDate() - 90);
+    const start = new Date(now); start.setDate(now.getDate() - 90); start.setHours(0, 0, 0, 0);
     return { $gte: start, $lte: now };
   }
   // Default: last 30 days
-  const start = new Date(now); start.setDate(now.getDate() - 30);
+  const start = new Date(now); start.setDate(now.getDate() - 30); start.setHours(0, 0, 0, 0);
   return { $gte: start, $lte: now };
 }
 

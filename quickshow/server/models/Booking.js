@@ -86,5 +86,8 @@ const bookingSchema = new mongoose.Schema(
 // Confirmed bookings should have expiresAt set to null/far future to prevent deletion
 bookingSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
+// Compound index for querying user bookings by status
+bookingSchema.index({ userId: 1, status: 1 });
+
 const Booking = mongoose.model('Booking', bookingSchema);
 export default Booking;

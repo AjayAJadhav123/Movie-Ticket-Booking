@@ -101,6 +101,7 @@ const showSchema = new mongoose.Schema(
 
 showSchema.index({ tmdbId: 1, date: 1, time: 1, theatre: 1, screen: 1 });
 showSchema.index({ date: 1, theatre: 1 });
+showSchema.index({ movieId: 1, date: 1 });
 
 const Show = mongoose.model('Show', showSchema);
 export default Show;

@@ -8,7 +8,7 @@ import emailService from '../services/emailService.js';
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Helper: Generate JWT
-const generateToken = (user) => {
+export const generateToken = (user) => {
   const secret = process.env.JWT_SECRET;
   if (!secret) throw new Error('JWT_SECRET is missing');
 
