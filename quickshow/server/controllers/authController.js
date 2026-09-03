@@ -108,7 +108,7 @@ export const register = async (req, res) => {
           existingUser.save(),
           new Promise((_, reject) => setTimeout(() => reject(new Error('MongoDB Timeout')), 5000))
         ]);
-        if (process.env.OTP_MODE === 'demo') {
+        if (process.env.OTP_MODE?.trim()?.toLowerCase() === 'demo') {
           return safeRespond(200, { 
             success: true, 
             message: 'Demo Mode Active. Please use the provided OTP.',
@@ -125,7 +125,7 @@ export const register = async (req, res) => {
 
           if (!emailResult.success) {
             console.error(`[OTP Error] Failed to send OTP to ***@${existingUser.email.split('@')[1]}: ${emailResult.error}`);
-            return safeRespond(400, { success: false, message: 'Failed to send OTP email. Please check if your email provider is correctly configured.' });
+            return safeRespond(400, { success: false, message: emailResult.error || 'Failed to send OTP email. Please check if your email provider is correctly configured.' });
           }
         } catch (emailErr) {
           console.error(`[OTP Error] Exception sending OTP: ${emailErr.message}`);
@@ -156,7 +156,7 @@ export const register = async (req, res) => {
       }),
       new Promise((_, reject) => setTimeout(() => reject(new Error('MongoDB Timeout')), 5000))
     ]);
-    if (process.env.OTP_MODE === 'demo') {
+    if (process.env.OTP_MODE?.trim()?.toLowerCase() === 'demo') {
       return safeRespond(201, { 
         success: true, 
         message: 'Demo Mode Active. Please use the provided OTP.',
@@ -173,7 +173,7 @@ export const register = async (req, res) => {
 
       if (!emailResult.success) {
         console.error(`[OTP Error] Failed to send OTP to ***@${newUser.email.split('@')[1]}: ${emailResult.error}`);
-        return safeRespond(400, { success: false, message: 'Failed to send OTP email. Please check if your email provider is correctly configured.' });
+        return safeRespond(400, { success: false, message: emailResult.error || 'Failed to send OTP email. Please check if your email provider is correctly configured.' });
       }
     } catch (emailErr) {
       console.error(`[OTP Error] Exception sending OTP: ${emailErr.message}`);
@@ -255,7 +255,7 @@ export const resendOtp = async (req, res) => {
     if (process.env.NODE_ENV !== 'production') {
       console.log(`[DEV/TEST] Resend OTP for ${email}: ${otp}`);
     }
-    if (process.env.OTP_MODE === 'demo') {
+    if (process.env.OTP_MODE?.trim()?.toLowerCase() === 'demo') {
       return res.status(200).json({ 
         success: true, 
         message: 'Demo Mode Active. Please use the provided OTP.',
@@ -271,7 +271,7 @@ export const resendOtp = async (req, res) => {
 
     if (!emailResult.success) {
       console.error(`[OTP Error] Failed to resend OTP to ***@${user.email.split('@')[1]}: ${emailResult.error}`);
-      return res.status(400).json({ success: false, message: 'Failed to resend OTP email. Please check your email configuration.' });
+      return res.status(400).json({ success: false, message: emailResult.error || 'Failed to resend OTP email. Please check your email configuration.' });
     }
 
     res.status(200).json({ success: true, message: 'OTP resent successfully' });

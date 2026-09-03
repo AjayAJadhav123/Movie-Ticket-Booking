@@ -62,6 +62,8 @@ const PORT = process.env.PORT || 5000;
 connectDB();
 initializeEmailService();
 
+console.log(`✅ Startup config - OTP_MODE: '${process.env.OTP_MODE || 'not set'}'`);
+
 // ✅ SECURITY: Add Helmet for security headers with proper CSP for external services
 app.use(helmet({
   contentSecurityPolicy: {
