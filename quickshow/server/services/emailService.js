@@ -17,7 +17,8 @@ import nodemailer from 'nodemailer';
 let transporter = null;
 
 export const initializeEmailService = () => {
-  const emailProvider = process.env.EMAIL_PROVIDER || (process.env.NODE_ENV === 'production' ? 'resend' : 'gmail');
+  const isRender = process.env.RENDER || process.env.RENDER_SERVICE_ID;
+  const emailProvider = process.env.EMAIL_PROVIDER || (process.env.RESEND_API_KEY || isRender || process.env.NODE_ENV === 'production' ? 'resend' : 'gmail');
   const senderEmail = process.env.SENDER_EMAIL;
 
   if (!senderEmail) {
