@@ -21,7 +21,7 @@ export const useSocketIO = (showId) => {
     const getSocketUrl = () => {
       let envUrl = import.meta.env.VITE_BACKEND_URL || '';
       if (import.meta.env.PROD && (!envUrl || envUrl.includes('localhost'))) {
-        return 'https://movie-ticket-booking-o9ga.onrender.com';
+        return 'https://movie-ticket-booking-4p6x.onrender.com';
       }
       envUrl = envUrl.replace(/\/+$/, '');
       if (envUrl.endsWith('/api')) envUrl = envUrl.substring(0, envUrl.length - 4);

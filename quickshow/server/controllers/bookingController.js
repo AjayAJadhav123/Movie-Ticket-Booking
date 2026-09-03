@@ -787,6 +787,7 @@ export const createCashfreeOrder = async (req, res) => {
           amount: finalTotalAmount,
           currency: 'INR',
           paymentSessionId: paymentSessionId,
+          environment: process.env.CASHFREE_ENV === 'PRODUCTION' ? 'production' : 'sandbox',
           demandInfo,
         },
       });
