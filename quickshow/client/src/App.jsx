@@ -125,7 +125,7 @@ function AIContent() {
           {/* Protected Public Routes */}
           <Route path="/seat-layout/:showId" element={<ProtectedRoute><SeatLayout /></ProtectedRoute>} />
           <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
-          <Route path="/payment/callback" element={<ProtectedRoute><PaymentCallback /></ProtectedRoute>} />
+          <Route path="/payment/callback" element={<PaymentCallback />} />
           <Route path="/booking/:bookingId" element={<ProtectedRoute><BookingTicket /></ProtectedRoute>} />
           <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
         </Route>

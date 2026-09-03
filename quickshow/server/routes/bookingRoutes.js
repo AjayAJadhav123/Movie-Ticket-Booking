@@ -63,7 +63,6 @@ router.post(
 
 router.post(
   '/verify-cashfree-payment',
-  requireAuthMiddleware,
   paymentVerifyLimiter,   // ✅ FIXED: Added rate limiting
   verifyCashfreePayment
 );

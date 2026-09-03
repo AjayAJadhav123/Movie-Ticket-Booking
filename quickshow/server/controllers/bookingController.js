@@ -835,7 +835,6 @@ export const verifyCashfreePayment = async (req, res) => {
       });
     }
 
-    const userId = req.userId;
     const { orderId, bookingId } = req.body;
 
     if (!orderId || !bookingId) {
@@ -854,13 +853,6 @@ export const verifyCashfreePayment = async (req, res) => {
       });
     }
 
-    // Verify booking belongs to user
-    if (booking.userId !== userId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Unauthorized booking access',
-      });
-    }
 
     // Initialize Cashfree
     const cfInstance = initCashfree();
