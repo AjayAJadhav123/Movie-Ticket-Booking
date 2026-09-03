@@ -5,7 +5,14 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 import AuthLayout from '../components/AuthLayout';
 
-const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
+// Always use relative URLs in production so Vercel proxy routes to Render correctly
+const getApiBase = () => {
+  const envUrl = import.meta.env.VITE_BACKEND_URL || '';
+  if (import.meta.env.PROD && (!envUrl || envUrl.includes('localhost'))) return '';
+  return envUrl.replace(/\/+$/, '').replace(/\/api$/, '');
+};
+const API_BASE = getApiBase();
+
 
 export default function ResetPassword() {
   const [password, setPassword] = useState('');
