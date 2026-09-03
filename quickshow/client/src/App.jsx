@@ -24,6 +24,7 @@ import SignUpPage from './pages/SignUpPage';
 import VerifyOtpPage from './pages/VerifyOtpPage';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import PaymentCallback from './pages/PaymentCallback';
 
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminLogin from './pages/admin/AdminLogin';
@@ -124,6 +125,7 @@ function AIContent() {
           {/* Protected Public Routes */}
           <Route path="/seat-layout/:showId" element={<ProtectedRoute><SeatLayout /></ProtectedRoute>} />
           <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
+          <Route path="/payment/callback" element={<ProtectedRoute><PaymentCallback /></ProtectedRoute>} />
           <Route path="/booking/:bookingId" element={<ProtectedRoute><BookingTicket /></ProtectedRoute>} />
           <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
         </Route>

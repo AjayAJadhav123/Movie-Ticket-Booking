@@ -745,7 +745,7 @@ export const createCashfreeOrder = async (req, res) => {
         : (process.env.BACKEND_URL || 'http://localhost:5000');
 
       // Always https for Cashfree
-      const returnUrl = `${frontendUrl}/my-bookings?order_id=${orderId}`;
+      const returnUrl = `${frontendUrl}/payment/callback?order_id=${orderId}&booking_id=${booking._id}`;
       const notifyUrl = `${backendUrl}/api/booking/cashfree-webhook`;
       console.log(`💳 Cashfree URLs → return: ${returnUrl}`);
       console.log(`💳 Cashfree URLs → notify: ${notifyUrl}`);
