@@ -100,7 +100,11 @@ export default function VerifyOtpPage() {
     try {
       const response = await axios.post(`${API_BASE}/api/auth/resend-otp`, { email });
       if (response.data.success) {
-        toast.success('A new OTP has been sent to your email.');
+        if (response.data.demoOtp) {
+          toast.success(`Demo Mode Active! Demo OTP: ${response.data.demoOtp}`, { autoClose: 15000, theme: "dark" });
+        } else {
+          toast.success('A new OTP has been sent to your email.');
+        }
         setOtp(['', '', '', '', '', '']);
         inputRefs.current[0]?.focus();
       }

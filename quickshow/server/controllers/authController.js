@@ -87,27 +87,34 @@ export const register = async (req, res) => {
       User.findOne({ email: email.toLowerCase() }),
       new Promise((_, reject) => setTimeout(() => reject(new Error('MongoDB Timeout')), 5000))
     ]);
-    
+
     if (existingUser) {
       if (!existingUser.isVerified) {
         const salt = await bcrypt.genSalt(12);
         const hashedPassword = await bcrypt.hash(password, salt);
         const otp = generateOTP();
-        
+
         existingUser.password = hashedPassword;
         existingUser.name = name;
         existingUser.verificationOtp = otp;
         existingUser.verificationOtpExpire = Date.now() + 10 * 60 * 1000;
-        
+
         if (process.env.NODE_ENV !== 'production') {
           console.log(`[DEV/TEST] Registration (resend) OTP for ${email}: ${otp}`);
         }
-        
+
         // Save user (with 5s DB timeout)
         await Promise.race([
           existingUser.save(),
           new Promise((_, reject) => setTimeout(() => reject(new Error('MongoDB Timeout')), 5000))
         ]);
+        if (process.env.OTP_MODE === 'demo') {
+          return safeRespond(200, { 
+            success: true, 
+            message: 'Demo Mode Active. Please use the provided OTP.',
+            demoOtp: otp 
+          });
+        }
 
         try {
           const emailResult = await emailService.sendEmail(
@@ -115,7 +122,7 @@ export const register = async (req, res) => {
             'Verify your QuickShow account',
             getOtpEmailTemplate(otp, existingUser.name)
           );
-          
+
           if (!emailResult.success) {
             console.error(`[OTP Error] Failed to send OTP to ***@${existingUser.email.split('@')[1]}: ${emailResult.error}`);
             return safeRespond(400, { success: false, message: 'Failed to send OTP email. Please check if your email provider is correctly configured.' });
@@ -149,6 +156,13 @@ export const register = async (req, res) => {
       }),
       new Promise((_, reject) => setTimeout(() => reject(new Error('MongoDB Timeout')), 5000))
     ]);
+    if (process.env.OTP_MODE === 'demo') {
+      return safeRespond(201, { 
+        success: true, 
+        message: 'Demo Mode Active. Please use the provided OTP.',
+        demoOtp: otp 
+      });
+    }
 
     try {
       const emailResult = await emailService.sendEmail(
@@ -156,7 +170,7 @@ export const register = async (req, res) => {
         'Verify your QuickShow account',
         getOtpEmailTemplate(otp, newUser.name)
       );
-      
+
       if (!emailResult.success) {
         console.error(`[OTP Error] Failed to send OTP to ***@${newUser.email.split('@')[1]}: ${emailResult.error}`);
         return safeRespond(400, { success: false, message: 'Failed to send OTP email. Please check if your email provider is correctly configured.' });
@@ -182,26 +196,26 @@ export const register = async (req, res) => {
 export const verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
-    
+
     if (!email || !otp) {
       return res.status(400).json({ success: false, message: 'Please provide email and OTP' });
     }
-    
-    const user = await User.findOne({ 
+
+    const user = await User.findOne({
       email: email.toLowerCase(),
       verificationOtp: otp,
       verificationOtpExpire: { $gt: Date.now() }
     }).select('+verificationOtp +verificationOtpExpire');
-    
+
     if (!user) {
       return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
     }
-    
+
     user.isVerified = true;
     user.verificationOtp = undefined;
     user.verificationOtpExpire = undefined;
     await user.save();
-    
+
     res.status(200).json({
       success: true,
       message: 'Email verified successfully. You can now log in.',
@@ -218,41 +232,48 @@ export const verifyOtp = async (req, res) => {
 export const resendOtp = async (req, res) => {
   try {
     const { email } = req.body;
-    
+
     if (!email) {
       return res.status(400).json({ success: false, message: 'Please provide email' });
     }
-    
+
     const user = await User.findOne({ email: email.toLowerCase() });
-    
+
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
-    
+
     if (user.isVerified) {
       return res.status(400).json({ success: false, message: 'User is already verified' });
     }
-    
+
     const otp = generateOTP();
     user.verificationOtp = otp;
     user.verificationOtpExpire = Date.now() + 10 * 60 * 1000;
     await user.save();
-    
+
     if (process.env.NODE_ENV !== 'production') {
       console.log(`[DEV/TEST] Resend OTP for ${email}: ${otp}`);
     }
-    
+    if (process.env.OTP_MODE === 'demo') {
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Demo Mode Active. Please use the provided OTP.',
+        demoOtp: otp 
+      });
+    }
+
     const emailResult = await emailService.sendEmail(
       user.email,
       'Your New QuickShow Verification Code',
       getOtpEmailTemplate(otp, user.name)
     );
-    
+
     if (!emailResult.success) {
       console.error(`[OTP Error] Failed to resend OTP to ***@${user.email.split('@')[1]}: ${emailResult.error}`);
       return res.status(400).json({ success: false, message: 'Failed to resend OTP email. Please check your email configuration.' });
     }
-    
+
     res.status(200).json({ success: true, message: 'OTP resent successfully' });
   } catch (error) {
     console.error('Resend OTP error:', error);
@@ -278,9 +299,9 @@ export const login = async (req, res) => {
     }
 
     if (user.lockUntil && user.lockUntil > Date.now()) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Account temporarily locked due to too many failed login attempts. Please try again later.' 
+      return res.status(401).json({
+        success: false,
+        message: 'Account temporarily locked due to too many failed login attempts. Please try again later.'
       });
     }
 
@@ -288,11 +309,11 @@ export const login = async (req, res) => {
     if (!user.password) {
       return res.status(401).json({ success: false, message: 'Please login using the method you signed up with (e.g., Google)' });
     }
-    
+
     // Check if user is verified
     if (user.isVerified === false) {
-      return res.status(403).json({ 
-        success: false, 
+      return res.status(403).json({
+        success: false,
         message: 'Please verify your email before logging in.',
         notVerified: true
       });
@@ -351,13 +372,13 @@ export const forgotPassword = async (req, res) => {
 
     // Generate reset token
     const resetToken = crypto.randomBytes(20).toString('hex');
-    
+
     // Hash token and set to resetPasswordToken field
     user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-    
+
     // Set expire (10 minutes)
     user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
-    
+
     await user.save({ validateBeforeSave: false });
 
     // Create reset url
@@ -426,13 +447,13 @@ export const resetPassword = async (req, res) => {
     // Hash new password
     const salt = await bcrypt.genSalt(12);
     user.password = await bcrypt.hash(password, salt);
-    
+
     // Revoke all existing sessions by incrementing token version
     user.tokenVersion = (user.tokenVersion || 0) + 1;
-    
+
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
-    
+
     await user.save();
 
     const token = generateToken(user);
@@ -470,7 +491,7 @@ export const googleLogin = async (req, res) => {
       idToken: credential,
       audience: process.env.GOOGLE_CLIENT_ID,
     });
-    
+
     const payload = ticket.getPayload();
     const { sub: googleId, email, name, picture } = payload;
 

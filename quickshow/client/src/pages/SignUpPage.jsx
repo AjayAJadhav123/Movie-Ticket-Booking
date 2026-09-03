@@ -36,7 +36,11 @@ export default function SignUpPage() {
       });
 
       if (response.data.success) {
-        toast.success(response.data.message || 'OTP sent! Please check your email.');
+        if (response.data.demoOtp) {
+          toast.success(`Demo Mode Active! Demo OTP: ${response.data.demoOtp}`, { autoClose: 15000, theme: "dark" });
+        } else {
+          toast.success(response.data.message || 'OTP sent! Please check your email.');
+        }
         navigate(`/verify-otp?email=${encodeURIComponent(email)}`);
       }
     } catch (err) {
