@@ -291,6 +291,8 @@ io.on('connection', (socket) => {
 httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ QuickShow server running on port ${PORT} (0.0.0.0)`);
   console.log(`🚀 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`💳 CASHFREE_ENV: ${process.env.CASHFREE_ENV || 'NOT SET'}`);
+  console.log(`🔗 Cashfree return_url format: [FRONTEND_URL]/payment/callback?order_id=...&booking_id=...`);
 
   // Configuration status warnings
   if (!process.env.STRIPE_SECRET_KEY) {
